@@ -45,6 +45,7 @@ const state = {
     imageUrl: null,
     maskId: null,
     maskUrl: null,
+    maskImage: null,
     jobId: null,
     jobStatus: null,
     jobStage: null,
@@ -74,6 +75,21 @@ function apiUrl(path) {
 
 function hasSelection() {
   return state.positivePoints.length > 0 || state.negativePoints.length > 0 || Boolean(state.box);
+}
+
+function resetBackendArtifacts({ keepImage = true } = {}) {
+  state.backend.maskId = null;
+  state.backend.maskUrl = null;
+  state.backend.maskImage = null;
+  state.backend.jobId = null;
+  state.backend.jobStatus = null;
+  state.backend.jobStage = null;
+  state.backend.result = null;
+  resultPanel.hidden = true;
+  if (!keepImage) {
+    state.backend.imageId = null;
+    state.backend.imageUrl = null;
+  }
 }
 
 function setPointType(pointType) {
@@ -130,6 +146,10 @@ function canvasToImage(event) {
 
 function drawMaskShape() {
   if (!maskToggle.checked || !state.image) return;
+  if (state.backend.maskImage) {
+    drawBackendMask();
+    return;
+  }
   ctx.save();
   ctx.fillStyle = "rgba(26, 127, 100, 0.28)";
   ctx.strokeStyle = "rgba(26, 127, 100, 0.8)";
@@ -159,6 +179,37 @@ function drawMaskShape() {
     ctx.fill();
   }
 
+  ctx.restore();
+}
+
+function drawBackendMask() {
+  const maskCanvas = document.createElement("canvas");
+  maskCanvas.width = canvas.width;
+  maskCanvas.height = canvas.height;
+  const maskCtx = maskCanvas.getContext("2d");
+  maskCtx.drawImage(
+    state.backend.maskImage,
+    state.layout.x,
+    state.layout.y,
+    state.layout.width,
+    state.layout.height,
+  );
+  maskCtx.globalCompositeOperation = "source-in";
+  maskCtx.fillStyle = "#1a7f64";
+  maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+
+  ctx.save();
+  ctx.globalAlpha = 0.34;
+  ctx.drawImage(maskCanvas, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = "rgba(26, 127, 100, 0.85)";
+  ctx.lineWidth = 2;
+  const box = state.box;
+  if (box) {
+    const start = imageToCanvas({ x: box[0], y: box[1] });
+    const end = imageToCanvas({ x: box[2], y: box[3] });
+    ctx.strokeRect(start.x, start.y, end.x - start.x, end.y - start.y);
+  }
   ctx.restore();
 }
 
@@ -302,6 +353,7 @@ function loadFile(file) {
         imageUrl: null,
         maskId: null,
         maskUrl: null,
+        maskImage: null,
         jobId: null,
         jobStatus: null,
         jobStage: null,
@@ -340,6 +392,7 @@ function resetAll() {
     imageUrl: null,
     maskId: null,
     maskUrl: null,
+    maskImage: null,
     jobId: null,
     jobStatus: null,
     jobStage: null,
@@ -374,6 +427,7 @@ undoButton.addEventListener("click", () => {
   } else if (state.negativePoints.length) {
     state.negativePoints.pop();
   }
+  resetBackendArtifacts();
   statusText.textContent = "Selection updated";
   draw();
 });
@@ -383,6 +437,7 @@ clearButton.addEventListener("click", () => {
   state.negativePoints = [];
   state.box = null;
   state.draftBox = null;
+  resetBackendArtifacts();
   statusText.textContent = "Selection cleared";
   draw();
 });
@@ -397,6 +452,7 @@ canvas.addEventListener("pointerdown", (event) => {
     } else {
       state.negativePoints.push(point);
     }
+    resetBackendArtifacts();
     statusText.textContent = "Selection updated";
     triggerScan();
     draw();
@@ -421,6 +477,7 @@ canvas.addEventListener("pointerup", (event) => {
   state.box = normalizeBox(state.boxStart, point);
   state.draftBox = null;
   state.isDraggingBox = false;
+  resetBackendArtifacts();
   canvas.releasePointerCapture(event.pointerId);
   statusText.textContent = "Box selected";
   triggerScan();
@@ -496,6 +553,21 @@ async function submitSelectionToBackend() {
   const result = await response.json();
   state.backend.maskId = result.mask_id;
   state.backend.maskUrl = result.mask_url;
+  await loadBackendMask(result.mask_url);
+}
+
+async function loadBackendMask(maskUrl) {
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+  const loaded = new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = () => reject(new Error("Backend mask preview failed to load."));
+  });
+  const separator = maskUrl.includes("?") ? "&" : "?";
+  image.src = `${apiUrl(maskUrl)}${separator}t=${Date.now()}`;
+  await loaded;
+  state.backend.maskImage = image;
+  draw();
 }
 
 syncButton.addEventListener("click", async () => {

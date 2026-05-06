@@ -477,6 +477,18 @@ Done criteria:
 - The mask preview is stable enough to validate upload, prompt, sync, and conversion UX.
 - The mask API shape can be reused by real segmentation later.
 
+Implementation status:
+
+- Implemented as a pre-SAM backend mask preview.
+- The placeholder mask generator now blends box and positive point prompts into a smoother object-like region.
+- Negative points cut holes from the placeholder mask.
+- The static web shell loads the backend-generated mask image after `Sync Backend` or `Run Conversion` and draws it as the canvas overlay.
+- Editing the selection invalidates stale mask, job, and result artifacts while keeping the uploaded backend image session.
+
+Current limitation:
+
+- This is still a deterministic prompt visualization, not semantic segmentation. It validates UI/API behavior before a real SAM image predictor is attached.
+
 ### Milestone UI-3.6: Mesh Inspection API
 
 Purpose:

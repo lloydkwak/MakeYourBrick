@@ -21,6 +21,7 @@ The current suite covers:
 - image-to-LDraw orchestration with a fake SAM command
 - FastAPI image upload and selection endpoints
 - FastAPI pipeline job stub endpoints
+- placeholder segmentation mask generation
 - optimizer report generation
 
 ## Test Design
