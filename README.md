@@ -52,3 +52,13 @@ Convert a mesh with greedy brick optimization enabled:
 ```bash
 python scripts/mesh_to_ldr.py --mesh data/examples/sample.stl --target-studs 8 --output outputs/ldr/mesh_optimized_phase4.ldr --optimize
 ```
+
+## Phase 4.5 Mesh Color Sampling and Reports
+
+Sample vertex or face colors from a mesh and write an optimizer report:
+
+```bash
+python scripts/mesh_to_ldr.py --mesh data/examples/sample_colored.ply --target-studs 8 --sample-colors --optimize --report outputs/reports/mesh_report.json --output outputs/ldr/sampled_color_mesh.ldr
+```
+
+The report includes occupied voxel count, input/output brick counts, reduction percentage, part counts, and color counts.
