@@ -44,7 +44,7 @@ The report is JSON and records:
 ## Completion Checklist
 
 - [x] Add Phase 4.5 TODO document.
-- [ ] Add mesh color sampling helpers and tests.
+- [x] Add mesh color sampling helpers and tests.
 - [ ] Connect sampled mesh colors to voxel artifacts.
 - [ ] Add optimizer report generation helpers and tests.
 - [ ] Add CLI options for sampled colors and report path.
