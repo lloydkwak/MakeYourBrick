@@ -20,11 +20,14 @@ The current suite covers:
 - mesh-to-LDraw CLI
 - image-to-LDraw orchestration with a fake SAM command
 - FastAPI image upload and selection endpoints
+- FastAPI pipeline job stub endpoints
 - optimizer report generation
 
 ## Test Design
 
 The test suite does not require a GPU or SAM 3D Objects installation. Image pipeline tests use `tests/fake_sam3d_command.py`, which emits a small colored mesh artifact.
+
+Backend job tests use `FakeSamMeshRunner`, which creates a deterministic local triangle mesh and then exercises the real mesh cleanup, voxelization, brick optimization, LDraw writer, and report writer.
 
 ## Manual Smoke Tests
 
@@ -59,3 +62,11 @@ Create the fake image first if needed:
 ```bash
 python -c "from pathlib import Path; Path('outputs/manual_fake_image.png').parent.mkdir(parents=True, exist_ok=True); Path('outputs/manual_fake_image.png').write_bytes(b'fake-image')"
 ```
+
+Local UI/backend smoke test:
+
+```bash
+python -m uvicorn makeyourbrick.server.main:app --app-dir src --reload
+```
+
+Open `apps/web/index.html`, set API base URL to `http://127.0.0.1:8000`, upload an image, make a point or box selection, and press `Run Conversion`. The result panel should show LDR, report, and raw mesh links.

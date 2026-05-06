@@ -355,9 +355,9 @@ Response:
 
 ```json
 {
-  "ldr_url": "/api/jobs/uuid/files/output.ldr",
-  "report_url": "/api/jobs/uuid/files/report.json",
-  "raw_mesh_url": "/api/jobs/uuid/files/raw_model.glb",
+  "ldr_url": "/api/jobs/uuid/files/ldr",
+  "report_url": "/api/jobs/uuid/files/report",
+  "raw_mesh_url": "/api/jobs/uuid/files/raw_mesh",
   "brick_count": 117,
   "reduction_percent": 83.9506,
   "warnings": []
@@ -426,6 +426,7 @@ Implementation status:
 Purpose:
 
 - Connect UI to a fake conversion job.
+- Validate the end-to-end browser/API/pipeline contract before real SAM 3D is installed.
 
 Tasks:
 
@@ -434,11 +435,117 @@ Tasks:
 3. Use fake SAM command to generate a colored box mesh.
 4. Run existing `run_from_image()` or `image_to_ldr` equivalent.
 5. Return `.ldr` and report URLs.
+6. Replace the frontend-only mock run with a real `/api/jobs` call.
+7. Poll job status until `completed` or `failed`.
+8. Show artifact links for LDR, report, and raw mesh.
 
 Done criteria:
 
 - User can upload image, select object, click convert, and receive `.ldr` output.
 - No real SAM dependency yet.
+
+Implementation status:
+
+- Implemented as a local FastAPI job stub.
+- `POST /api/jobs` validates the uploaded image and optional placeholder mask, creates an in-memory job record, and starts a background conversion task.
+- The background task uses `FakeSamMeshRunner` to create a deterministic colored triangle mesh, then calls the existing `run_from_image()` pipeline.
+- Job artifacts are stored below `outputs/ui_sessions/<image_id>/jobs/<job_id>/`.
+- `GET /api/jobs/{job_id}` returns status, stage, progress, and message.
+- `GET /api/jobs/{job_id}/result` returns generated artifact URLs and optimizer summary values.
+- `GET /api/jobs/{job_id}/files/{kind}` serves `ldr`, `report`, `raw_mesh`, `cleaned_mesh`, and `voxels`.
+- The static web shell now uses `Run Conversion` to upload/sync if needed, start a backend job, poll status, and display artifact links.
+
+Current limitation:
+
+- The fake SAM runner ignores the selection mask. It exists only to test the contract between UI, backend jobs, and the existing LEGO conversion pipeline.
+
+### Milestone UI-3.5: Placeholder Segmentation Upgrade
+
+Purpose:
+
+- Improve pre-SAM UX validation without adding the real segmentation model yet.
+
+Tasks:
+
+1. Make point-based masks more object-like than simple circles.
+2. Blend box and point prompts into a single placeholder mask.
+3. Let the frontend display the backend-generated mask overlay instead of only the canvas-local preview.
+4. Preserve positive and negative prompt semantics.
+
+Done criteria:
+
+- The mask preview is stable enough to validate upload, prompt, sync, and conversion UX.
+- The mask API shape can be reused by real segmentation later.
+
+### Milestone UI-3.6: Mesh Inspection API
+
+Purpose:
+
+- Add early automated validation for future SAM 3D outputs.
+
+Tasks:
+
+1. Add `src/makeyourbrick/mesh/inspect.py`.
+2. Add `scripts/inspect_mesh.py`.
+3. Report triangle count, vertex count, watertightness, bounds, visual/color availability, and voxelization readiness.
+4. Attach mesh inspection output to job reports or expose it through `/api/jobs/{job_id}/files/mesh_inspect`.
+
+Done criteria:
+
+- Any generated mesh can be checked before voxelization.
+- Future real SAM adapter failures become diagnosable from job artifacts.
+
+### Milestone UI-3.7: Real SAM Adapter Preparation
+
+Purpose:
+
+- Prepare the boundary where real SAM 3D Objects will replace the fake runner.
+
+Tasks:
+
+1. Add `scripts/adapters/sam3d_to_mesh.py`.
+2. Discover actual SAM output files and formats.
+3. Confirm whether output is triangle mesh, point cloud, Gaussian splat, or another representation.
+4. Export triangle mesh directly when possible.
+5. Design fallback conversion when SAM returns point clouds or splats.
+
+Done criteria:
+
+- The real adapter can satisfy the same runner contract as `FakeSamMeshRunner.generate(image_path, output_path)`.
+
+### Milestone UI-3.8: Mesh Repair Modes
+
+Purpose:
+
+- Make AI-generated mesh cleanup explicit and testable.
+
+Tasks:
+
+1. Add repair mode options: `none`, `basic`, `manifold`, `convex-hull`.
+2. Include repair mode in pipeline config and job request.
+3. Generate repair reports.
+4. Add open mesh fixtures and tests.
+
+Done criteria:
+
+- The pipeline can explain how it repaired or approximated invalid SAM meshes.
+
+### Milestone UI-3.9: Stud.io/LDraw Visual Verification
+
+Purpose:
+
+- Confirm that optimized brick placement is visually correct in real LDraw-compatible tools.
+
+Tasks:
+
+1. Check origin and rotation behavior for `3001.dat`, `3010.dat`, `3003.dat`, `3004.dat`, and `3005.dat`.
+2. Compare generated output in LDraw and Stud.io.
+3. Add a part offset table if larger bricks need origin correction.
+4. Document verified part transforms.
+
+Done criteria:
+
+- Large optimized bricks align correctly when opened in Stud.io/LDraw.
 
 ### Milestone UI-4: Real Segmentation Backend
 

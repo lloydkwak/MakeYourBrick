@@ -30,6 +30,21 @@ class SessionStorage:
     def selection_dir(self, image_id: str) -> Path:
         return self.session_dir(image_id) / "selection"
 
+    def job_dir(self, image_id: str, job_id: str) -> Path:
+        return self.session_dir(image_id) / "jobs" / job_id
+
+    def job_mesh_dir(self, image_id: str, job_id: str) -> Path:
+        return self.job_dir(image_id, job_id) / "meshes"
+
+    def job_voxel_dir(self, image_id: str, job_id: str) -> Path:
+        return self.job_dir(image_id, job_id) / "voxels"
+
+    def job_ldr_dir(self, image_id: str, job_id: str) -> Path:
+        return self.job_dir(image_id, job_id) / "ldr"
+
+    def job_report_dir(self, image_id: str, job_id: str) -> Path:
+        return self.job_dir(image_id, job_id) / "reports"
+
     def image_path(self, image_id: str) -> Path:
         matches = list(self.input_dir(image_id).glob("image.*"))
         if not matches:
@@ -71,4 +86,3 @@ class SessionStorage:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         return path
-

@@ -108,8 +108,31 @@
         <section class="panel-section action-panel">
           <button id="exportButton" class="primary-button" type="button">Export JSON</button>
           <button id="syncButton" type="button">Sync Backend</button>
-          <button id="mockRunButton" type="button">Mock Run</button>
+          <button id="runButton" type="button">Run Conversion</button>
           <p id="statusText">Waiting for image</p>
+        </section>
+
+        <section id="resultPanel" class="panel-section result-panel" hidden>
+          <h2>Result</h2>
+          <dl>
+            <div>
+              <dt>Job</dt>
+              <dd id="jobIdText">-</dd>
+            </div>
+            <div>
+              <dt>Bricks</dt>
+              <dd id="brickCountText">-</dd>
+            </div>
+            <div>
+              <dt>Reduction</dt>
+              <dd id="reductionText">-</dd>
+            </div>
+          </dl>
+          <div class="artifact-links">
+            <a id="ldrLink" href="#" target="_blank" rel="noreferrer">LDR</a>
+            <a id="reportLink" href="#" target="_blank" rel="noreferrer">Report</a>
+            <a id="rawMeshLink" href="#" target="_blank" rel="noreferrer">Raw mesh</a>
+          </div>
         </section>
       </aside>
     </main>

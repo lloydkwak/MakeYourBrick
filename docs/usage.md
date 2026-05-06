@@ -88,7 +88,7 @@ Generated files are ignored by Git:
 Run the FastAPI backend:
 
 ```bash
-python -m uvicorn makeyourbrick.server.main:app --reload
+python -m uvicorn makeyourbrick.server.main:app --app-dir src --reload
 ```
 
 Backend endpoints:
@@ -98,3 +98,17 @@ Backend endpoints:
 - `GET /api/images/{image_id}/file`
 - `POST /api/images/{image_id}/selection`
 - `GET /api/masks/{mask_id}/file?image_id={image_id}`
+- `POST /api/jobs`
+- `GET /api/jobs/{job_id}`
+- `GET /api/jobs/{job_id}/result`
+- `GET /api/jobs/{job_id}/files/{kind}`
+
+The current job endpoint is a local stub. It uses a deterministic fake SAM mesh and then runs the real MakeYourBrick conversion pipeline, producing LDR, voxel, mesh, and report artifacts under `outputs/ui_sessions/<image_id>/jobs/<job_id>/`.
+
+Start a browser workflow by opening:
+
+```text
+apps/web/index.html
+```
+
+Then upload an image, select a target object, and press `Run Conversion`.

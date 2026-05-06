@@ -27,3 +27,35 @@ class SelectionResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
 
+
+class JobRequest(BaseModel):
+    image_id: str
+    mask_id: str | None = None
+    target_studs: int = Field(default=48, ge=8, le=128)
+    sample_colors: bool = True
+    optimize: bool = True
+    fill: bool = True
+    default_color_id: int = Field(default=16, ge=0, le=999)
+
+
+class JobStatusResponse(BaseModel):
+    job_id: str
+    image_id: str
+    status: str
+    stage: str
+    progress: float
+    message: str
+    error: str | None = None
+
+
+class JobResultResponse(BaseModel):
+    job_id: str
+    status: str
+    ldr_url: str
+    report_url: str
+    raw_mesh_url: str
+    cleaned_mesh_url: str
+    voxel_url: str
+    brick_count: int | None = None
+    reduction_percent: float | None = None
+    warnings: list[str] = Field(default_factory=list)

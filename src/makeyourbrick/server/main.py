@@ -2,22 +2,26 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from PIL import Image, UnidentifiedImageError
 
+from makeyourbrick.server.jobs import JobRegistry, run_pipeline_job, to_status_response
 from makeyourbrick.server.masks import create_placeholder_mask
 from makeyourbrick.server.schemas import (
     HealthResponse,
     ImageUploadResponse,
+    JobRequest,
+    JobResultResponse,
+    JobStatusResponse,
     SelectionRequest,
     SelectionResponse,
 )
 from makeyourbrick.server.storage import SessionStorage
 
 
-def create_app(storage: SessionStorage | None = None) -> FastAPI:
+def create_app(storage: SessionStorage | None = None, registry: JobRegistry | None = None) -> FastAPI:
     app = FastAPI(title="MakeYourBrick API", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
@@ -27,6 +31,7 @@ def create_app(storage: SessionStorage | None = None) -> FastAPI:
         allow_headers=["*"],
     )
     app.state.storage = storage or SessionStorage()
+    app.state.jobs = registry or JobRegistry()
 
     @app.get("/api/health", response_model=HealthResponse)
     def health() -> HealthResponse:
@@ -91,6 +96,56 @@ def create_app(storage: SessionStorage | None = None) -> FastAPI:
         if not path.exists():
             raise HTTPException(status_code=404, detail=f"Mask not found: {mask_id}")
         return FileResponse(path, media_type="image/png")
+
+    @app.post("/api/jobs", response_model=JobStatusResponse)
+    def create_job(request: JobRequest, background_tasks: BackgroundTasks) -> JobStatusResponse:
+        try:
+            app.state.storage.image_path(request.image_id)
+        except FileNotFoundError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
+        if request.mask_id is not None and not app.state.storage.mask_path(request.image_id, request.mask_id).exists():
+            raise HTTPException(status_code=404, detail=f"Mask not found: {request.mask_id}")
+        job_id = app.state.storage.new_id()
+        record = app.state.jobs.create(request.image_id, job_id)
+        background_tasks.add_task(run_pipeline_job, job_id, request, app.state.storage, app.state.jobs)
+        return to_status_response(record)
+
+    @app.get("/api/jobs/{job_id}", response_model=JobStatusResponse)
+    def get_job(job_id: str) -> JobStatusResponse:
+        try:
+            record = app.state.jobs.get(job_id)
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail=f"Job not found: {job_id}") from error
+        return to_status_response(record)
+
+    @app.get("/api/jobs/{job_id}/result", response_model=JobResultResponse)
+    def get_job_result(job_id: str) -> JobResultResponse:
+        try:
+            record = app.state.jobs.get(job_id)
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail=f"Job not found: {job_id}") from error
+        if record.status == "failed":
+            raise HTTPException(status_code=500, detail=record.error or "Job failed")
+        if record.result is None:
+            raise HTTPException(status_code=409, detail=f"Job is not completed: {record.status}")
+        return record.result
+
+    @app.get("/api/jobs/{job_id}/files/{kind}")
+    def get_job_file(job_id: str, kind: str) -> FileResponse:
+        try:
+            record = app.state.jobs.get(job_id)
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail=f"Job not found: {job_id}") from error
+        if kind not in record.paths:
+            raise HTTPException(status_code=404, detail=f"Artifact not found: {kind}")
+        path = record.paths[kind]
+        if not path.exists():
+            raise HTTPException(status_code=404, detail=f"Artifact file missing: {kind}")
+        if kind == "report":
+            return FileResponse(path, media_type="application/json")
+        if kind == "ldr":
+            return FileResponse(path, media_type="text/plain")
+        return FileResponse(path)
 
     return app
 

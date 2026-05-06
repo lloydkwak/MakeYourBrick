@@ -20,11 +20,18 @@ const sampleColors = document.querySelector("#sampleColors");
 const optimizeBricks = document.querySelector("#optimizeBricks");
 const exportButton = document.querySelector("#exportButton");
 const syncButton = document.querySelector("#syncButton");
-const mockRunButton = document.querySelector("#mockRunButton");
+const runButton = document.querySelector("#runButton");
 const statusText = document.querySelector("#statusText");
 const reconstructionPreview = document.querySelector("#reconstructionPreview");
 const previewTitle = document.querySelector("#previewTitle");
 const previewSubtitle = document.querySelector("#previewSubtitle");
+const resultPanel = document.querySelector("#resultPanel");
+const jobIdText = document.querySelector("#jobIdText");
+const brickCountText = document.querySelector("#brickCountText");
+const reductionText = document.querySelector("#reductionText");
+const ldrLink = document.querySelector("#ldrLink");
+const reportLink = document.querySelector("#reportLink");
+const rawMeshLink = document.querySelector("#rawMeshLink");
 
 const ctx = canvas.getContext("2d");
 
@@ -38,6 +45,10 @@ const state = {
     imageUrl: null,
     maskId: null,
     maskUrl: null,
+    jobId: null,
+    jobStatus: null,
+    jobStage: null,
+    result: null,
   },
   mode: "point",
   pointType: "positive",
@@ -55,6 +66,14 @@ function setMode(mode) {
   boxModeButton.classList.toggle("is-active", mode === "box");
   canvas.style.cursor = mode === "box" ? "crosshair" : "copy";
   draw();
+}
+
+function apiUrl(path) {
+  return `${apiBaseUrl.value.replace(/\/$/, "")}${path}`;
+}
+
+function hasSelection() {
+  return state.positivePoints.length > 0 || state.negativePoints.length > 0 || Boolean(state.box);
 }
 
 function setPointType(pointType) {
@@ -231,6 +250,12 @@ function buildPayload() {
       optimize: optimizeBricks.checked,
       fill: true,
     },
+    job: {
+      job_id: state.backend.jobId,
+      status: state.backend.jobStatus,
+      stage: state.backend.jobStage,
+      result: state.backend.result,
+    },
   };
 }
 
@@ -240,18 +265,21 @@ function updateStages() {
     stage.classList.remove("is-current", "is-done");
   });
   const hasImage = Boolean(state.image);
-  const hasSelection =
-    state.positivePoints.length > 0 || state.negativePoints.length > 0 || Boolean(state.box);
-  reconstructionPreview.classList.toggle("is-active", hasSelection);
-  previewTitle.textContent = hasSelection ? "Target locked" : "Waiting for target";
-  previewSubtitle.textContent = hasSelection
+  const selectionReady = hasSelection();
+  reconstructionPreview.classList.toggle("is-active", selectionReady);
+  previewTitle.textContent = selectionReady ? "Target locked" : "Waiting for target";
+  previewSubtitle.textContent = selectionReady
     ? "Mask preview is ready for LEGO conversion."
     : "Select an object to prepare reconstruction.";
+  if (selectionReady && state.backend.jobStage) {
+    setPipelineStage(state.backend.jobStage);
+    return;
+  }
   document.querySelector('[data-stage="upload"]').classList.toggle("is-done", hasImage);
   document.querySelector('[data-stage="upload"]').classList.toggle("is-current", !hasImage);
-  document.querySelector('[data-stage="select"]').classList.toggle("is-current", hasImage && !hasSelection);
-  document.querySelector('[data-stage="select"]').classList.toggle("is-done", hasSelection);
-  document.querySelector('[data-stage="segment"]').classList.toggle("is-current", hasSelection);
+  document.querySelector('[data-stage="select"]').classList.toggle("is-current", hasImage && !selectionReady);
+  document.querySelector('[data-stage="select"]').classList.toggle("is-done", selectionReady);
+  document.querySelector('[data-stage="segment"]').classList.toggle("is-current", selectionReady);
 }
 
 function updatePayload() {
@@ -269,13 +297,23 @@ function loadFile(file) {
       state.imageFile = file;
       state.imageName = file.name;
       state.imageSize = file.size;
-      state.backend = { imageId: null, imageUrl: null, maskId: null, maskUrl: null };
+      state.backend = {
+        imageId: null,
+        imageUrl: null,
+        maskId: null,
+        maskUrl: null,
+        jobId: null,
+        jobStatus: null,
+        jobStage: null,
+        result: null,
+      };
       state.positivePoints = [];
       state.negativePoints = [];
       state.box = null;
       state.draftBox = null;
       imageMeta.textContent = `${file.name} · ${image.width} x ${image.height}`;
       statusText.textContent = "Image ready";
+      resultPanel.hidden = true;
       draw();
     };
     image.src = reader.result;
@@ -297,7 +335,16 @@ function resetAll() {
   state.imageFile = null;
   state.imageName = null;
   state.imageSize = null;
-  state.backend = { imageId: null, imageUrl: null, maskId: null, maskUrl: null };
+  state.backend = {
+    imageId: null,
+    imageUrl: null,
+    maskId: null,
+    maskUrl: null,
+    jobId: null,
+    jobStatus: null,
+    jobStage: null,
+    result: null,
+  };
   state.positivePoints = [];
   state.negativePoints = [];
   state.box = null;
@@ -305,6 +352,7 @@ function resetAll() {
   imageInput.value = "";
   imageMeta.textContent = "No image loaded";
   statusText.textContent = "Waiting for image";
+  resultPanel.hidden = true;
   draw();
 }
 
@@ -422,7 +470,7 @@ async function uploadImageToBackend() {
   if (!state.imageFile) throw new Error("Upload an image first.");
   const formData = new FormData();
   formData.append("file", state.imageFile, state.imageFile.name);
-  const response = await fetch(`${apiBaseUrl.value}/api/images`, {
+  const response = await fetch(apiUrl("/api/images"), {
     method: "POST",
     body: formData,
   });
@@ -437,7 +485,7 @@ async function uploadImageToBackend() {
 async function submitSelectionToBackend() {
   if (!state.backend.imageId) return;
   const payload = buildPayload();
-  const response = await fetch(`${apiBaseUrl.value}/api/images/${state.backend.imageId}/selection`, {
+  const response = await fetch(apiUrl(`/api/images/${state.backend.imageId}/selection`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload.selection),
@@ -462,36 +510,120 @@ syncButton.addEventListener("click", async () => {
   }
 });
 
-mockRunButton.addEventListener("click", () => {
+function setPipelineStage(stage) {
+  const stages = document.querySelectorAll(".stage-list li");
+  stages.forEach((item) => item.classList.remove("is-current", "is-done"));
+  document.querySelector('[data-stage="upload"]').classList.add("is-done");
+  document.querySelector('[data-stage="select"]').classList.add("is-done");
+  if (stage === "queued" || stage === "segment") {
+    document.querySelector('[data-stage="segment"]').classList.add("is-current");
+  } else if (stage === "reconstruction" || stage === "conversion") {
+    document.querySelector('[data-stage="segment"]').classList.add("is-done");
+    document.querySelector('[data-stage="reconstruct"]').classList.toggle("is-current", stage === "reconstruction");
+    document.querySelector('[data-stage="reconstruct"]').classList.toggle("is-done", stage === "conversion");
+    document.querySelector('[data-stage="convert"]').classList.toggle("is-current", stage === "conversion");
+  } else if (stage === "completed") {
+    document.querySelector('[data-stage="segment"]').classList.add("is-done");
+    document.querySelector('[data-stage="reconstruct"]').classList.add("is-done");
+    document.querySelector('[data-stage="convert"]').classList.add("is-done");
+  }
+}
+
+function setResultLinks(result) {
+  const links = [
+    [ldrLink, result.ldr_url],
+    [reportLink, result.report_url],
+    [rawMeshLink, result.raw_mesh_url],
+  ];
+  for (const [link, path] of links) {
+    link.href = apiUrl(path);
+  }
+  jobIdText.textContent = result.job_id;
+  brickCountText.textContent = String(result.brick_count ?? "-");
+  reductionText.textContent =
+    typeof result.reduction_percent === "number" ? `${result.reduction_percent.toFixed(2)}%` : "-";
+  resultPanel.hidden = false;
+}
+
+function delay(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function pollJob(jobId) {
+  for (;;) {
+    const response = await fetch(apiUrl(`/api/jobs/${jobId}`));
+    if (!response.ok) throw new Error(`Job polling failed: ${response.status}`);
+    const job = await response.json();
+    state.backend.jobStatus = job.status;
+    state.backend.jobStage = job.stage;
+    statusText.textContent = `${job.stage}: ${job.message}`;
+    setPipelineStage(job.stage);
+    if (job.status === "completed") {
+      const resultResponse = await fetch(apiUrl(`/api/jobs/${jobId}/result`));
+      if (!resultResponse.ok) throw new Error(`Result request failed: ${resultResponse.status}`);
+      const result = await resultResponse.json();
+      state.backend.result = result;
+      statusText.textContent = "Conversion complete";
+      previewTitle.textContent = "LEGO output ready";
+      previewSubtitle.textContent = "LDR and report artifacts are available.";
+      setPipelineStage("completed");
+      setResultLinks(result);
+      updatePayload();
+      return;
+    }
+    if (job.status === "failed") {
+      throw new Error(job.error || job.message || "Pipeline job failed");
+    }
+    await delay(650);
+  }
+}
+
+runButton.addEventListener("click", async () => {
   const payload = buildPayload();
-  const hasSelection =
+  const selectionReady =
     payload.selection.positive_points.length > 0 ||
     payload.selection.negative_points.length > 0 ||
     payload.selection.box;
-  if (!payload.image || !hasSelection) {
+  if (!payload.image || !selectionReady) {
     statusText.textContent = "Image and selection required";
     return;
   }
-  statusText.textContent = "Mock conversion queued";
-  document.querySelector('[data-stage="segment"]').classList.add("is-done");
-  document.querySelector('[data-stage="reconstruct"]').classList.add("is-current");
-  reconstructionPreview.classList.add("is-active");
-  previewTitle.textContent = "Reconstructing object";
-  previewSubtitle.textContent = "Mock 3D and LEGO conversion are in progress.";
-  window.setTimeout(() => {
-    document.querySelector('[data-stage="reconstruct"]').classList.remove("is-current");
-    document.querySelector('[data-stage="reconstruct"]').classList.add("is-done");
-    document.querySelector('[data-stage="convert"]').classList.add("is-current");
-    previewTitle.textContent = "Building LEGO model";
-    previewSubtitle.textContent = "Optimizing bricks and preparing LDraw output.";
-  }, 700);
-  window.setTimeout(() => {
-    document.querySelector('[data-stage="convert"]').classList.remove("is-current");
-    document.querySelector('[data-stage="convert"]').classList.add("is-done");
-    statusText.textContent = "Mock conversion complete";
-    previewTitle.textContent = "Preview complete";
-    previewSubtitle.textContent = "Ready for backend integration.";
-  }, 1500);
+  try {
+    runButton.disabled = true;
+    resultPanel.hidden = true;
+    statusText.textContent = "Preparing backend job";
+    await uploadImageToBackend();
+    await submitSelectionToBackend();
+    setPipelineStage("segment");
+    reconstructionPreview.classList.add("is-active");
+    previewTitle.textContent = "Reconstructing object";
+    previewSubtitle.textContent = "Backend conversion job is running.";
+    const response = await fetch(apiUrl("/api/jobs"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image_id: state.backend.imageId,
+        mask_id: state.backend.maskId,
+        target_studs: payload.lego.target_studs,
+        sample_colors: payload.lego.sample_colors,
+        optimize: payload.lego.optimize,
+        fill: payload.lego.fill,
+        default_color_id: payload.lego.default_color_id,
+      }),
+    });
+    if (!response.ok) throw new Error(`Job creation failed: ${response.status}`);
+    const job = await response.json();
+    state.backend.jobId = job.job_id;
+    state.backend.jobStatus = job.status;
+    state.backend.jobStage = job.stage;
+    statusText.textContent = "Conversion job queued";
+    updatePayload();
+    await pollJob(job.job_id);
+  } catch (error) {
+    statusText.textContent = error.message;
+  } finally {
+    runButton.disabled = false;
+  }
 });
 
 window.addEventListener("resize", resizeCanvas);
