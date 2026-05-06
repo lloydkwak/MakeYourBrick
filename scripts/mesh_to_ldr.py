@@ -32,6 +32,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-fill", action="store_true", help="Skip voxel fill.")
     parser.add_argument("--optimize", action="store_true", help="Merge voxels into larger bricks.")
     parser.add_argument(
+        "--sample-colors",
+        action="store_true",
+        help="Sample nearest mesh vertex or face colors into voxels.",
+    )
+    parser.add_argument("--report", type=Path, help="Optional optimizer report JSON path.")
+    parser.add_argument(
         "--cleaned-mesh",
         type=Path,
         default=Path("outputs/meshes/watertight_model.glb"),
@@ -66,6 +72,8 @@ def main() -> None:
         default_rgb=tuple(args.rgb) if args.rgb else None,
         palette_path=args.palette,
         optimize=args.optimize,
+        sample_colors=args.sample_colors,
+        report_path=args.report,
     )
     print(f"Wrote LDraw model to {output_path}")
 

@@ -5,6 +5,7 @@ from pathlib import Path
 from makeyourbrick.brickify.colors import load_ldraw_palette
 from makeyourbrick.config import PipelineConfig
 from makeyourbrick.brickify.optimizer import brickify_1x1, greedy_brickify
+from makeyourbrick.brickify.report import build_brick_report, write_brick_report
 from makeyourbrick.io.ldr_writer import write_ldr
 from makeyourbrick.mesh.solidify import clean_mesh, load_mesh
 from makeyourbrick.types import MeshArtifact
@@ -36,6 +37,8 @@ def convert_mesh_to_ldr(
     default_rgb: tuple[int, int, int] | None = None,
     palette_path: Path | None = None,
     optimize: bool = False,
+    sample_colors: bool = False,
+    report_path: Path | None = None,
 ) -> Path:
     """Convert an existing mesh file to a 1x1-brick LDraw file."""
     mesh = clean_mesh(load_mesh(mesh_path))
@@ -56,7 +59,14 @@ def convert_mesh_to_ldr(
         default_rgb=default_rgb,
         palette_ids=palette_ids,
         palette_rgb=palette_rgb,
+        sample_colors=sample_colors,
     )
     occupancy, color_ids, _rgb, _origin, _pitch = load_voxel_artifact(voxel_output_path)
-    bricks = greedy_brickify(occupancy, color_ids) if optimize else brickify_1x1(occupancy, color_ids)
+    input_bricks = brickify_1x1(occupancy, color_ids)
+    bricks = greedy_brickify(occupancy, color_ids) if optimize else input_bricks
+    if report_path is not None:
+        write_brick_report(
+            build_brick_report(occupancy, input_bricks, bricks, optimized=optimize),
+            report_path,
+        )
     return write_ldr(bricks, ldr_output_path, title=f"Mesh conversion: {mesh_path.name}")
