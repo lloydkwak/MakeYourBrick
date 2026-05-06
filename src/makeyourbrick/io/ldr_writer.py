@@ -15,9 +15,22 @@ def brick_to_ldraw_position(brick: Brick) -> tuple[int, int, int]:
     return x, y, z
 
 
+def brick_to_ldraw_matrix(brick: Brick) -> str:
+    rotation = brick.rotation_degrees % 360
+    if rotation == 0:
+        return "1 0 0 0 1 0 0 0 1"
+    if rotation == 90:
+        return "0 0 1 0 1 0 -1 0 0"
+    if rotation == 180:
+        return "-1 0 0 0 1 0 0 0 -1"
+    if rotation == 270:
+        return "0 0 -1 0 1 0 1 0 0"
+    raise ValueError(f"Unsupported brick rotation: {brick.rotation_degrees}")
+
+
 def brick_to_ldr_line(brick: Brick) -> str:
     x, y, z = brick_to_ldraw_position(brick)
-    matrix = "1 0 0 0 1 0 0 0 1"
+    matrix = brick_to_ldraw_matrix(brick)
     return f"1 {brick.color_id} {x} {y} {z} {matrix} {brick.part_id}"
 
 

@@ -56,7 +56,7 @@ All bricks are one brick high in Phase 4.
 - [x] Implement candidate placement validation.
 - [x] Implement greedy brick optimizer.
 - [x] Add round-trip and brick count reduction tests.
-- [ ] Add rotation-aware LDraw writer support.
+- [x] Add rotation-aware LDraw writer support.
 - [ ] Add optimizer mode to `mesh_to_ldr.py`.
 - [ ] Add end-to-end CLI test proving optimized output uses fewer bricks.
 - [ ] Run verification commands.

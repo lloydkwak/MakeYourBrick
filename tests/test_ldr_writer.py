@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from makeyourbrick.io.ldr_writer import brick_to_ldr_line, brick_to_ldraw_position, write_ldr
+import pytest
+
+from makeyourbrick.io.ldr_writer import (
+    brick_to_ldr_line,
+    brick_to_ldraw_matrix,
+    brick_to_ldraw_position,
+    write_ldr,
+)
 from makeyourbrick.types import Brick
 
 
@@ -22,6 +29,22 @@ def test_brick_to_ldr_line_writes_type_1_part_reference() -> None:
     assert len(tokens) == 15
     assert tokens[0] == "1"
     assert tokens[-1] == "3005.dat"
+
+
+def test_brick_to_ldraw_matrix_supports_right_angle_rotations() -> None:
+    assert brick_to_ldraw_matrix(Brick("3001.dat", 16, 0, 0, 0, 2, 4, rotation_degrees=0)) == (
+        "1 0 0 0 1 0 0 0 1"
+    )
+    assert brick_to_ldraw_matrix(Brick("3001.dat", 16, 0, 0, 0, 4, 2, rotation_degrees=90)) == (
+        "0 0 1 0 1 0 -1 0 0"
+    )
+
+
+def test_brick_to_ldraw_matrix_rejects_unsupported_rotation() -> None:
+    brick = Brick("3001.dat", 16, 0, 0, 0, 2, 4, rotation_degrees=45)
+
+    with pytest.raises(ValueError, match="Unsupported"):
+        brick_to_ldraw_matrix(brick)
 
 
 def test_write_ldr_includes_header_and_all_bricks() -> None:
