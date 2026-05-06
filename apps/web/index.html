@@ -59,6 +59,10 @@
         <section class="panel-section">
           <h2>LEGO Settings</h2>
           <label>
+            API base URL
+            <input id="apiBaseUrl" type="text" value="http://127.0.0.1:8000" />
+          </label>
+          <label>
             Target studs
             <input id="targetStuds" type="number" min="8" max="128" step="1" value="48" />
           </label>
@@ -103,6 +107,7 @@
 
         <section class="panel-section action-panel">
           <button id="exportButton" class="primary-button" type="button">Export JSON</button>
+          <button id="syncButton" type="button">Sync Backend</button>
           <button id="mockRunButton" type="button">Mock Run</button>
           <p id="statusText">Waiting for image</p>
         </section>

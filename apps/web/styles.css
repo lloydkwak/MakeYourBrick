@@ -259,7 +259,8 @@ button.is-active {
   color: var(--muted);
 }
 
-.panel-section input[type="number"] {
+.panel-section input[type="number"],
+.panel-section input[type="text"] {
   min-height: 38px;
   border: 1px solid var(--line);
   border-radius: 6px;

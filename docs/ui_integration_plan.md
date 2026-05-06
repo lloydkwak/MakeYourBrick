@@ -414,6 +414,13 @@ Done criteria:
 - Backend returns stable image ID.
 - Selection data is persisted.
 
+Implementation status:
+
+- Implemented under `src/makeyourbrick/server`.
+- Provides health, image upload, image file serving, selection submission, and placeholder mask serving endpoints.
+- Stores session artifacts under `outputs/ui_sessions` by default.
+- The static web shell can sync uploads and selections to the backend through the `Sync Backend` button.
+
 ### Milestone UI-3: Pipeline Job Stub
 
 Purpose:

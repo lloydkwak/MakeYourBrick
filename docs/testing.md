@@ -19,6 +19,7 @@ The current suite covers:
 - voxel artifact save/load
 - mesh-to-LDraw CLI
 - image-to-LDraw orchestration with a fake SAM command
+- FastAPI image upload and selection endpoints
 - optimizer report generation
 
 ## Test Design
@@ -58,4 +59,3 @@ Create the fake image first if needed:
 ```bash
 python -c "from pathlib import Path; Path('outputs/manual_fake_image.png').parent.mkdir(parents=True, exist_ok=True); Path('outputs/manual_fake_image.png').write_bytes(b'fake-image')"
 ```
-

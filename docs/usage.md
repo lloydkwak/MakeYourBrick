@@ -83,3 +83,18 @@ Generated files are ignored by Git:
 - `outputs/ldr/`
 - `outputs/reports/`
 
+## Local Backend
+
+Run the FastAPI backend:
+
+```bash
+python -m uvicorn makeyourbrick.server.main:app --reload
+```
+
+Backend endpoints:
+
+- `GET /api/health`
+- `POST /api/images`
+- `GET /api/images/{image_id}/file`
+- `POST /api/images/{image_id}/selection`
+- `GET /api/masks/{mask_id}/file?image_id={image_id}`

@@ -14,10 +14,12 @@ const emptyState = document.querySelector("#emptyState");
 const imageMeta = document.querySelector("#imageMeta");
 const payloadPreview = document.querySelector("#payloadPreview");
 const targetStuds = document.querySelector("#targetStuds");
+const apiBaseUrl = document.querySelector("#apiBaseUrl");
 const defaultColor = document.querySelector("#defaultColor");
 const sampleColors = document.querySelector("#sampleColors");
 const optimizeBricks = document.querySelector("#optimizeBricks");
 const exportButton = document.querySelector("#exportButton");
+const syncButton = document.querySelector("#syncButton");
 const mockRunButton = document.querySelector("#mockRunButton");
 const statusText = document.querySelector("#statusText");
 const reconstructionPreview = document.querySelector("#reconstructionPreview");
@@ -28,8 +30,15 @@ const ctx = canvas.getContext("2d");
 
 const state = {
   image: null,
+  imageFile: null,
   imageName: null,
   imageSize: null,
+  backend: {
+    imageId: null,
+    imageUrl: null,
+    maskId: null,
+    maskUrl: null,
+  },
   mode: "point",
   pointType: "positive",
   positivePoints: [],
@@ -200,13 +209,17 @@ function buildPayload() {
   return {
     image: state.image
       ? {
+          image_id: state.backend.imageId,
           name: state.imageName,
           width: state.image.width,
           height: state.image.height,
           size_bytes: state.imageSize,
+          image_url: state.backend.imageUrl,
         }
       : null,
     selection: {
+      mask_id: state.backend.maskId,
+      mask_url: state.backend.maskUrl,
       positive_points: state.positivePoints.map((point) => [point.x, point.y]),
       negative_points: state.negativePoints.map((point) => [point.x, point.y]),
       box: state.box,
@@ -253,8 +266,10 @@ function loadFile(file) {
     const image = new Image();
     image.onload = () => {
       state.image = image;
+      state.imageFile = file;
       state.imageName = file.name;
       state.imageSize = file.size;
+      state.backend = { imageId: null, imageUrl: null, maskId: null, maskUrl: null };
       state.positivePoints = [];
       state.negativePoints = [];
       state.box = null;
@@ -279,8 +294,10 @@ function normalizeBox(start, end) {
 
 function resetAll() {
   state.image = null;
+  state.imageFile = null;
   state.imageName = null;
   state.imageSize = null;
+  state.backend = { imageId: null, imageUrl: null, maskId: null, maskUrl: null };
   state.positivePoints = [];
   state.negativePoints = [];
   state.box = null;
@@ -380,7 +397,7 @@ dropZone.addEventListener("drop", (event) => {
   loadFile(event.dataTransfer.files[0]);
 });
 
-for (const input of [targetStuds, defaultColor, sampleColors, optimizeBricks]) {
+for (const input of [apiBaseUrl, targetStuds, defaultColor, sampleColors, optimizeBricks]) {
   input.addEventListener("change", updatePayload);
 }
 
@@ -398,6 +415,51 @@ exportButton.addEventListener("click", () => {
   link.download = "makeyourbrick-selection.json";
   link.click();
   URL.revokeObjectURL(url);
+});
+
+async function uploadImageToBackend() {
+  if (state.backend.imageId) return;
+  if (!state.imageFile) throw new Error("Upload an image first.");
+  const formData = new FormData();
+  formData.append("file", state.imageFile, state.imageFile.name);
+  const response = await fetch(`${apiBaseUrl.value}/api/images`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error(`Image upload failed: ${response.status}`);
+  }
+  const payload = await response.json();
+  state.backend.imageId = payload.image_id;
+  state.backend.imageUrl = payload.image_url;
+}
+
+async function submitSelectionToBackend() {
+  if (!state.backend.imageId) return;
+  const payload = buildPayload();
+  const response = await fetch(`${apiBaseUrl.value}/api/images/${state.backend.imageId}/selection`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload.selection),
+  });
+  if (!response.ok) {
+    throw new Error(`Selection sync failed: ${response.status}`);
+  }
+  const result = await response.json();
+  state.backend.maskId = result.mask_id;
+  state.backend.maskUrl = result.mask_url;
+}
+
+syncButton.addEventListener("click", async () => {
+  try {
+    statusText.textContent = "Syncing with backend";
+    await uploadImageToBackend();
+    await submitSelectionToBackend();
+    statusText.textContent = state.backend.maskId ? "Backend selection synced" : "Backend image synced";
+    updatePayload();
+  } catch (error) {
+    statusText.textContent = error.message;
+  }
 });
 
 mockRunButton.addEventListener("click", () => {

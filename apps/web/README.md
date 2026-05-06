@@ -23,3 +23,12 @@ No package installation or dev server is required for this milestone.
 
 This milestone does not call the Python backend, SAM segmentation, or SAM 3D Objects. It defines the browser-side interaction and payload shape that later backend milestones can consume.
 
+## Optional Backend Sync
+
+Run the FastAPI backend:
+
+```bash
+python -m uvicorn makeyourbrick.server.main:app --reload
+```
+
+Then open this page, upload an image, make a selection, and press `Sync Backend`.
