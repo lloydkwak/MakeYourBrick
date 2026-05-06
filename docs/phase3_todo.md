@@ -58,8 +58,8 @@ Outputs:
 - [x] Add color-aware voxel artifact test coverage.
 - [x] Add CLI options for constant RGB color and palette path.
 - [x] Add end-to-end CLI test proving `.ldr` color IDs are quantized.
-- [ ] Run verification commands.
-- [ ] Commit and push each completed feature checkpoint.
+- [x] Run verification commands.
+- [x] Commit and push each completed feature checkpoint.
 
 ## Verification Commands
 

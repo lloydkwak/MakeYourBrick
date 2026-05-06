@@ -28,3 +28,13 @@ python scripts/mesh_to_ldr.py --mesh data/examples/sample.stl --target-studs 24 
 ```
 
 The mesh path can point to formats supported by Trimesh, including `.stl`, `.obj`, and `.glb`.
+
+## Phase 3 Color Quantization
+
+Convert a mesh with a constant RGB color that is quantized to the nearest LDraw color:
+
+```bash
+python scripts/mesh_to_ldr.py --mesh data/examples/sample.stl --target-studs 24 --rgb 242 205 55 --output outputs/ldr/yellow_mesh_output.ldr
+```
+
+The command above maps LEGO yellow RGB `(242, 205, 55)` to LDraw color ID `14`.
