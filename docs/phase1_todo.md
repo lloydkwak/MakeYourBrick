@@ -32,8 +32,8 @@ Build a deterministic, testable path from an in-memory voxel matrix to a valid L
 - [x] Harden LDraw writer output and coordinate tests.
 - [x] Add a synthetic LDR CLI.
 - [ ] Add pytest coverage for synthetic voxels, brickification, round-trip, and LDR writer.
-- [ ] Run verification commands.
-- [ ] Commit and push each completed feature checkpoint.
+- [x] Run verification commands.
+- [x] Commit and push each completed feature checkpoint.
 
 ## Verification Commands
 
