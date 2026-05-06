@@ -53,9 +53,9 @@ All bricks are one brick high in Phase 4.
 ## Completion Checklist
 
 - [x] Add Phase 4 TODO document.
-- [ ] Implement candidate placement validation.
-- [ ] Implement greedy brick optimizer.
-- [ ] Add round-trip and brick count reduction tests.
+- [x] Implement candidate placement validation.
+- [x] Implement greedy brick optimizer.
+- [x] Add round-trip and brick count reduction tests.
 - [ ] Add rotation-aware LDraw writer support.
 - [ ] Add optimizer mode to `mesh_to_ldr.py`.
 - [ ] Add end-to-end CLI test proving optimized output uses fewer bricks.
