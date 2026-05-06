@@ -42,6 +42,7 @@
 
         <div id="dropZone" class="canvas-wrap">
           <canvas id="selectionCanvas" width="1280" height="820"></canvas>
+          <div id="scanLayer" class="scan-layer" aria-hidden="true"></div>
           <div id="emptyState" class="empty-state">
             <strong>Upload an image</strong>
             <span>Point and box selections are recorded in image coordinates.</span>
@@ -77,10 +78,25 @@
 
         <section class="panel-section">
           <h2>Pipeline Preview</h2>
+          <div id="reconstructionPreview" class="reconstruction-preview" aria-label="Reconstruction preview">
+            <div class="preview-orbit">
+              <div class="preview-object">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+            <div class="preview-caption">
+              <strong id="previewTitle">Waiting for target</strong>
+              <span id="previewSubtitle">Select an object to prepare reconstruction.</span>
+            </div>
+          </div>
           <ol class="stage-list">
             <li data-stage="upload" class="is-current">Image uploaded</li>
             <li data-stage="select">Target selected</li>
-            <li data-stage="segment">Mask preview</li>
+            <li data-stage="segment">Segmentation mask</li>
+            <li data-stage="reconstruct">3D reconstruction</li>
             <li data-stage="convert">LEGO conversion</li>
           </ol>
         </section>
@@ -96,4 +112,3 @@
     <script src="./app.js" defer></script>
   </body>
 </html>
-

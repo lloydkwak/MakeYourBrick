@@ -9,6 +9,7 @@ const clearButton = document.querySelector("#clearButton");
 const maskToggle = document.querySelector("#maskToggle");
 const dropZone = document.querySelector("#dropZone");
 const canvas = document.querySelector("#selectionCanvas");
+const scanLayer = document.querySelector("#scanLayer");
 const emptyState = document.querySelector("#emptyState");
 const imageMeta = document.querySelector("#imageMeta");
 const payloadPreview = document.querySelector("#payloadPreview");
@@ -19,6 +20,9 @@ const optimizeBricks = document.querySelector("#optimizeBricks");
 const exportButton = document.querySelector("#exportButton");
 const mockRunButton = document.querySelector("#mockRunButton");
 const statusText = document.querySelector("#statusText");
+const reconstructionPreview = document.querySelector("#reconstructionPreview");
+const previewTitle = document.querySelector("#previewTitle");
+const previewSubtitle = document.querySelector("#previewSubtitle");
 
 const ctx = canvas.getContext("2d");
 
@@ -148,19 +152,47 @@ function drawPoint(point, color, label) {
   ctx.restore();
 }
 
+function drawPulse(point, color) {
+  if (typeof point.createdAt !== "number") return;
+  const current = imageToCanvas(point);
+  const age = performance.now() - point.createdAt;
+  const duration = 900;
+  if (age < 0 || age > duration) return;
+  const progress = age / duration;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = 1 - progress;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(current.x, current.y, 14 + progress * 34, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+  requestAnimationFrame(draw);
+}
+
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   fitImage();
   if (!state.image) {
+    dropZone.classList.remove("has-selection");
     emptyState.hidden = false;
     updatePayload();
     return;
   }
   emptyState.hidden = true;
+  const hasSelection =
+    state.positivePoints.length > 0 || state.negativePoints.length > 0 || Boolean(state.box);
+  dropZone.classList.toggle("has-selection", hasSelection);
   ctx.drawImage(state.image, state.layout.x, state.layout.y, state.layout.width, state.layout.height);
   drawMaskShape();
-  state.positivePoints.forEach((point) => drawPoint(point, "#1a7f64", "+"));
-  state.negativePoints.forEach((point) => drawPoint(point, "#c9352b", "-"));
+  state.positivePoints.forEach((point) => {
+    drawPulse(point, "#1a7f64");
+    drawPoint(point, "#1a7f64", "+");
+  });
+  state.negativePoints.forEach((point) => {
+    drawPulse(point, "#c9352b");
+    drawPoint(point, "#c9352b", "-");
+  });
   updatePayload();
 }
 
@@ -197,6 +229,11 @@ function updateStages() {
   const hasImage = Boolean(state.image);
   const hasSelection =
     state.positivePoints.length > 0 || state.negativePoints.length > 0 || Boolean(state.box);
+  reconstructionPreview.classList.toggle("is-active", hasSelection);
+  previewTitle.textContent = hasSelection ? "Target locked" : "Waiting for target";
+  previewSubtitle.textContent = hasSelection
+    ? "Mask preview is ready for LEGO conversion."
+    : "Select an object to prepare reconstruction.";
   document.querySelector('[data-stage="upload"]').classList.toggle("is-done", hasImage);
   document.querySelector('[data-stage="upload"]').classList.toggle("is-current", !hasImage);
   document.querySelector('[data-stage="select"]').classList.toggle("is-current", hasImage && !hasSelection);
@@ -289,12 +326,14 @@ canvas.addEventListener("pointerdown", (event) => {
   if (!state.image) return;
   const point = canvasToImage(event);
   if (state.mode === "point") {
+    point.createdAt = performance.now();
     if (state.pointType === "positive") {
       state.positivePoints.push(point);
     } else {
       state.negativePoints.push(point);
     }
     statusText.textContent = "Selection updated";
+    triggerScan();
     draw();
     return;
   }
@@ -319,6 +358,7 @@ canvas.addEventListener("pointerup", (event) => {
   state.isDraggingBox = false;
   canvas.releasePointerCapture(event.pointerId);
   statusText.textContent = "Box selected";
+  triggerScan();
   draw();
 });
 
@@ -344,6 +384,12 @@ for (const input of [targetStuds, defaultColor, sampleColors, optimizeBricks]) {
   input.addEventListener("change", updatePayload);
 }
 
+function triggerScan() {
+  scanLayer.classList.remove("is-active");
+  void scanLayer.offsetWidth;
+  scanLayer.classList.add("is-active");
+}
+
 exportButton.addEventListener("click", () => {
   const blob = new Blob([JSON.stringify(buildPayload(), null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -366,7 +412,24 @@ mockRunButton.addEventListener("click", () => {
   }
   statusText.textContent = "Mock conversion queued";
   document.querySelector('[data-stage="segment"]').classList.add("is-done");
-  document.querySelector('[data-stage="convert"]').classList.add("is-current");
+  document.querySelector('[data-stage="reconstruct"]').classList.add("is-current");
+  reconstructionPreview.classList.add("is-active");
+  previewTitle.textContent = "Reconstructing object";
+  previewSubtitle.textContent = "Mock 3D and LEGO conversion are in progress.";
+  window.setTimeout(() => {
+    document.querySelector('[data-stage="reconstruct"]').classList.remove("is-current");
+    document.querySelector('[data-stage="reconstruct"]').classList.add("is-done");
+    document.querySelector('[data-stage="convert"]').classList.add("is-current");
+    previewTitle.textContent = "Building LEGO model";
+    previewSubtitle.textContent = "Optimizing bricks and preparing LDraw output.";
+  }, 700);
+  window.setTimeout(() => {
+    document.querySelector('[data-stage="convert"]').classList.remove("is-current");
+    document.querySelector('[data-stage="convert"]').classList.add("is-done");
+    statusText.textContent = "Mock conversion complete";
+    previewTitle.textContent = "Preview complete";
+    previewSubtitle.textContent = "Ready for backend integration.";
+  }, 1500);
 });
 
 window.addEventListener("resize", resizeCanvas);
@@ -374,4 +437,3 @@ resizeCanvas();
 setMode("point");
 setPointType("positive");
 updatePayload();
-
