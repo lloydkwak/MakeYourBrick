@@ -63,8 +63,8 @@ Outputs:
 - [x] Add mesh cleanup/solidification tests.
 - [x] Add voxel artifact helpers for saving/loading occupancy and colors.
 - [x] Add voxelization tests with a synthetic Trimesh mesh.
-- [ ] Add `mesh_to_ldr` CLI.
-- [ ] Add end-to-end CLI test from generated STL to LDR.
+- [x] Add `mesh_to_ldr` CLI.
+- [x] Add end-to-end CLI test from generated STL to LDR.
 - [ ] Run verification commands.
 - [ ] Commit and push each completed feature checkpoint.
 
