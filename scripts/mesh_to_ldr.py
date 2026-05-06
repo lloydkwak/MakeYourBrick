@@ -8,6 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from makeyourbrick.pipeline import convert_mesh_to_ldr
+from makeyourbrick.mesh.repair import REPAIR_MODES
 
 
 def parse_args() -> argparse.Namespace:
@@ -37,6 +38,13 @@ def parse_args() -> argparse.Namespace:
         help="Sample nearest mesh vertex or face colors into voxels.",
     )
     parser.add_argument("--report", type=Path, help="Optional optimizer report JSON path.")
+    parser.add_argument(
+        "--repair-mode",
+        choices=REPAIR_MODES,
+        default="basic",
+        help="Mesh repair mode before voxelization.",
+    )
+    parser.add_argument("--repair-report", type=Path, help="Optional mesh repair report JSON path.")
     parser.add_argument(
         "--cleaned-mesh",
         type=Path,
@@ -74,6 +82,8 @@ def main() -> None:
         optimize=args.optimize,
         sample_colors=args.sample_colors,
         report_path=args.report,
+        repair_mode=args.repair_mode,
+        repair_report_path=args.repair_report,
     )
     print(f"Wrote LDraw model to {output_path}")
 

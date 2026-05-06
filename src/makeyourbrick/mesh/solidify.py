@@ -8,6 +8,7 @@ except ModuleNotFoundError:  # pragma: no cover - exercised only when optional d
     trimesh = None
 
 from makeyourbrick.types import MeshArtifact
+from makeyourbrick.mesh.repair import repair_mesh
 
 
 def _require_trimesh():
@@ -39,16 +40,8 @@ def load_mesh(mesh_path: Path):
 
 
 def clean_mesh(mesh):
-    mesh = mesh.copy()
-    if hasattr(mesh, "remove_unreferenced_vertices"):
-        mesh.remove_unreferenced_vertices()
-    if hasattr(mesh, "unique_faces"):
-        mesh.update_faces(mesh.unique_faces())
-    if hasattr(mesh, "nondegenerate_faces"):
-        mesh.update_faces(mesh.nondegenerate_faces())
-    if hasattr(mesh, "process"):
-        mesh.process(validate=True)
-    return mesh
+    repaired, _report = repair_mesh(mesh, mode="basic")
+    return repaired
 
 
 def solidify_mesh(input_path: Path, output_path: Path) -> MeshArtifact:

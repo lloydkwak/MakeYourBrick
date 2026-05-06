@@ -39,6 +39,7 @@ def test_job_stub_generates_ldr_report_and_artifact_links() -> None:
             "optimize": True,
             "fill": True,
             "default_color_id": 16,
+            "repair_mode": "basic",
         },
     )
 
@@ -56,6 +57,7 @@ def test_job_stub_generates_ldr_report_and_artifact_links() -> None:
     assert result["brick_count"] > 0
     assert result["reduction_percent"] >= 0
     assert result["mesh_inspect_url"].endswith("/files/mesh_inspect")
+    assert result["repair_report_url"].endswith("/files/repair_report")
 
     ldr_response = client.get(result["ldr_url"])
     assert ldr_response.status_code == 200
@@ -64,6 +66,10 @@ def test_job_stub_generates_ldr_report_and_artifact_links() -> None:
     mesh_inspect_response = client.get(result["mesh_inspect_url"])
     assert mesh_inspect_response.status_code == 200
     assert mesh_inspect_response.json()["voxelization_ready"] is True
+
+    repair_report_response = client.get(result["repair_report_url"])
+    assert repair_report_response.status_code == 200
+    assert repair_report_response.json()["mode_requested"] == "basic"
 
     report_response = client.get(result["report_url"])
     assert report_response.status_code == 200

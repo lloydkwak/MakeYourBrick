@@ -555,6 +555,22 @@ Done criteria:
 
 - The pipeline can explain how it repaired or approximated invalid SAM meshes.
 
+Implementation status:
+
+- Implemented explicit repair modes: `none`, `basic`, `manifold`, and `convex-hull`.
+- Added `src/makeyourbrick/mesh/repair.py`.
+- `basic` uses Trimesh cleanup, duplicate/degenerate face removal, vertex merge, simple hole filling, normal repair, and validation processing.
+- `manifold` attempts `manifold3d` when installed and falls back to `basic` with report warnings when unavailable or unsuccessful.
+- `convex-hull` provides a robust watertight outer approximation for severely broken meshes.
+- `convert_mesh_to_ldr()` and `run_from_image()` accept `repair_mode` and `repair_report_path`.
+- `scripts/mesh_to_ldr.py` and `scripts/image_to_ldr.py` expose `--repair-mode` and `--repair-report`.
+- Backend jobs accept `repair_mode`, write `repair_report.json`, and expose it through `/api/jobs/{job_id}/files/repair_report`.
+- The web UI exposes repair mode selection and links the repair report in the result panel.
+
+Current limitation:
+
+- `manifold` mode is optional because `manifold3d` may not be installed in every local environment. The report records whether fallback was used.
+
 ### Milestone UI-3.9: Stud.io/LDraw Visual Verification
 
 Purpose:

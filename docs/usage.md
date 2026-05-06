@@ -51,6 +51,24 @@ Convert with greedy brick optimization and write a report:
 python scripts/mesh_to_ldr.py --mesh data/examples/sample_colored.ply --target-studs 8 --sample-colors --optimize --report outputs/reports/mesh_report.json --output outputs/ldr/sampled_color_mesh.ldr
 ```
 
+Convert with an explicit mesh repair mode and repair report:
+
+```bash
+python scripts/mesh_to_ldr.py \
+  --mesh data/examples/sample.stl \
+  --repair-mode basic \
+  --repair-report outputs/reports/repair_report.json \
+  --target-studs 24 \
+  --output outputs/ldr/mesh_output.ldr
+```
+
+Supported repair modes:
+
+- `none`: preserve loaded mesh geometry apart from export processing
+- `basic`: Trimesh cleanup, duplicate/degenerate face removal, hole filling, and normal fixing
+- `manifold`: use `manifold3d` when available; falls back to `basic` with a report warning if unavailable or unsuccessful
+- `convex-hull`: replace the model with a watertight convex outer approximation
+
 ## Mesh Inspection
 
 Inspect a mesh before conversion:
@@ -113,7 +131,7 @@ Backend endpoints:
 - `GET /api/jobs/{job_id}/result`
 - `GET /api/jobs/{job_id}/files/{kind}`
 
-The current job endpoint is a local stub. It uses a deterministic fake SAM mesh and then runs the real MakeYourBrick conversion pipeline, producing LDR, voxel, mesh, mesh inspection, and report artifacts under `outputs/ui_sessions/<image_id>/jobs/<job_id>/`.
+The current job endpoint is a local stub. It uses a deterministic fake SAM mesh and then runs the real MakeYourBrick conversion pipeline, producing LDR, voxel, mesh, mesh inspection, mesh repair, and optimizer report artifacts under `outputs/ui_sessions/<image_id>/jobs/<job_id>/`.
 
 Start a browser workflow by opening:
 

@@ -16,6 +16,7 @@ const payloadPreview = document.querySelector("#payloadPreview");
 const targetStuds = document.querySelector("#targetStuds");
 const apiBaseUrl = document.querySelector("#apiBaseUrl");
 const defaultColor = document.querySelector("#defaultColor");
+const repairMode = document.querySelector("#repairMode");
 const sampleColors = document.querySelector("#sampleColors");
 const optimizeBricks = document.querySelector("#optimizeBricks");
 const exportButton = document.querySelector("#exportButton");
@@ -32,6 +33,7 @@ const reductionText = document.querySelector("#reductionText");
 const ldrLink = document.querySelector("#ldrLink");
 const reportLink = document.querySelector("#reportLink");
 const meshInspectLink = document.querySelector("#meshInspectLink");
+const repairReportLink = document.querySelector("#repairReportLink");
 const rawMeshLink = document.querySelector("#rawMeshLink");
 
 const ctx = canvas.getContext("2d");
@@ -298,6 +300,7 @@ function buildPayload() {
     lego: {
       target_studs: Number(targetStuds.value),
       default_color_id: Number(defaultColor.value),
+      repair_mode: repairMode.value,
       sample_colors: sampleColors.checked,
       optimize: optimizeBricks.checked,
       fill: true,
@@ -503,7 +506,7 @@ dropZone.addEventListener("drop", (event) => {
   loadFile(event.dataTransfer.files[0]);
 });
 
-for (const input of [apiBaseUrl, targetStuds, defaultColor, sampleColors, optimizeBricks]) {
+for (const input of [apiBaseUrl, targetStuds, defaultColor, repairMode, sampleColors, optimizeBricks]) {
   input.addEventListener("change", updatePayload);
 }
 
@@ -609,6 +612,7 @@ function setResultLinks(result) {
     [ldrLink, result.ldr_url],
     [reportLink, result.report_url],
     [meshInspectLink, result.mesh_inspect_url],
+    [repairReportLink, result.repair_report_url],
     [rawMeshLink, result.raw_mesh_url],
   ];
   for (const [link, path] of links) {
@@ -685,6 +689,7 @@ runButton.addEventListener("click", async () => {
         optimize: payload.lego.optimize,
         fill: payload.lego.fill,
         default_color_id: payload.lego.default_color_id,
+        repair_mode: payload.lego.repair_mode,
       }),
     });
     if (!response.ok) throw new Error(`Job creation failed: ${response.status}`);

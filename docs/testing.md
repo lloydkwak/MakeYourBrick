@@ -16,6 +16,7 @@ The current suite covers:
 - color palette loading and CIELAB quantization
 - mesh loading and cleanup
 - mesh inspection reports and CLI
+- mesh repair modes and reports
 - mesh color sampling
 - voxel artifact save/load
 - mesh-to-LDraw CLI

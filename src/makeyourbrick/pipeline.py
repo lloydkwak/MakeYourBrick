@@ -9,6 +9,7 @@ from makeyourbrick.brickify.optimizer import brickify_1x1, greedy_brickify
 from makeyourbrick.brickify.report import build_brick_report, write_brick_report
 from makeyourbrick.io.ldr_writer import write_ldr
 from makeyourbrick.mesh.inspect import inspect_mesh_to_file
+from makeyourbrick.mesh.repair import repair_mesh, write_repair_report
 from makeyourbrick.mesh.solidify import clean_mesh, load_mesh
 from makeyourbrick.types import MeshArtifact
 from makeyourbrick.voxel.voxelize import compute_pitch, load_voxel_artifact, voxelize_mesh
@@ -32,6 +33,8 @@ def run_from_image(
     sample_colors: bool = False,
     report_path: Path | None = None,
     raw_mesh_report_path: Path | None = None,
+    repair_mode: str = "basic",
+    repair_report_path: Path | None = None,
 ) -> Path:
     """Run the full pipeline from a single image to an LDR file."""
     config = config or PipelineConfig()
@@ -58,6 +61,8 @@ def run_from_image(
         optimize=optimize,
         sample_colors=sample_colors,
         report_path=report_path,
+        repair_mode=repair_mode,
+        repair_report_path=repair_report_path,
     )
 
 
@@ -81,9 +86,16 @@ def convert_mesh_to_ldr(
     optimize: bool = False,
     sample_colors: bool = False,
     report_path: Path | None = None,
+    repair_mode: str = "basic",
+    repair_report_path: Path | None = None,
 ) -> Path:
     """Convert an existing mesh file to a 1x1-brick LDraw file."""
-    mesh = clean_mesh(load_mesh(mesh_path))
+    if repair_mode == "basic" and repair_report_path is None:
+        mesh = clean_mesh(load_mesh(mesh_path))
+    else:
+        mesh, repair_report = repair_mesh(load_mesh(mesh_path), mode=repair_mode)
+        if repair_report_path is not None:
+            write_repair_report(repair_report, repair_report_path)
     cleaned_mesh_path.parent.mkdir(parents=True, exist_ok=True)
     mesh.export(cleaned_mesh_path)
 

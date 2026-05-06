@@ -8,6 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from makeyourbrick.ai.sam3d_runner import Sam3DRunner
+from makeyourbrick.mesh.repair import REPAIR_MODES
 from makeyourbrick.pipeline import run_from_image
 
 
@@ -49,6 +50,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cleaned-mesh", type=Path, default=Path("outputs/meshes/watertight_model.glb"))
     parser.add_argument("--voxels", type=Path, default=Path("outputs/voxels/model_voxels.npz"))
     parser.add_argument("--report", type=Path, help="Optional optimizer report JSON path.")
+    parser.add_argument(
+        "--repair-mode",
+        choices=REPAIR_MODES,
+        default="basic",
+        help="Mesh repair mode before voxelization.",
+    )
+    parser.add_argument("--repair-report", type=Path, help="Optional mesh repair report JSON path.")
     parser.add_argument("--output", type=Path, default=Path("outputs/ldr/image_output.ldr"))
     return parser.parse_args()
 
@@ -76,10 +84,11 @@ def main() -> None:
         optimize=args.optimize,
         sample_colors=args.sample_colors,
         report_path=args.report,
+        repair_mode=args.repair_mode,
+        repair_report_path=args.repair_report,
     )
     print(f"Wrote LDraw model to {output_path}")
 
 
 if __name__ == "__main__":
     main()
-

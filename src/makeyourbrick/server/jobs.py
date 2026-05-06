@@ -93,6 +93,7 @@ def run_pipeline_job(job_id: str, request: JobRequest, storage: SessionStorage, 
         ldr_path = storage.job_ldr_dir(request.image_id, job_id) / "output.ldr"
         report_path = storage.job_report_dir(request.image_id, job_id) / "report.json"
         mesh_inspect_path = storage.job_report_dir(request.image_id, job_id) / "mesh_inspect.json"
+        repair_report_path = storage.job_report_dir(request.image_id, job_id) / "repair_report.json"
         registry.update(
             job_id,
             status="running",
@@ -106,6 +107,7 @@ def run_pipeline_job(job_id: str, request: JobRequest, storage: SessionStorage, 
                 "ldr": ldr_path,
                 "report": report_path,
                 "mesh_inspect": mesh_inspect_path,
+                "repair_report": repair_report_path,
             },
         )
         registry.update(
@@ -128,6 +130,8 @@ def run_pipeline_job(job_id: str, request: JobRequest, storage: SessionStorage, 
             optimize=request.optimize,
             report_path=report_path,
             raw_mesh_report_path=mesh_inspect_path,
+            repair_mode=request.repair_mode,
+            repair_report_path=repair_report_path,
         )
         report = json.loads(report_path.read_text(encoding="utf-8"))
         mesh_inspect = json.loads(mesh_inspect_path.read_text(encoding="utf-8"))
@@ -140,6 +144,7 @@ def run_pipeline_job(job_id: str, request: JobRequest, storage: SessionStorage, 
             raw_mesh_url=f"/api/jobs/{job_id}/files/raw_mesh",
             cleaned_mesh_url=f"/api/jobs/{job_id}/files/cleaned_mesh",
             mesh_inspect_url=f"/api/jobs/{job_id}/files/mesh_inspect",
+            repair_report_url=f"/api/jobs/{job_id}/files/repair_report",
             voxel_url=f"/api/jobs/{job_id}/files/voxels",
             brick_count=report.get("output_brick_count"),
             reduction_percent=report.get("reduction_percent"),

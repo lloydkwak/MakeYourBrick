@@ -26,7 +26,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -260,7 +261,8 @@ button.is-active {
 }
 
 .panel-section input[type="number"],
-.panel-section input[type="text"] {
+.panel-section input[type="text"],
+.panel-section select {
   min-height: 38px;
   border: 1px solid var(--line);
   border-radius: 6px;

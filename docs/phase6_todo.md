@@ -194,6 +194,8 @@ Handle cases where SAM output is not directly a triangle mesh.
 
 Improve success rate for AI-generated meshes that are open, noisy, self-intersecting, or non-manifold.
 
+Status: implemented for explicit repair modes and repair reports. Further hardening can add deeper non-manifold diagnostics and model-size limits.
+
 ### New Files
 
 ```text

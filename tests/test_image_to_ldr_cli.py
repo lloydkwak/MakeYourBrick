@@ -13,6 +13,7 @@ def test_image_to_ldr_cli_runs_fake_sam_command_to_ldr() -> None:
     voxel_path = Path("outputs/voxels/test_cli_image_voxels.npz")
     ldr_path = Path("outputs/ldr/test_cli_image.ldr")
     report_path = Path("outputs/reports/test_cli_image_report.json")
+    repair_report_path = Path("outputs/reports/test_cli_image_repair_report.json")
     try:
         image_path.write_bytes(b"fake-image")
         command = f"{sys.executable} tests/fake_sam3d_command.py --output {{output}} --colored-box"
@@ -39,6 +40,8 @@ def test_image_to_ldr_cli_runs_fake_sam_command_to_ldr() -> None:
                 str(voxel_path),
                 "--report",
                 str(report_path),
+                "--repair-report",
+                str(repair_report_path),
                 "--output",
                 str(ldr_path),
             ],
@@ -49,12 +52,14 @@ def test_image_to_ldr_cli_runs_fake_sam_command_to_ldr() -> None:
 
         brick_lines = [line for line in ldr_path.read_text(encoding="utf-8").splitlines() if line.startswith("1 ")]
         report = json.loads(report_path.read_text(encoding="utf-8"))
+        repair_report = json.loads(repair_report_path.read_text(encoding="utf-8"))
         assert raw_mesh.exists()
         assert cleaned_mesh.exists()
         assert voxel_path.exists()
         assert brick_lines
         assert all(line.split()[1] == "14" for line in brick_lines)
         assert report["optimized"] is True
+        assert repair_report["mode_requested"] == "basic"
         assert report["output_brick_count"] == len(brick_lines)
     finally:
         image_path.unlink(missing_ok=True)
@@ -63,4 +68,4 @@ def test_image_to_ldr_cli_runs_fake_sam_command_to_ldr() -> None:
         voxel_path.unlink(missing_ok=True)
         ldr_path.unlink(missing_ok=True)
         report_path.unlink(missing_ok=True)
-
+        repair_report_path.unlink(missing_ok=True)

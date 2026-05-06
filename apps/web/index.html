@@ -70,6 +70,15 @@
             Default color ID
             <input id="defaultColor" type="number" min="0" max="999" step="1" value="16" />
           </label>
+          <label>
+            Repair mode
+            <select id="repairMode">
+              <option value="basic" selected>basic</option>
+              <option value="none">none</option>
+              <option value="manifold">manifold</option>
+              <option value="convex-hull">convex-hull</option>
+            </select>
+          </label>
           <label class="toggle">
             <input id="sampleColors" type="checkbox" checked />
             Sample mesh colors
@@ -132,6 +141,7 @@
             <a id="ldrLink" href="#" target="_blank" rel="noreferrer">LDR</a>
             <a id="reportLink" href="#" target="_blank" rel="noreferrer">Report</a>
             <a id="meshInspectLink" href="#" target="_blank" rel="noreferrer">Mesh inspect</a>
+            <a id="repairReportLink" href="#" target="_blank" rel="noreferrer">Repair</a>
             <a id="rawMeshLink" href="#" target="_blank" rel="noreferrer">Raw mesh</a>
           </div>
         </section>

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -36,6 +38,7 @@ class JobRequest(BaseModel):
     optimize: bool = True
     fill: bool = True
     default_color_id: int = Field(default=16, ge=0, le=999)
+    repair_mode: Literal["none", "basic", "manifold", "convex-hull"] = "basic"
 
 
 class JobStatusResponse(BaseModel):
@@ -56,6 +59,7 @@ class JobResultResponse(BaseModel):
     raw_mesh_url: str
     cleaned_mesh_url: str
     mesh_inspect_url: str | None = None
+    repair_report_url: str | None = None
     voxel_url: str
     brick_count: int | None = None
     reduction_percent: float | None = None

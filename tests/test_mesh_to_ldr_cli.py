@@ -146,6 +146,7 @@ def test_mesh_to_ldr_cli_can_write_optimizer_report() -> None:
     voxel_path = Path("outputs/voxels/test_cli_report_voxels.npz")
     ldr_path = Path("outputs/ldr/test_cli_report_mesh.ldr")
     report_path = Path("outputs/reports/test_cli_report.json")
+    repair_report_path = Path("outputs/reports/test_cli_repair_report.json")
     try:
         input_mesh.parent.mkdir(parents=True, exist_ok=True)
         trimesh.creation.box(extents=(1, 1, 1)).export(input_mesh)
@@ -167,6 +168,8 @@ def test_mesh_to_ldr_cli_can_write_optimizer_report() -> None:
                 str(ldr_path),
                 "--report",
                 str(report_path),
+                "--repair-report",
+                str(repair_report_path),
             ],
             check=True,
             capture_output=True,
@@ -174,7 +177,10 @@ def test_mesh_to_ldr_cli_can_write_optimizer_report() -> None:
         )
 
         report = json.loads(report_path.read_text(encoding="utf-8"))
+        repair_report = json.loads(repair_report_path.read_text(encoding="utf-8"))
         assert report["optimized"] is True
+        assert repair_report["mode_requested"] == "basic"
+        assert repair_report["after"]["is_watertight"] is True
         assert report["input_brick_count"] == 729
         assert report["output_brick_count"] < report["input_brick_count"]
         assert report["part_counts"]
@@ -184,6 +190,7 @@ def test_mesh_to_ldr_cli_can_write_optimizer_report() -> None:
         voxel_path.unlink(missing_ok=True)
         ldr_path.unlink(missing_ok=True)
         report_path.unlink(missing_ok=True)
+        repair_report_path.unlink(missing_ok=True)
 
 
 def test_mesh_to_ldr_cli_can_sample_mesh_colors_and_write_report() -> None:
