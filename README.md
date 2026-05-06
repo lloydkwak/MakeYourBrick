@@ -18,3 +18,13 @@ Run the current verification suite:
 python -m compileall src scripts
 python -m pytest
 ```
+
+## Phase 2 Mesh LDraw
+
+Convert an existing mesh into a 1x1-brick LDraw model:
+
+```bash
+python scripts/mesh_to_ldr.py --mesh data/examples/sample.stl --target-studs 24 --output outputs/ldr/mesh_output.ldr
+```
+
+The mesh path can point to formats supported by Trimesh, including `.stl`, `.obj`, and `.glb`.

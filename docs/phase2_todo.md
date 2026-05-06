@@ -65,8 +65,8 @@ Outputs:
 - [x] Add voxelization tests with a synthetic Trimesh mesh.
 - [x] Add `mesh_to_ldr` CLI.
 - [x] Add end-to-end CLI test from generated STL to LDR.
-- [ ] Run verification commands.
-- [ ] Commit and push each completed feature checkpoint.
+- [x] Run verification commands.
+- [x] Commit and push each completed feature checkpoint.
 
 ## Verification Commands
 
