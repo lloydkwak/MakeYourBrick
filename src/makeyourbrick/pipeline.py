@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from makeyourbrick.brickify.colors import load_ldraw_palette
 from makeyourbrick.config import PipelineConfig
 from makeyourbrick.brickify.optimizer import brickify_1x1
 from makeyourbrick.io.ldr_writer import write_ldr
@@ -32,6 +33,8 @@ def convert_mesh_to_ldr(
     min_pitch: float = 0.005,
     fill: bool = True,
     default_color_id: int = 16,
+    default_rgb: tuple[int, int, int] | None = None,
+    palette_path: Path | None = None,
 ) -> Path:
     """Convert an existing mesh file to a 1x1-brick LDraw file."""
     mesh = clean_mesh(load_mesh(mesh_path))
@@ -39,12 +42,19 @@ def convert_mesh_to_ldr(
     mesh.export(cleaned_mesh_path)
 
     pitch = compute_pitch(mesh, target_longest_studs=target_longest_studs, min_pitch=min_pitch)
+    palette_ids = None
+    palette_rgb = None
+    if default_rgb is not None:
+        palette_ids, palette_rgb = load_ldraw_palette(palette_path or Path("data/ldraw/ldraw_colors.json"))
     voxelize_mesh(
         mesh,
         voxel_output_path,
         pitch=pitch,
         fill=fill,
         default_color_id=default_color_id,
+        default_rgb=default_rgb,
+        palette_ids=palette_ids,
+        palette_rgb=palette_rgb,
     )
     occupancy, color_ids, _rgb, _origin, _pitch = load_voxel_artifact(voxel_output_path)
     bricks = brickify_1x1(occupancy, color_ids)

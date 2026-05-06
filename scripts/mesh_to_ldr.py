@@ -16,6 +16,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--target-studs", type=int, default=24, help="Longest model extent in studs.")
     parser.add_argument("--min-pitch", type=float, default=0.005, help="Minimum voxel pitch.")
     parser.add_argument("--color", type=int, default=16, help="Default LDraw color id.")
+    parser.add_argument(
+        "--rgb",
+        nargs=3,
+        type=int,
+        metavar=("R", "G", "B"),
+        help="Constant voxel RGB color to quantize through the LDraw palette.",
+    )
+    parser.add_argument(
+        "--palette",
+        type=Path,
+        default=Path("data/ldraw/ldraw_colors.json"),
+        help="LDraw palette JSON path used with --rgb.",
+    )
     parser.add_argument("--no-fill", action="store_true", help="Skip voxel fill.")
     parser.add_argument(
         "--cleaned-mesh",
@@ -49,10 +62,11 @@ def main() -> None:
         min_pitch=args.min_pitch,
         fill=not args.no_fill,
         default_color_id=args.color,
+        default_rgb=tuple(args.rgb) if args.rgb else None,
+        palette_path=args.palette,
     )
     print(f"Wrote LDraw model to {output_path}")
 
 
 if __name__ == "__main__":
     main()
-

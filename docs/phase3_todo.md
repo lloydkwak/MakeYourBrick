@@ -56,8 +56,8 @@ Outputs:
 - [x] Add CIELAB quantization tests.
 - [x] Add voxel RGB-to-LDraw color ID helper.
 - [x] Add color-aware voxel artifact test coverage.
-- [ ] Add CLI options for constant RGB color and palette path.
-- [ ] Add end-to-end CLI test proving `.ldr` color IDs are quantized.
+- [x] Add CLI options for constant RGB color and palette path.
+- [x] Add end-to-end CLI test proving `.ldr` color IDs are quantized.
 - [ ] Run verification commands.
 - [ ] Commit and push each completed feature checkpoint.
 
