@@ -7,6 +7,7 @@ import pytest
 
 trimesh = pytest.importorskip("trimesh")
 
+from makeyourbrick.brickify.colors import load_ldraw_palette
 from makeyourbrick.voxel.voxelize import (
     compute_pitch,
     load_voxel_artifact,
@@ -65,3 +66,26 @@ def test_voxelize_mesh_writes_occupancy_and_default_color_ids() -> None:
     finally:
         output_path.unlink(missing_ok=True)
 
+
+def test_voxelize_mesh_quantizes_constant_rgb_when_palette_is_provided() -> None:
+    output_path = Path("outputs/voxels/test_box_yellow_voxels.npz")
+    mesh = trimesh.creation.box(extents=(1, 1, 1))
+    palette_ids, palette_rgb = load_ldraw_palette(Path("data/ldraw/ldraw_colors.json"))
+
+    try:
+        artifact = voxelize_mesh(
+            mesh,
+            output_path,
+            pitch=0.5,
+            fill=True,
+            default_rgb=(242, 205, 55),
+            palette_ids=palette_ids,
+            palette_rgb=palette_rgb,
+        )
+        occupancy, color_ids, rgb, _origin, _pitch = load_voxel_artifact(artifact.path)
+
+        assert occupancy.any()
+        assert np.all(color_ids[occupancy] == 14)
+        assert np.all(rgb[occupancy] == np.asarray([242, 205, 55], dtype=np.uint8))
+    finally:
+        output_path.unlink(missing_ok=True)

@@ -9,6 +9,7 @@ import pytest
 from makeyourbrick.brickify.colors import (
     load_ldraw_palette,
     quantize_rgb_to_ldraw,
+    quantize_voxel_rgb_to_ldraw,
     validate_palette_rows,
 )
 
@@ -66,3 +67,23 @@ def test_quantize_rgb_to_ldraw_rejects_missing_channel_dimension() -> None:
 
     with pytest.raises(ValueError, match="final channel"):
         quantize_rgb_to_ldraw(np.ones((2, 2), dtype=np.uint8), ids, palette_rgb)
+
+
+def test_quantize_voxel_rgb_to_ldraw_only_assigns_occupied_voxels() -> None:
+    ids, palette_rgb = load_ldraw_palette(Path("data/ldraw/ldraw_colors.json"))
+    occupancy = np.asarray([[[True, False], [True, False]]], dtype=bool)
+    rgb = np.zeros((*occupancy.shape, 3), dtype=np.uint8)
+    rgb[0, 0, 0] = (242, 205, 55)
+    rgb[0, 1, 0] = (201, 26, 9)
+
+    color_ids = quantize_voxel_rgb_to_ldraw(
+        occupancy,
+        rgb,
+        ids,
+        palette_rgb,
+        default_color_id=16,
+    )
+
+    assert color_ids[0, 0, 0] == 14
+    assert color_ids[0, 1, 0] == 4
+    assert color_ids[0, 0, 1] == 16

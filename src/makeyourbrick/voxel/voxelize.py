@@ -9,6 +9,7 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - exercised only when optional deps are absent.
     trimesh = None
 
+from makeyourbrick.brickify.colors import quantize_voxel_rgb_to_ldraw
 from makeyourbrick.types import VoxelArtifact
 
 
@@ -75,13 +76,28 @@ def voxelize_mesh(
     pitch: float,
     fill: bool = True,
     default_color_id: int = 16,
+    default_rgb: tuple[int, int, int] | None = None,
+    palette_ids: np.ndarray | None = None,
+    palette_rgb: np.ndarray | None = None,
 ) -> VoxelArtifact:
     grid = mesh.voxelized(pitch)
     if fill:
         grid = grid.fill()
     occupancy = grid.matrix.astype(bool)
-    color_ids = np.full(occupancy.shape, int(default_color_id), dtype=np.int32)
     rgb = np.zeros((*occupancy.shape, 3), dtype=np.uint8)
-    rgb[occupancy] = (160, 165, 169)
+    rgb_value = default_rgb or (160, 165, 169)
+    rgb[occupancy] = rgb_value
+    if palette_ids is not None or palette_rgb is not None:
+        if palette_ids is None or palette_rgb is None:
+            raise ValueError("Both palette_ids and palette_rgb are required for RGB quantization.")
+        color_ids = quantize_voxel_rgb_to_ldraw(
+            occupancy,
+            rgb,
+            palette_ids,
+            palette_rgb,
+            default_color_id=default_color_id,
+        )
+    else:
+        color_ids = np.full(occupancy.shape, int(default_color_id), dtype=np.int32)
     origin = voxel_grid_origin(grid)
     return save_voxel_artifact(output_path, occupancy, color_ids, rgb, origin, pitch)

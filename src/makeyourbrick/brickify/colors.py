@@ -49,3 +49,20 @@ def quantize_rgb_to_ldraw(rgb: np.ndarray, palette_ids: np.ndarray, palette_rgb:
     palette_lab = rgb2lab(palette).reshape(-1, 3)
     nearest = cdist(flat_lab, palette_lab).argmin(axis=1)
     return palette_ids[nearest].reshape(rgb.shape[:-1])
+
+
+def quantize_voxel_rgb_to_ldraw(
+    occupancy: np.ndarray,
+    rgb: np.ndarray,
+    palette_ids: np.ndarray,
+    palette_rgb: np.ndarray,
+    default_color_id: int = 16,
+) -> np.ndarray:
+    if occupancy.ndim != 3:
+        raise ValueError("Occupancy must be a 3D array.")
+    if rgb.shape != (*occupancy.shape, 3):
+        raise ValueError("RGB array must have shape occupancy.shape + (3,).")
+    color_ids = np.full(occupancy.shape, int(default_color_id), dtype=np.int32)
+    if occupancy.any():
+        color_ids[occupancy] = quantize_rgb_to_ldraw(rgb[occupancy], palette_ids, palette_rgb)
+    return color_ids
