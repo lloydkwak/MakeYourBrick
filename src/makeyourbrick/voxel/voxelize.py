@@ -10,6 +10,7 @@ except ModuleNotFoundError:  # pragma: no cover - exercised only when optional d
     trimesh = None
 
 from makeyourbrick.brickify.colors import quantize_voxel_rgb_to_ldraw
+from makeyourbrick.mesh.color_sampling import sample_mesh_rgb
 from makeyourbrick.types import VoxelArtifact
 
 
@@ -70,6 +71,19 @@ def voxel_grid_origin(grid) -> np.ndarray:
     return np.zeros(3, dtype=np.float32)
 
 
+def occupied_indices_to_points(grid, occupancy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    indices = np.argwhere(occupancy)
+    if len(indices) == 0:
+        return indices, np.zeros((0, 3), dtype=np.float32)
+    if hasattr(grid, "indices_to_points"):
+        points = np.asarray(grid.indices_to_points(indices), dtype=np.float32)
+    else:
+        transform = np.asarray(grid.transform, dtype=np.float32)
+        homogenous = np.column_stack([indices, np.ones(len(indices), dtype=np.float32)])
+        points = (transform @ homogenous.T).T[:, :3]
+    return indices, points
+
+
 def voxelize_mesh(
     mesh,
     output_path: Path,
@@ -79,6 +93,7 @@ def voxelize_mesh(
     default_rgb: tuple[int, int, int] | None = None,
     palette_ids: np.ndarray | None = None,
     palette_rgb: np.ndarray | None = None,
+    sample_colors: bool = False,
 ) -> VoxelArtifact:
     grid = mesh.voxelized(pitch)
     if fill:
@@ -86,7 +101,13 @@ def voxelize_mesh(
     occupancy = grid.matrix.astype(bool)
     rgb = np.zeros((*occupancy.shape, 3), dtype=np.uint8)
     rgb_value = default_rgb or (160, 165, 169)
-    rgb[occupancy] = rgb_value
+    if sample_colors:
+        indices, points = occupied_indices_to_points(grid, occupancy)
+        rgb_values = sample_mesh_rgb(mesh, points, default_rgb=rgb_value)
+        if len(indices):
+            rgb[indices[:, 0], indices[:, 1], indices[:, 2]] = rgb_values
+    else:
+        rgb[occupancy] = rgb_value
     if palette_ids is not None or palette_rgb is not None:
         if palette_ids is None or palette_rgb is None:
             raise ValueError("Both palette_ids and palette_rgb are required for RGB quantization.")

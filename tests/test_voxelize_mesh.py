@@ -89,3 +89,31 @@ def test_voxelize_mesh_quantizes_constant_rgb_when_palette_is_provided() -> None
         assert np.all(rgb[occupancy] == np.asarray([242, 205, 55], dtype=np.uint8))
     finally:
         output_path.unlink(missing_ok=True)
+
+
+def test_voxelize_mesh_can_sample_vertex_colors_into_voxel_artifact() -> None:
+    output_path = Path("outputs/voxels/test_sampled_color_voxels.npz")
+    mesh = trimesh.creation.box(extents=(1, 1, 1))
+    mesh.visual.vertex_colors = np.tile(
+        np.asarray([[242, 205, 55, 255]], dtype=np.uint8),
+        (len(mesh.vertices), 1),
+    )
+    palette_ids, palette_rgb = load_ldraw_palette(Path("data/ldraw/ldraw_colors.json"))
+
+    try:
+        artifact = voxelize_mesh(
+            mesh,
+            output_path,
+            pitch=0.5,
+            fill=True,
+            sample_colors=True,
+            palette_ids=palette_ids,
+            palette_rgb=palette_rgb,
+        )
+        occupancy, color_ids, rgb, _origin, _pitch = load_voxel_artifact(artifact.path)
+
+        assert occupancy.any()
+        assert np.all(rgb[occupancy] == np.asarray([242, 205, 55], dtype=np.uint8))
+        assert np.all(color_ids[occupancy] == 14)
+    finally:
+        output_path.unlink(missing_ok=True)
