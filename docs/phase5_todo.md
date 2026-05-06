@@ -38,8 +38,8 @@ The real runner must:
 ## Completion Checklist
 
 - [x] Add Phase 5 TODO document.
-- [ ] Harden `Sam3DRunner` with configurable subprocess execution.
-- [ ] Add tests for missing repo, missing image, failed command, and successful command.
+- [x] Harden `Sam3DRunner` with configurable subprocess execution.
+- [x] Add tests for missing repo, missing image, failed command, and successful command.
 - [ ] Implement `run_from_image()` orchestration using dependency injection.
 - [ ] Add fake runner integration test from image to `.ldr`.
 - [ ] Add `scripts/image_to_ldr.py`.
