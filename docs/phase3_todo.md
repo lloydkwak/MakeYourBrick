@@ -52,8 +52,8 @@ Outputs:
 ## Completion Checklist
 
 - [x] Add Phase 3 TODO document.
-- [ ] Harden LDraw palette loading and validation.
-- [ ] Add CIELAB quantization tests.
+- [x] Harden LDraw palette loading and validation.
+- [x] Add CIELAB quantization tests.
 - [ ] Add voxel RGB-to-LDraw color ID helper.
 - [ ] Add color-aware voxel artifact test coverage.
 - [ ] Add CLI options for constant RGB color and palette path.
