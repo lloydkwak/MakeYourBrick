@@ -69,6 +69,8 @@ python scripts/image_to_ldr.py --image data/input_images/sample.png --sam-repo t
 - [Environment](docs/environment.md)
 - [Testing](docs/testing.md)
 - [SAM 3D manual setup](docs/sam3d_manual_setup.md)
+- [Phase 6 TODO](docs/phase6_todo.md)
+- [UI integration plan](docs/ui_integration_plan.md)
 - [Roadmap and limitations](docs/roadmap.md)
 - [References](docs/references.md)
 

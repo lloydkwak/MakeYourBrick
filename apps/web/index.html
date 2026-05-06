@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MakeYourBrick Web Shell</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace" aria-label="Image selection workspace">
+        <header class="topbar">
+          <div>
+            <h1>MakeYourBrick</h1>
+            <p id="imageMeta">No image loaded</p>
+          </div>
+          <div class="topbar-actions">
+            <label class="file-button">
+              <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" />
+              Upload
+            </label>
+            <button id="resetButton" type="button">Reset</button>
+          </div>
+        </header>
+
+        <div class="tool-row" role="toolbar" aria-label="Selection tools">
+          <div class="segmented" aria-label="Selection mode">
+            <button class="is-active" id="pointModeButton" type="button">Point</button>
+            <button id="boxModeButton" type="button">Box</button>
+          </div>
+          <div class="segmented" aria-label="Point type">
+            <button class="is-active" id="positiveButton" type="button">Positive</button>
+            <button id="negativeButton" type="button">Negative</button>
+          </div>
+          <button id="undoButton" type="button">Undo</button>
+          <button id="clearButton" type="button">Clear</button>
+          <label class="toggle">
+            <input id="maskToggle" type="checkbox" checked />
+            Mask
+          </label>
+        </div>
+
+        <div id="dropZone" class="canvas-wrap">
+          <canvas id="selectionCanvas" width="1280" height="820"></canvas>
+          <div id="emptyState" class="empty-state">
+            <strong>Upload an image</strong>
+            <span>Point and box selections are recorded in image coordinates.</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side-panel" aria-label="Pipeline configuration">
+        <section class="panel-section">
+          <h2>Selection Payload</h2>
+          <pre id="payloadPreview"></pre>
+        </section>
+
+        <section class="panel-section">
+          <h2>LEGO Settings</h2>
+          <label>
+            Target studs
+            <input id="targetStuds" type="number" min="8" max="128" step="1" value="48" />
+          </label>
+          <label>
+            Default color ID
+            <input id="defaultColor" type="number" min="0" max="999" step="1" value="16" />
+          </label>
+          <label class="toggle">
+            <input id="sampleColors" type="checkbox" checked />
+            Sample mesh colors
+          </label>
+          <label class="toggle">
+            <input id="optimizeBricks" type="checkbox" checked />
+            Optimize bricks
+          </label>
+        </section>
+
+        <section class="panel-section">
+          <h2>Pipeline Preview</h2>
+          <ol class="stage-list">
+            <li data-stage="upload" class="is-current">Image uploaded</li>
+            <li data-stage="select">Target selected</li>
+            <li data-stage="segment">Mask preview</li>
+            <li data-stage="convert">LEGO conversion</li>
+          </ol>
+        </section>
+
+        <section class="panel-section action-panel">
+          <button id="exportButton" class="primary-button" type="button">Export JSON</button>
+          <button id="mockRunButton" type="button">Mock Run</button>
+          <p id="statusText">Waiting for image</p>
+        </section>
+      </aside>
+    </main>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
+

@@ -20,6 +20,14 @@ Write a concrete adapter command for `facebookresearch/sam-3d-objects` that acce
 
 This is the highest-risk remaining task because upstream SAM examples may produce Gaussian splats or point-cloud-like PLY files rather than triangle meshes.
 
+See `docs/phase6_todo.md` for the detailed preparation plan.
+
+### 1.5 User Interface
+
+Build a tool UI where users can upload an image, select the target object with point or box prompts, preview the mask, configure LEGO output options, and run the conversion job.
+
+See `docs/ui_integration_plan.md` for the proposed UX, API, repository structure, and milestones.
+
 ### 2. Stronger Mesh Repair
 
 The current mesh cleanup path does not guarantee watertight manifold output. Add `manifold3d` repair or a documented fallback strategy for open/noisy AI-generated meshes.
@@ -53,4 +61,3 @@ The bundled LDraw palette is a starter subset. Replace it with a broader, valida
 - Watertight repair is not yet robust enough for all generated meshes.
 - Physical buildability is only approximate.
 - LDraw optimized part placement should be visually checked in Stud.io.
-
