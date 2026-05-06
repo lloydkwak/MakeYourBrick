@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from makeyourbrick.ai.sam3d_runner import Sam3DRunner
 from makeyourbrick.brickify.colors import load_ldraw_palette
 from makeyourbrick.config import PipelineConfig
 from makeyourbrick.brickify.optimizer import brickify_1x1, greedy_brickify
@@ -12,11 +13,48 @@ from makeyourbrick.types import MeshArtifact
 from makeyourbrick.voxel.voxelize import compute_pitch, load_voxel_artifact, voxelize_mesh
 
 
-def run_from_image(image_path: Path, config: PipelineConfig | None = None) -> Path:
+def run_from_image(
+    image_path: Path,
+    config: PipelineConfig | None = None,
+    runner: object | None = None,
+    raw_mesh_path: Path | None = None,
+    ldr_output_path: Path | None = None,
+    cleaned_mesh_path: Path | None = None,
+    voxel_output_path: Path | None = None,
+    target_longest_studs: int = 24,
+    min_pitch: float = 0.005,
+    fill: bool = True,
+    default_color_id: int = 16,
+    default_rgb: tuple[int, int, int] | None = None,
+    palette_path: Path | None = None,
+    optimize: bool = False,
+    sample_colors: bool = False,
+    report_path: Path | None = None,
+) -> Path:
     """Run the full pipeline from a single image to an LDR file."""
-    _ = image_path
-    _ = config or PipelineConfig()
-    raise NotImplementedError("Full image-to-LDR pipeline will be wired after Phase 1 modules land.")
+    config = config or PipelineConfig()
+    raw_mesh_path = raw_mesh_path or config.paths.raw_mesh
+    ldr_output_path = ldr_output_path or config.paths.ldr_output
+    cleaned_mesh_path = cleaned_mesh_path or config.paths.watertight_mesh
+    voxel_output_path = voxel_output_path or config.paths.voxel_npz
+    runner = runner or Sam3DRunner(config.paths.sam3d_repo)
+
+    artifact = runner.generate(image_path, raw_mesh_path)
+    return convert_mesh_to_ldr(
+        mesh_path=artifact.path,
+        ldr_output_path=ldr_output_path,
+        cleaned_mesh_path=cleaned_mesh_path,
+        voxel_output_path=voxel_output_path,
+        target_longest_studs=target_longest_studs,
+        min_pitch=min_pitch,
+        fill=fill,
+        default_color_id=default_color_id,
+        default_rgb=default_rgb,
+        palette_path=palette_path,
+        optimize=optimize,
+        sample_colors=sample_colors,
+        report_path=report_path,
+    )
 
 
 def run_from_mesh(mesh_path: Path, config: PipelineConfig | None = None) -> MeshArtifact:

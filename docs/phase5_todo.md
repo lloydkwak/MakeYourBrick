@@ -40,8 +40,8 @@ The real runner must:
 - [x] Add Phase 5 TODO document.
 - [x] Harden `Sam3DRunner` with configurable subprocess execution.
 - [x] Add tests for missing repo, missing image, failed command, and successful command.
-- [ ] Implement `run_from_image()` orchestration using dependency injection.
-- [ ] Add fake runner integration test from image to `.ldr`.
+- [x] Implement `run_from_image()` orchestration using dependency injection.
+- [x] Add fake runner integration test from image to `.ldr`.
 - [ ] Add `scripts/image_to_ldr.py`.
 - [ ] Add CLI test using a fake generated mesh path.
 - [ ] Document real SAM setup and manual verification commands.
