@@ -59,8 +59,8 @@ All bricks are one brick high in Phase 4.
 - [x] Add rotation-aware LDraw writer support.
 - [x] Add optimizer mode to `mesh_to_ldr.py`.
 - [x] Add end-to-end CLI test proving optimized output uses fewer bricks.
-- [ ] Run verification commands.
-- [ ] Commit and push each completed feature checkpoint.
+- [x] Run verification commands.
+- [x] Commit and push each completed feature checkpoint.
 
 ## Verification Commands
 

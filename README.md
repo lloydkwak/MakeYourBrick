@@ -38,3 +38,17 @@ python scripts/mesh_to_ldr.py --mesh data/examples/sample.stl --target-studs 24 
 ```
 
 The command above maps LEGO yellow RGB `(242, 205, 55)` to LDraw color ID `14`.
+
+## Phase 4 Brick Optimization
+
+Generate an optimized synthetic model by merging voxels into larger bricks:
+
+```bash
+python scripts/make_synthetic_ldr.py --shape box --size 4 1 2 --color 16 --output outputs/ldr/optimized_box.ldr --optimize
+```
+
+Convert a mesh with greedy brick optimization enabled:
+
+```bash
+python scripts/mesh_to_ldr.py --mesh data/examples/sample.stl --target-studs 8 --output outputs/ldr/mesh_optimized_phase4.ldr --optimize
+```
