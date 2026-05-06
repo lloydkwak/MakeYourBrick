@@ -62,3 +62,13 @@ python scripts/mesh_to_ldr.py --mesh data/examples/sample_colored.ply --target-s
 ```
 
 The report includes occupied voxel count, input/output brick counts, reduction percentage, part counts, and color counts.
+
+## Phase 5 Image Pipeline
+
+Run the image pipeline with a SAM 3D command template:
+
+```bash
+python scripts/image_to_ldr.py --image data/input_images/sample.png --sam-repo third_party/sam-3d-objects --sam-command "<command that writes {output}>" --target-studs 48 --sample-colors --optimize --report outputs/reports/image_report.json --output outputs/ldr/image_output.ldr
+```
+
+The command template supports `{image}`, `{output}`, `{output_dir}`, and `{repo}` placeholders. See [docs/sam3d_manual_setup.md](docs/sam3d_manual_setup.md) for the real SAM 3D setup notes.

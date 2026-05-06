@@ -44,9 +44,9 @@ The real runner must:
 - [x] Add fake runner integration test from image to `.ldr`.
 - [x] Add `scripts/image_to_ldr.py`.
 - [x] Add CLI test using a fake generated mesh path.
-- [ ] Document real SAM setup and manual verification commands.
-- [ ] Run verification commands.
-- [ ] Commit and push each completed feature checkpoint.
+- [x] Document real SAM setup and manual verification commands.
+- [x] Run verification commands.
+- [x] Commit and push each completed feature checkpoint.
 
 ## Verification Commands
 
