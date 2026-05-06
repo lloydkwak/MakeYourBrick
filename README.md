@@ -1,74 +1,93 @@
 # MakeYourBrick
 
-Image-to-LEGO 3D conversion pipeline for generating LDraw `.ldr` files from images or mesh artifacts.
+MakeYourBrick is a Python pipeline for converting a 2D image or 3D mesh into an LDraw `.ldr` LEGO model.
 
-See [docs/image_to_lego_3d_plan.md](docs/image_to_lego_3d_plan.md) for the concrete architecture, directory structure, file responsibilities, tech stack, and implementation milestones.
+The local mesh-to-LDraw pipeline is implemented and tested. The image pipeline is wired through a SAM 3D Objects command contract, but real SAM 3D inference still requires a separate GPU setup and a mesh-producing adapter.
 
-## Phase 1 Synthetic LDraw
+## Status
 
-Generate a simple 1x1-brick LDraw model from a synthetic voxel box:
+Implemented:
+
+- synthetic voxel to LDraw
+- mesh loading and cleanup
+- mesh voxelization
+- RGB to LDraw color quantization
+- nearest vertex/face mesh color sampling
+- greedy brick optimization
+- LDraw output with basic rotations
+- optimizer report JSON
+- image-to-LDraw orchestration through a SAM command template
+
+Current verification:
 
 ```bash
-python scripts/make_synthetic_ldr.py --shape box --size 4 3 2 --color 16 --output outputs/ldr/synthetic_box.ldr
-```
-
-Run the current verification suite:
-
-```bash
-python -m compileall src scripts
+python -m compileall src scripts tests/fake_sam3d_command.py
 python -m pytest
 ```
 
-## Phase 2 Mesh LDraw
+Latest local result: `52 passed`.
 
-Convert an existing mesh into a 1x1-brick LDraw model:
-
-```bash
-python scripts/mesh_to_ldr.py --mesh data/examples/sample.stl --target-studs 24 --output outputs/ldr/mesh_output.ldr
-```
-
-The mesh path can point to formats supported by Trimesh, including `.stl`, `.obj`, and `.glb`.
-
-## Phase 3 Color Quantization
-
-Convert a mesh with a constant RGB color that is quantized to the nearest LDraw color:
+## Installation
 
 ```bash
-python scripts/mesh_to_ldr.py --mesh data/examples/sample.stl --target-studs 24 --rgb 242 205 55 --output outputs/ldr/yellow_mesh_output.ldr
+python -m pip install -r requirements.txt
+python -m pip install -e .
 ```
 
-The command above maps LEGO yellow RGB `(242, 205, 55)` to LDraw color ID `14`.
+For real SAM 3D Objects inference, see [docs/sam3d_manual_setup.md](docs/sam3d_manual_setup.md).
 
-## Phase 4 Brick Optimization
+## Quick Usage
 
-Generate an optimized synthetic model by merging voxels into larger bricks:
+Optimized synthetic model:
 
 ```bash
-python scripts/make_synthetic_ldr.py --shape box --size 4 1 2 --color 16 --output outputs/ldr/optimized_box.ldr --optimize
+python scripts/make_synthetic_ldr.py --shape box --size 4 1 2 --color 16 --optimize --output outputs/ldr/optimized_box.ldr
 ```
 
-Convert a mesh with greedy brick optimization enabled:
+Mesh to optimized LDraw:
 
 ```bash
-python scripts/mesh_to_ldr.py --mesh data/examples/sample.stl --target-studs 8 --output outputs/ldr/mesh_optimized_phase4.ldr --optimize
+python scripts/mesh_to_ldr.py --mesh data/examples/sample.stl --target-studs 8 --optimize --output outputs/ldr/mesh_optimized.ldr
 ```
 
-## Phase 4.5 Mesh Color Sampling and Reports
-
-Sample vertex or face colors from a mesh and write an optimizer report:
+Colored mesh to optimized LDraw with report:
 
 ```bash
 python scripts/mesh_to_ldr.py --mesh data/examples/sample_colored.ply --target-studs 8 --sample-colors --optimize --report outputs/reports/mesh_report.json --output outputs/ldr/sampled_color_mesh.ldr
 ```
 
-The report includes occupied voxel count, input/output brick counts, reduction percentage, part counts, and color counts.
-
-## Phase 5 Image Pipeline
-
-Run the image pipeline with a SAM 3D command template:
+Image to LDraw through a SAM command template:
 
 ```bash
 python scripts/image_to_ldr.py --image data/input_images/sample.png --sam-repo third_party/sam-3d-objects --sam-command "<command that writes {output}>" --target-studs 48 --sample-colors --optimize --report outputs/reports/image_report.json --output outputs/ldr/image_output.ldr
 ```
 
-The command template supports `{image}`, `{output}`, `{output_dir}`, and `{repo}` placeholders. See [docs/sam3d_manual_setup.md](docs/sam3d_manual_setup.md) for the real SAM 3D setup notes.
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [Usage](docs/usage.md)
+- [Environment](docs/environment.md)
+- [Testing](docs/testing.md)
+- [SAM 3D manual setup](docs/sam3d_manual_setup.md)
+- [Roadmap and limitations](docs/roadmap.md)
+- [References](docs/references.md)
+
+## Important Limitations
+
+- Real SAM 3D inference has not been executed in this repository.
+- The SAM command must produce a Trimesh-loadable triangle mesh, not only a Gaussian splat or point cloud.
+- Mesh cleanup does not yet guarantee watertight manifold repair.
+- Brick optimization reduces brick count but does not yet score real physical stability.
+- LDraw part origins should be visually checked in Stud.io or another LDraw-compatible tool.
+
+## References
+
+This project is informed by:
+
+- SAM 3D Objects: https://github.com/facebookresearch/sam-3d-objects
+- Manifold: https://github.com/elalish/manifold
+- Trimesh: https://github.com/mikedh/trimesh
+- Brickalize: https://github.com/CreativeMindstorms/brickalize
+- StableLego: https://github.com/intelligent-control-lab/StableLego
+- Brick Optimization Builder: https://github.com/dzungpng/brick-optimization-builder
+- LDraw file format: https://www.ldraw.org/article/218.html
