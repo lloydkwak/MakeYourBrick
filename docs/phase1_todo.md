@@ -30,7 +30,7 @@ Build a deterministic, testable path from an in-memory voxel matrix to a valid L
 - [x] Make 1x1 brickification deterministic and validate input shapes.
 - [x] Add brick-to-occupancy round-trip helper for tests.
 - [x] Harden LDraw writer output and coordinate tests.
-- [ ] Add a synthetic LDR CLI.
+- [x] Add a synthetic LDR CLI.
 - [ ] Add pytest coverage for synthetic voxels, brickification, round-trip, and LDR writer.
 - [ ] Run verification commands.
 - [ ] Commit and push each completed feature checkpoint.
