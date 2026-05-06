@@ -61,8 +61,8 @@ Outputs:
 - [x] Add Phase 2 TODO document.
 - [x] Improve mesh loading and scene-to-mesh handling.
 - [x] Add mesh cleanup/solidification tests.
-- [ ] Add voxel artifact helpers for saving/loading occupancy and colors.
-- [ ] Add voxelization tests with a synthetic Trimesh mesh.
+- [x] Add voxel artifact helpers for saving/loading occupancy and colors.
+- [x] Add voxelization tests with a synthetic Trimesh mesh.
 - [ ] Add `mesh_to_ldr` CLI.
 - [ ] Add end-to-end CLI test from generated STL to LDR.
 - [ ] Run verification commands.
