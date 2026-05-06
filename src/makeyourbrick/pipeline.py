@@ -48,7 +48,7 @@ def convert_mesh_to_ldr(
     pitch = compute_pitch(mesh, target_longest_studs=target_longest_studs, min_pitch=min_pitch)
     palette_ids = None
     palette_rgb = None
-    if default_rgb is not None:
+    if default_rgb is not None or sample_colors:
         palette_ids, palette_rgb = load_ldraw_palette(palette_path or Path("data/ldraw/ldraw_colors.json"))
     voxelize_mesh(
         mesh,

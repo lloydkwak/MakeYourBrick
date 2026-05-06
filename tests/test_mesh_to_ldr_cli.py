@@ -5,6 +5,7 @@ import sys
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 trimesh = pytest.importorskip("trimesh")
@@ -177,6 +178,59 @@ def test_mesh_to_ldr_cli_can_write_optimizer_report() -> None:
         assert report["input_brick_count"] == 729
         assert report["output_brick_count"] < report["input_brick_count"]
         assert report["part_counts"]
+    finally:
+        input_mesh.unlink(missing_ok=True)
+        cleaned_mesh.unlink(missing_ok=True)
+        voxel_path.unlink(missing_ok=True)
+        ldr_path.unlink(missing_ok=True)
+        report_path.unlink(missing_ok=True)
+
+
+def test_mesh_to_ldr_cli_can_sample_mesh_colors_and_write_report() -> None:
+    input_mesh = Path("outputs/meshes/test_cli_sampled_color.ply")
+    cleaned_mesh = Path("outputs/meshes/test_cli_sampled_color_cleaned.glb")
+    voxel_path = Path("outputs/voxels/test_cli_sampled_color_voxels.npz")
+    ldr_path = Path("outputs/ldr/test_cli_sampled_color.ldr")
+    report_path = Path("outputs/reports/test_cli_sampled_color_report.json")
+    try:
+        input_mesh.parent.mkdir(parents=True, exist_ok=True)
+        mesh = trimesh.creation.box(extents=(1, 1, 1))
+        mesh.visual.vertex_colors = np.tile(
+            np.asarray([[242, 205, 55, 255]], dtype=np.uint8),
+            (len(mesh.vertices), 1),
+        )
+        mesh.export(input_mesh)
+
+        subprocess.run(
+            [
+                sys.executable,
+                "scripts/mesh_to_ldr.py",
+                "--mesh",
+                str(input_mesh),
+                "--target-studs",
+                "8",
+                "--sample-colors",
+                "--optimize",
+                "--cleaned-mesh",
+                str(cleaned_mesh),
+                "--voxels",
+                str(voxel_path),
+                "--output",
+                str(ldr_path),
+                "--report",
+                str(report_path),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        brick_lines = [line for line in ldr_path.read_text(encoding="utf-8").splitlines() if line.startswith("1 ")]
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        assert brick_lines
+        assert all(line.split()[1] == "14" for line in brick_lines)
+        assert report["optimized"] is True
+        assert report["output_brick_count"] == len(brick_lines)
     finally:
         input_mesh.unlink(missing_ok=True)
         cleaned_mesh.unlink(missing_ok=True)

@@ -48,7 +48,7 @@ The report is JSON and records:
 - [x] Connect sampled mesh colors to voxel artifacts.
 - [x] Add optimizer report generation helpers and tests.
 - [x] Add CLI options for sampled colors and report path.
-- [ ] Add end-to-end tests for sampled color and report output.
+- [x] Add end-to-end tests for sampled color and report output.
 - [ ] Run verification commands.
 - [ ] Commit and push each completed feature checkpoint.
 
