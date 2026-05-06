@@ -26,7 +26,7 @@ Build a deterministic, testable path from an in-memory voxel matrix to a valid L
 
 ## Completion Checklist
 
-- [ ] Add synthetic voxel generators.
+- [x] Add synthetic voxel generators.
 - [ ] Make 1x1 brickification deterministic and validate input shapes.
 - [ ] Add brick-to-occupancy round-trip helper for tests.
 - [ ] Harden LDraw writer output and coordinate tests.
@@ -50,4 +50,3 @@ python scripts/make_synthetic_ldr.py --shape box --size 4 3 2 --color 16 --outpu
 - Occupied voxel count equals emitted brick count.
 - Round-trip reconstruction matches the original occupancy.
 - Coordinate conversion is tested against LDraw unit expectations.
-
