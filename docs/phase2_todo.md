@@ -59,8 +59,8 @@ Outputs:
 ## Completion Checklist
 
 - [x] Add Phase 2 TODO document.
-- [ ] Improve mesh loading and scene-to-mesh handling.
-- [ ] Add mesh cleanup/solidification tests.
+- [x] Improve mesh loading and scene-to-mesh handling.
+- [x] Add mesh cleanup/solidification tests.
 - [ ] Add voxel artifact helpers for saving/loading occupancy and colors.
 - [ ] Add voxelization tests with a synthetic Trimesh mesh.
 - [ ] Add `mesh_to_ldr` CLI.
