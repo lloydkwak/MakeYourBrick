@@ -8,13 +8,24 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path)
     parser.add_argument("--exit-code", type=int, default=0)
+    parser.add_argument("--colored-box", action="store_true")
     args = parser.parse_args()
     if args.exit_code:
         raise SystemExit(args.exit_code)
     args.output.parent.mkdir(parents=True, exist_ok=True)
+    if args.colored_box:
+        import numpy as np
+        import trimesh
+
+        mesh = trimesh.creation.box(extents=(1, 1, 1))
+        mesh.visual.vertex_colors = np.tile(
+            np.asarray([[242, 205, 55, 255]], dtype=np.uint8),
+            (len(mesh.vertices), 1),
+        )
+        mesh.export(args.output)
+        return
     args.output.write_bytes(b"mesh")
 
 
 if __name__ == "__main__":
     main()
-

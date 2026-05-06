@@ -42,8 +42,8 @@ The real runner must:
 - [x] Add tests for missing repo, missing image, failed command, and successful command.
 - [x] Implement `run_from_image()` orchestration using dependency injection.
 - [x] Add fake runner integration test from image to `.ldr`.
-- [ ] Add `scripts/image_to_ldr.py`.
-- [ ] Add CLI test using a fake generated mesh path.
+- [x] Add `scripts/image_to_ldr.py`.
+- [x] Add CLI test using a fake generated mesh path.
 - [ ] Document real SAM setup and manual verification commands.
 - [ ] Run verification commands.
 - [ ] Commit and push each completed feature checkpoint.

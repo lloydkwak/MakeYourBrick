@@ -1,0 +1,85 @@
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+from makeyourbrick.ai.sam3d_runner import Sam3DRunner
+from makeyourbrick.pipeline import run_from_image
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Convert an image to an LDraw model through SAM 3D.")
+    parser.add_argument("--image", type=Path, required=True, help="Input image path.")
+    parser.add_argument(
+        "--sam-repo",
+        type=Path,
+        default=Path("third_party/sam-3d-objects"),
+        help="External SAM 3D Objects repo path.",
+    )
+    parser.add_argument(
+        "--sam-command",
+        required=True,
+        help="SAM command template. Supports {image}, {output}, {output_dir}, and {repo}.",
+    )
+    parser.add_argument("--sam-timeout", type=int, default=3600, help="SAM command timeout in seconds.")
+    parser.add_argument("--target-studs", type=int, default=48, help="Longest model extent in studs.")
+    parser.add_argument("--min-pitch", type=float, default=0.005, help="Minimum voxel pitch.")
+    parser.add_argument("--color", type=int, default=16, help="Default LDraw color id.")
+    parser.add_argument(
+        "--rgb",
+        nargs=3,
+        type=int,
+        metavar=("R", "G", "B"),
+        help="Constant voxel RGB color to quantize through the LDraw palette.",
+    )
+    parser.add_argument(
+        "--palette",
+        type=Path,
+        default=Path("data/ldraw/ldraw_colors.json"),
+        help="LDraw palette JSON path.",
+    )
+    parser.add_argument("--no-fill", action="store_true", help="Skip voxel fill.")
+    parser.add_argument("--sample-colors", action="store_true", help="Sample nearest mesh colors into voxels.")
+    parser.add_argument("--optimize", action="store_true", help="Merge voxels into larger bricks.")
+    parser.add_argument("--raw-mesh", type=Path, default=Path("outputs/meshes/raw_model.glb"))
+    parser.add_argument("--cleaned-mesh", type=Path, default=Path("outputs/meshes/watertight_model.glb"))
+    parser.add_argument("--voxels", type=Path, default=Path("outputs/voxels/model_voxels.npz"))
+    parser.add_argument("--report", type=Path, help="Optional optimizer report JSON path.")
+    parser.add_argument("--output", type=Path, default=Path("outputs/ldr/image_output.ldr"))
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    runner = Sam3DRunner(
+        repo_path=args.sam_repo,
+        command_template=args.sam_command,
+        timeout_seconds=args.sam_timeout,
+    )
+    output_path = run_from_image(
+        image_path=args.image,
+        runner=runner,
+        raw_mesh_path=args.raw_mesh,
+        cleaned_mesh_path=args.cleaned_mesh,
+        voxel_output_path=args.voxels,
+        ldr_output_path=args.output,
+        target_longest_studs=args.target_studs,
+        min_pitch=args.min_pitch,
+        fill=not args.no_fill,
+        default_color_id=args.color,
+        default_rgb=tuple(args.rgb) if args.rgb else None,
+        palette_path=args.palette,
+        optimize=args.optimize,
+        sample_colors=args.sample_colors,
+        report_path=args.report,
+    )
+    print(f"Wrote LDraw model to {output_path}")
+
+
+if __name__ == "__main__":
+    main()
+
