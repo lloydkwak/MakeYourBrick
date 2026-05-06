@@ -95,3 +95,44 @@ def test_mesh_to_ldr_cli_quantizes_rgb_to_ldraw_color_id() -> None:
         cleaned_mesh.unlink(missing_ok=True)
         voxel_path.unlink(missing_ok=True)
         ldr_path.unlink(missing_ok=True)
+
+
+def test_mesh_to_ldr_cli_can_write_optimized_output() -> None:
+    input_mesh = Path("outputs/meshes/test_cli_optimized_box.stl")
+    cleaned_mesh = Path("outputs/meshes/test_cli_optimized_cleaned.glb")
+    voxel_path = Path("outputs/voxels/test_cli_optimized_voxels.npz")
+    ldr_path = Path("outputs/ldr/test_cli_optimized_mesh.ldr")
+    try:
+        input_mesh.parent.mkdir(parents=True, exist_ok=True)
+        trimesh.creation.box(extents=(1, 1, 1)).export(input_mesh)
+
+        subprocess.run(
+            [
+                sys.executable,
+                "scripts/mesh_to_ldr.py",
+                "--mesh",
+                str(input_mesh),
+                "--target-studs",
+                "8",
+                "--optimize",
+                "--cleaned-mesh",
+                str(cleaned_mesh),
+                "--voxels",
+                str(voxel_path),
+                "--output",
+                str(ldr_path),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        brick_lines = [line for line in ldr_path.read_text(encoding="utf-8").splitlines() if line.startswith("1 ")]
+        assert brick_lines
+        assert len(brick_lines) < 729
+        assert any(line.endswith("3001.dat") for line in brick_lines)
+    finally:
+        input_mesh.unlink(missing_ok=True)
+        cleaned_mesh.unlink(missing_ok=True)
+        voxel_path.unlink(missing_ok=True)
+        ldr_path.unlink(missing_ok=True)

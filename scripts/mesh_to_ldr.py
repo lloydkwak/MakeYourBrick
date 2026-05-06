@@ -30,6 +30,7 @@ def parse_args() -> argparse.Namespace:
         help="LDraw palette JSON path used with --rgb.",
     )
     parser.add_argument("--no-fill", action="store_true", help="Skip voxel fill.")
+    parser.add_argument("--optimize", action="store_true", help="Merge voxels into larger bricks.")
     parser.add_argument(
         "--cleaned-mesh",
         type=Path,
@@ -64,6 +65,7 @@ def main() -> None:
         default_color_id=args.color,
         default_rgb=tuple(args.rgb) if args.rgb else None,
         palette_path=args.palette,
+        optimize=args.optimize,
     )
     print(f"Wrote LDraw model to {output_path}")
 
