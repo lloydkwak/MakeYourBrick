@@ -141,7 +141,7 @@ def create_app(storage: SessionStorage | None = None, registry: JobRegistry | No
         path = record.paths[kind]
         if not path.exists():
             raise HTTPException(status_code=404, detail=f"Artifact file missing: {kind}")
-        if kind == "report":
+        if kind in {"report", "mesh_inspect"}:
             return FileResponse(path, media_type="application/json")
         if kind == "ldr":
             return FileResponse(path, media_type="text/plain")

@@ -55,10 +55,15 @@ def test_job_stub_generates_ldr_report_and_artifact_links() -> None:
     result = result_response.json()
     assert result["brick_count"] > 0
     assert result["reduction_percent"] >= 0
+    assert result["mesh_inspect_url"].endswith("/files/mesh_inspect")
 
     ldr_response = client.get(result["ldr_url"])
     assert ldr_response.status_code == 200
     assert "3005.dat" in ldr_response.text or "3001.dat" in ldr_response.text
+
+    mesh_inspect_response = client.get(result["mesh_inspect_url"])
+    assert mesh_inspect_response.status_code == 200
+    assert mesh_inspect_response.json()["voxelization_ready"] is True
 
     report_response = client.get(result["report_url"])
     assert report_response.status_code == 200

@@ -84,6 +84,8 @@ Confirm the real SAM 3D Objects environment and determine what artifacts the ups
 
 Create a tool that answers: "Can this output be consumed by MakeYourBrick?"
 
+Status: implemented for triangle mesh compatibility reporting. Memory-cost estimation and dry-run voxelization remain future hardening tasks.
+
 ### New Files
 
 ```text
@@ -286,4 +288,3 @@ Recommended commits:
 - GPU environment may differ from local test environment.
 - Mesh repair may alter shape too aggressively.
 - Large voxel grids may generate too many bricks.
-

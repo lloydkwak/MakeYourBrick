@@ -8,6 +8,7 @@ from makeyourbrick.config import PipelineConfig
 from makeyourbrick.brickify.optimizer import brickify_1x1, greedy_brickify
 from makeyourbrick.brickify.report import build_brick_report, write_brick_report
 from makeyourbrick.io.ldr_writer import write_ldr
+from makeyourbrick.mesh.inspect import inspect_mesh_to_file
 from makeyourbrick.mesh.solidify import clean_mesh, load_mesh
 from makeyourbrick.types import MeshArtifact
 from makeyourbrick.voxel.voxelize import compute_pitch, load_voxel_artifact, voxelize_mesh
@@ -30,6 +31,7 @@ def run_from_image(
     optimize: bool = False,
     sample_colors: bool = False,
     report_path: Path | None = None,
+    raw_mesh_report_path: Path | None = None,
 ) -> Path:
     """Run the full pipeline from a single image to an LDR file."""
     config = config or PipelineConfig()
@@ -40,6 +42,8 @@ def run_from_image(
     runner = runner or Sam3DRunner(config.paths.sam3d_repo)
 
     artifact = runner.generate(image_path, raw_mesh_path)
+    if raw_mesh_report_path is not None:
+        inspect_mesh_to_file(artifact.path, raw_mesh_report_path)
     return convert_mesh_to_ldr(
         mesh_path=artifact.path,
         ldr_output_path=ldr_output_path,

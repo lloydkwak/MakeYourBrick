@@ -33,6 +33,7 @@ def test_run_from_image_generates_ldr_and_report_with_fake_runner() -> None:
     voxel_path = Path("outputs/voxels/test_image_voxels.npz")
     ldr_path = Path("outputs/ldr/test_image_output.ldr")
     report_path = Path("outputs/reports/test_image_report.json")
+    mesh_inspect_path = Path("outputs/reports/test_image_mesh_inspect.json")
     try:
         image_path.write_bytes(b"fake-image")
 
@@ -47,12 +48,15 @@ def test_run_from_image_generates_ldr_and_report_with_fake_runner() -> None:
             sample_colors=True,
             optimize=True,
             report_path=report_path,
+            raw_mesh_report_path=mesh_inspect_path,
         )
 
         brick_lines = [line for line in result.read_text(encoding="utf-8").splitlines() if line.startswith("1 ")]
         report = json.loads(report_path.read_text(encoding="utf-8"))
+        mesh_inspect = json.loads(mesh_inspect_path.read_text(encoding="utf-8"))
         assert result == ldr_path
         assert raw_mesh_path.exists()
+        assert mesh_inspect["voxelization_ready"] is True
         assert cleaned_mesh_path.exists()
         assert voxel_path.exists()
         assert brick_lines
@@ -66,4 +70,4 @@ def test_run_from_image_generates_ldr_and_report_with_fake_runner() -> None:
         voxel_path.unlink(missing_ok=True)
         ldr_path.unlink(missing_ok=True)
         report_path.unlink(missing_ok=True)
-
+        mesh_inspect_path.unlink(missing_ok=True)

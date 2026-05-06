@@ -15,6 +15,7 @@ The current suite covers:
 - LDraw coordinate and rotation output
 - color palette loading and CIELAB quantization
 - mesh loading and cleanup
+- mesh inspection reports and CLI
 - mesh color sampling
 - voxel artifact save/load
 - mesh-to-LDraw CLI

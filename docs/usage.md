@@ -51,6 +51,16 @@ Convert with greedy brick optimization and write a report:
 python scripts/mesh_to_ldr.py --mesh data/examples/sample_colored.ply --target-studs 8 --sample-colors --optimize --report outputs/reports/mesh_report.json --output outputs/ldr/sampled_color_mesh.ldr
 ```
 
+## Mesh Inspection
+
+Inspect a mesh before conversion:
+
+```bash
+python scripts/inspect_mesh.py --mesh outputs/meshes/raw_model.glb --report outputs/reports/mesh_inspect.json
+```
+
+The report records asset type, geometry count, vertices, faces, bounds, watertightness, color availability, warnings, and whether the artifact is ready for voxelization.
+
 ## Image to LDraw
 
 The image pipeline requires a SAM-compatible command template that writes a triangle mesh to `{output}`.
@@ -103,7 +113,7 @@ Backend endpoints:
 - `GET /api/jobs/{job_id}/result`
 - `GET /api/jobs/{job_id}/files/{kind}`
 
-The current job endpoint is a local stub. It uses a deterministic fake SAM mesh and then runs the real MakeYourBrick conversion pipeline, producing LDR, voxel, mesh, and report artifacts under `outputs/ui_sessions/<image_id>/jobs/<job_id>/`.
+The current job endpoint is a local stub. It uses a deterministic fake SAM mesh and then runs the real MakeYourBrick conversion pipeline, producing LDR, voxel, mesh, mesh inspection, and report artifacts under `outputs/ui_sessions/<image_id>/jobs/<job_id>/`.
 
 Start a browser workflow by opening:
 

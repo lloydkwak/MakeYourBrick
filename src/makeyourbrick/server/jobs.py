@@ -92,6 +92,7 @@ def run_pipeline_job(job_id: str, request: JobRequest, storage: SessionStorage, 
         voxel_path = storage.job_voxel_dir(request.image_id, job_id) / "model_voxels.npz"
         ldr_path = storage.job_ldr_dir(request.image_id, job_id) / "output.ldr"
         report_path = storage.job_report_dir(request.image_id, job_id) / "report.json"
+        mesh_inspect_path = storage.job_report_dir(request.image_id, job_id) / "mesh_inspect.json"
         registry.update(
             job_id,
             status="running",
@@ -104,13 +105,14 @@ def run_pipeline_job(job_id: str, request: JobRequest, storage: SessionStorage, 
                 "voxels": voxel_path,
                 "ldr": ldr_path,
                 "report": report_path,
+                "mesh_inspect": mesh_inspect_path,
             },
         )
         registry.update(
             job_id,
-            stage="conversion",
-            progress=0.35,
-            message="Running mesh cleanup, voxelization, brick optimization, and LDraw export",
+            stage="mesh_inspection",
+            progress=0.28,
+            message="Generating and inspecting raw mesh before conversion",
         )
         run_from_image(
             image_path=image_path,
@@ -125,8 +127,11 @@ def run_pipeline_job(job_id: str, request: JobRequest, storage: SessionStorage, 
             sample_colors=request.sample_colors,
             optimize=request.optimize,
             report_path=report_path,
+            raw_mesh_report_path=mesh_inspect_path,
         )
         report = json.loads(report_path.read_text(encoding="utf-8"))
+        mesh_inspect = json.loads(mesh_inspect_path.read_text(encoding="utf-8"))
+        warnings = list(mesh_inspect.get("warnings", []))
         result = JobResultResponse(
             job_id=job_id,
             status="completed",
@@ -134,10 +139,11 @@ def run_pipeline_job(job_id: str, request: JobRequest, storage: SessionStorage, 
             report_url=f"/api/jobs/{job_id}/files/report",
             raw_mesh_url=f"/api/jobs/{job_id}/files/raw_mesh",
             cleaned_mesh_url=f"/api/jobs/{job_id}/files/cleaned_mesh",
+            mesh_inspect_url=f"/api/jobs/{job_id}/files/mesh_inspect",
             voxel_url=f"/api/jobs/{job_id}/files/voxels",
             brick_count=report.get("output_brick_count"),
             reduction_percent=report.get("reduction_percent"),
-            warnings=[],
+            warnings=warnings,
         )
         registry.update(
             job_id,

@@ -55,6 +55,7 @@ class JobResultResponse(BaseModel):
     report_url: str
     raw_mesh_url: str
     cleaned_mesh_url: str
+    mesh_inspect_url: str | None = None
     voxel_url: str
     brick_count: int | None = None
     reduction_percent: float | None = None

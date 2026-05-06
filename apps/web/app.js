@@ -31,6 +31,7 @@ const brickCountText = document.querySelector("#brickCountText");
 const reductionText = document.querySelector("#reductionText");
 const ldrLink = document.querySelector("#ldrLink");
 const reportLink = document.querySelector("#reportLink");
+const meshInspectLink = document.querySelector("#meshInspectLink");
 const rawMeshLink = document.querySelector("#rawMeshLink");
 
 const ctx = canvas.getContext("2d");
@@ -589,9 +590,11 @@ function setPipelineStage(stage) {
   document.querySelector('[data-stage="select"]').classList.add("is-done");
   if (stage === "queued" || stage === "segment") {
     document.querySelector('[data-stage="segment"]').classList.add("is-current");
-  } else if (stage === "reconstruction" || stage === "conversion") {
+  } else if (stage === "reconstruction" || stage === "mesh_inspection" || stage === "conversion") {
     document.querySelector('[data-stage="segment"]').classList.add("is-done");
-    document.querySelector('[data-stage="reconstruct"]').classList.toggle("is-current", stage === "reconstruction");
+    document
+      .querySelector('[data-stage="reconstruct"]')
+      .classList.toggle("is-current", stage === "reconstruction" || stage === "mesh_inspection");
     document.querySelector('[data-stage="reconstruct"]').classList.toggle("is-done", stage === "conversion");
     document.querySelector('[data-stage="convert"]').classList.toggle("is-current", stage === "conversion");
   } else if (stage === "completed") {
@@ -605,10 +608,11 @@ function setResultLinks(result) {
   const links = [
     [ldrLink, result.ldr_url],
     [reportLink, result.report_url],
+    [meshInspectLink, result.mesh_inspect_url],
     [rawMeshLink, result.raw_mesh_url],
   ];
   for (const [link, path] of links) {
-    link.href = apiUrl(path);
+    if (path) link.href = apiUrl(path);
   }
   jobIdText.textContent = result.job_id;
   brickCountText.textContent = String(result.brick_count ?? "-");

@@ -507,6 +507,19 @@ Done criteria:
 - Any generated mesh can be checked before voxelization.
 - Future real SAM adapter failures become diagnosable from job artifacts.
 
+Implementation status:
+
+- Implemented mesh inspection module at `src/makeyourbrick/mesh/inspect.py`.
+- Added CLI entry point `scripts/inspect_mesh.py`.
+- The report captures load status, asset type, scene geometry count, vertex count, face count, bounds, extents, watertightness, color availability, texture hints, warnings, errors, and `voxelization_ready`.
+- `run_from_image()` can now write a raw mesh inspection report immediately after mesh generation.
+- Job stub runs raw mesh inspection and exposes it through `/api/jobs/{job_id}/files/mesh_inspect`.
+- The web result panel links to the mesh inspection report.
+
+Current limitation:
+
+- The report currently validates geometry compatibility. It does not yet run a dry-run voxelization or estimate memory cost for large target stud counts.
+
 ### Milestone UI-3.7: Real SAM Adapter Preparation
 
 Purpose:
