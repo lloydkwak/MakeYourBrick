@@ -1,0 +1,26 @@
+# Core geometry and numeric stack
+numpy>=1.26
+scipy>=1.11
+trimesh>=4.6
+manifold3d>=3.0
+
+# Image and color handling
+Pillow>=10.0
+opencv-python>=4.9
+scikit-image>=0.22
+
+# Config and CLI helpers
+PyYAML>=6.0
+tqdm>=4.66
+
+# AI inference stack for SAM 3D Objects.
+# Install CUDA-specific PyTorch wheels as needed for the local GPU.
+torch>=2.5
+torchvision>=0.20
+huggingface-hub>=0.24
+transformers>=4.45
+
+# Development and tests
+pytest>=8.0
+ruff>=0.8
+

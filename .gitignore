@@ -216,3 +216,20 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# MakeYourBrick generated artifacts and local external checkouts
+outputs/*
+!outputs/**/
+!outputs/**/.gitkeep
+data/input_images/*
+!data/input_images/**/
+!data/input_images/**/.gitkeep
+data/masks/*
+!data/masks/**/
+!data/masks/**/.gitkeep
+data/examples/*
+!data/examples/**/
+!data/examples/**/.gitkeep
+third_party/*
+!third_party/**/
+!third_party/**/.gitkeep

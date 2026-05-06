@@ -1,0 +1,43 @@
+paths:
+  sam3d_repo: third_party/sam-3d-objects
+  input_image: data/input_images/sample.png
+  raw_mesh: outputs/meshes/raw_model.glb
+  watertight_mesh: outputs/meshes/watertight_model.glb
+  voxel_npz: outputs/voxels/model_voxels.npz
+  ldr_output: outputs/ldr/lego_output.ldr
+  ldraw_colors: data/ldraw/ldraw_colors.json
+
+voxel:
+  target_longest_studs: 48
+  min_pitch: 0.005
+  fill: true
+
+brickify:
+  allow_rotations: true
+  bricks:
+    - part_id: 3001.dat
+      width: 2
+      depth: 4
+      height: 1
+    - part_id: 3010.dat
+      width: 1
+      depth: 4
+      height: 1
+    - part_id: 3003.dat
+      width: 2
+      depth: 2
+      height: 1
+    - part_id: 3004.dat
+      width: 1
+      depth: 2
+      height: 1
+    - part_id: 3005.dat
+      width: 1
+      depth: 1
+      height: 1
+
+colors:
+  default_ldraw_color_id: 16
+  exclude_transparent: true
+  exclude_metallic: true
+
