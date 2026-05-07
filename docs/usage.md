@@ -165,6 +165,7 @@ python -m uvicorn makeyourbrick.server.main:app --app-dir src --reload
 Backend endpoints:
 
 - `GET /api/health`
+- `GET /api/config`
 - `POST /api/images`
 - `GET /api/images/{image_id}/file`
 - `POST /api/images/{image_id}/selection`
@@ -185,6 +186,18 @@ Backend runner configuration:
 - `MAKEYOURBRICK_SAM_COMMAND="<command that writes {output}>"`
 - SAM command placeholders include `{image}`, `{mask}`, `{output}`, `{output_dir}`, and `{repo}`
 - `MAKEYOURBRICK_SAM_TIMEOUT_SECONDS=3600`
+
+Example real SAM 3D backend configuration:
+
+```powershell
+$env:MAKEYOURBRICK_RUNNER_MODE = "sam3d"
+$env:MAKEYOURBRICK_SAM_REPO = "third_party/sam-3d-objects"
+$env:MAKEYOURBRICK_SAM_COMMAND = "python scripts/adapters/run_sam3d_objects_export.py --repo {repo} --image {image} --mask {mask} --output {output} --metadata {output_dir}/sam3d_export.json"
+$env:MAKEYOURBRICK_SAM_TIMEOUT_SECONDS = "3600"
+python -m uvicorn makeyourbrick.server.main:app --app-dir src --reload
+```
+
+In `sam3d` mode, `POST /api/jobs` requires a `mask_id`. The UI flow should upload an image, submit a selection, then start the conversion job with the returned mask id.
 
 Start a browser workflow by opening:
 

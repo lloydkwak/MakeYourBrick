@@ -34,6 +34,14 @@ class JobRunnerConfig:
             timeout_seconds=timeout_seconds,
         )
 
+    @property
+    def normalized_mode(self) -> str:
+        return self.mode.strip().lower()
+
+    @property
+    def requires_mask(self) -> bool:
+        return self.normalized_mode == "sam3d"
+
 
 @dataclass
 class JobRecord:
@@ -109,7 +117,7 @@ def to_status_response(record: JobRecord) -> JobStatusResponse:
 
 
 def build_image_runner(config: JobRunnerConfig) -> object:
-    mode = config.mode.strip().lower()
+    mode = config.normalized_mode
     if mode == "fake":
         return FakeSamMeshRunner()
     if mode in {"command", "sam3d"}:

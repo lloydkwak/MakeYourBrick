@@ -116,22 +116,36 @@ Acceptance criteria:
 
 ## Phase D: Backend Real SAM Mode
 
+Status: implementation completed; real GPU/SAM validation pending.
+
 Purpose:
 
 Run the real adapter through the existing backend job system.
 
 Tasks:
 
-- Set `MAKEYOURBRICK_RUNNER_MODE=sam3d`.
-- Set `MAKEYOURBRICK_SAM_REPO`.
-- Set `MAKEYOURBRICK_SAM_COMMAND` to the adapter command.
-- Run UI upload, selection, conversion, and artifact download.
-- Verify job status and failure messages.
+- [x] Set `MAKEYOURBRICK_RUNNER_MODE=sam3d`.
+- [x] Set `MAKEYOURBRICK_SAM_REPO`.
+- [x] Set `MAKEYOURBRICK_SAM_COMMAND` to the adapter command.
+- [ ] Run UI upload, selection, conversion, and artifact download in a real SAM 3D environment.
+- [x] Verify job status and failure messages.
+- [x] Expose backend runner mode through `GET /api/config`.
+- [x] Require `mask_id` when backend runs in `sam3d` mode.
 
 Acceptance criteria:
 
-- UI job produces `.ldr`, reports, raw mesh, cleaned mesh, and voxels from a real image.
-- Errors are readable when SAM fails.
+- [ ] UI job produces `.ldr`, reports, raw mesh, cleaned mesh, and voxels from a real image.
+- [x] Errors are readable when SAM fails or when a required mask is missing.
+
+Example backend configuration:
+
+```powershell
+$env:MAKEYOURBRICK_RUNNER_MODE = "sam3d"
+$env:MAKEYOURBRICK_SAM_REPO = "third_party/sam-3d-objects"
+$env:MAKEYOURBRICK_SAM_COMMAND = "python scripts/adapters/run_sam3d_objects_export.py --repo {repo} --image {image} --mask {mask} --output {output} --metadata {output_dir}/sam3d_export.json"
+$env:MAKEYOURBRICK_SAM_TIMEOUT_SECONDS = "3600"
+python -m uvicorn makeyourbrick.server.main:app --app-dir src --reload
+```
 
 ## Phase E: Manual Quality Gate
 

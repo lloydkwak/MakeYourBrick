@@ -15,6 +15,7 @@ from makeyourbrick.server.schemas import (
     JobRequest,
     JobResultResponse,
     JobStatusResponse,
+    ServerConfigResponse,
     SelectionRequest,
     SelectionResponse,
 )
@@ -41,6 +42,17 @@ def create_app(
     @app.get("/api/health", response_model=HealthResponse)
     def health() -> HealthResponse:
         return HealthResponse(status="ok")
+
+    @app.get("/api/config", response_model=ServerConfigResponse)
+    def get_config() -> ServerConfigResponse:
+        config = app.state.runner_config
+        return ServerConfigResponse(
+            runner_mode=config.normalized_mode,
+            sam_repo=str(config.sam_repo),
+            has_sam_command=bool(config.sam_command),
+            timeout_seconds=config.timeout_seconds,
+            requires_mask=config.requires_mask,
+        )
 
     @app.post("/api/images", response_model=ImageUploadResponse)
     async def upload_image(file: UploadFile = File(...)) -> ImageUploadResponse:
@@ -108,6 +120,8 @@ def create_app(
             app.state.storage.image_path(request.image_id)
         except FileNotFoundError as error:
             raise HTTPException(status_code=404, detail=str(error)) from error
+        if app.state.runner_config.requires_mask and request.mask_id is None:
+            raise HTTPException(status_code=400, detail="SAM 3D runner mode requires mask_id.")
         if request.mask_id is not None and not app.state.storage.mask_path(request.image_id, request.mask_id).exists():
             raise HTTPException(status_code=404, detail=f"Mask not found: {request.mask_id}")
         job_id = app.state.storage.new_id()

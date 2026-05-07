@@ -141,3 +141,88 @@ def test_job_can_use_command_runner_config() -> None:
         assert command_record["mask"].endswith(f"{selection['mask_id']}.png")
     finally:
         record_path.unlink(missing_ok=True)
+
+
+def test_sam3d_runner_mode_requires_mask_id() -> None:
+    client = make_client(
+        JobRunnerConfig(
+            mode="sam3d",
+            sam_repo=Path("."),
+            sam_command=f"{sys.executable} tests/fake_sam3d_command.py --colored-box --output {{output}}",
+            timeout_seconds=10,
+        )
+    )
+    upload = client.post(
+        "/api/images",
+        files={"file": ("sample.png", make_png_bytes(), "image/png")},
+    ).json()
+
+    response = client.post(
+        "/api/jobs",
+        json={
+            "image_id": upload["image_id"],
+            "target_studs": 8,
+            "sample_colors": True,
+            "optimize": False,
+            "fill": True,
+            "default_color_id": 16,
+            "repair_mode": "basic",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "SAM 3D runner mode requires mask_id."
+
+
+def test_sam3d_runner_mode_can_execute_with_mask() -> None:
+    record_path = Path("outputs/reports/test_server_sam3d_runner_record.json")
+    client = make_client(
+        JobRunnerConfig(
+            mode="sam3d",
+            sam_repo=Path("."),
+            sam_command=(
+                f"{sys.executable} tests/fake_sam3d_command.py "
+                "--colored-box --output {output} --mask {mask} --record-json "
+                f"{record_path}"
+            ),
+            timeout_seconds=10,
+        )
+    )
+    try:
+        config = client.get("/api/config").json()
+        upload = client.post(
+            "/api/images",
+            files={"file": ("sample.png", make_png_bytes(), "image/png")},
+        ).json()
+        selection = client.post(
+            f"/api/images/{upload['image_id']}/selection",
+            json={
+                "positive_points": [[12, 10]],
+                "negative_points": [],
+                "box": [4, 4, 28, 20],
+            },
+        ).json()
+
+        response = client.post(
+            "/api/jobs",
+            json={
+                "image_id": upload["image_id"],
+                "mask_id": selection["mask_id"],
+                "target_studs": 8,
+                "sample_colors": True,
+                "optimize": False,
+                "fill": True,
+                "default_color_id": 16,
+                "repair_mode": "basic",
+            },
+        )
+
+        assert config["runner_mode"] == "sam3d"
+        assert config["requires_mask"] is True
+        assert response.status_code == 200
+        status = client.get(f"/api/jobs/{response.json()['job_id']}").json()
+        command_record = json.loads(record_path.read_text(encoding="utf-8"))
+        assert status["status"] == "completed"
+        assert command_record["mask"].endswith(f"{selection['mask_id']}.png")
+    finally:
+        record_path.unlink(missing_ok=True)

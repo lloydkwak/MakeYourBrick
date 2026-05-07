@@ -30,6 +30,18 @@ def test_health_endpoint_returns_ok() -> None:
     assert response.json() == {"status": "ok"}
 
 
+def test_config_endpoint_returns_runner_settings() -> None:
+    client = make_client()
+
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["runner_mode"] == "fake"
+    assert payload["has_sam_command"] is False
+    assert payload["requires_mask"] is False
+
+
 def test_upload_image_stores_file_and_returns_metadata() -> None:
     client = make_client()
 

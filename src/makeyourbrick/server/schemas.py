@@ -30,6 +30,14 @@ class HealthResponse(BaseModel):
     status: str
 
 
+class ServerConfigResponse(BaseModel):
+    runner_mode: str
+    sam_repo: str
+    has_sam_command: bool
+    timeout_seconds: int
+    requires_mask: bool
+
+
 class JobRequest(BaseModel):
     image_id: str
     mask_id: str | None = None

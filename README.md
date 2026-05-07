@@ -22,6 +22,7 @@ Implemented:
 - SAM adapter contract with PLY artifact classification
 - backend runner selection for fake, command, and SAM adapter modes
 - SAM 3D Objects GLB export wrapper
+- backend `sam3d` mode mask validation and config endpoint
 
 Current verification:
 
@@ -30,7 +31,7 @@ python -m compileall src scripts tests/fake_sam3d_command.py
 python -m pytest
 ```
 
-Latest local result: `81 passed`.
+Latest local result: `84 passed`.
 
 ## Installation
 
