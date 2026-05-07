@@ -11,11 +11,13 @@
 - LDraw rotation output
 - Optimizer report JSON
 - Image pipeline orchestration through a SAM command contract
-- Local web shell and FastAPI job stub
+- Local web shell and FastAPI job flow
 - Mesh inspection reports
 - Mesh repair modes
 - SAM adapter contract with PLY artifact classification
 - Backend job runner selection for fake, command, and SAM adapter modes
+- SAM 3D Objects GLB export wrapper
+- Backend `sam3d` mode mask validation and config endpoint
 
 ## Next Work
 
@@ -23,13 +25,13 @@
 
 Run `facebookresearch/sam-3d-objects` in a suitable GPU/Linux environment and finalize the upstream command that writes or exposes a triangle mesh.
 
-This is the highest-risk remaining task because official quickstart examples export Gaussian splat PLY files. These are preserved as raw artifacts, while the MakeYourBrick pipeline requires a triangle mesh.
+This is the highest-risk remaining task because it requires external checkpoints, CUDA, and enough VRAM. The local wrapper already prefers `output["glb"]`, falls back to `output["mesh"][0]`, and preserves Gaussian splat PLY only as a debug artifact.
 
-See `docs/phase6_todo.md` for the detailed preparation plan.
+See `docs/real_sam3d_integration.md` for the detailed preparation plan.
 
 ### 1.5 Real SAM Backend Configuration
 
-Point backend `sam3d` mode at the verified adapter command after the real SAM environment spike. The selection mechanism is implemented; the remaining work is the real upstream command and manual validation.
+Point backend `sam3d` mode at the verified wrapper command in a real GPU/SAM environment and run one UI-to-LDraw sample.
 
 ### 2. Real Segmentation Backend
 
@@ -60,7 +62,7 @@ The bundled LDraw palette is a starter subset. Replace it with a broader, valida
 ## Current Risk Summary
 
 - Real SAM inference has not been run inside this repository.
-- Real SAM output may need a mesh extraction path if only Gaussian splats are available.
+- Real SAM output may need a mesh extraction path if the current upstream wrapper cannot access GLB or mesh output in the installed version.
 - Watertight repair is explicit but may still approximate difficult AI-generated meshes.
 - Physical buildability is only approximate.
 - LDraw optimized part placement should be visually checked in Stud.io.

@@ -1,6 +1,6 @@
 # SAM 3D Objects Manual Setup
 
-This document records the real SAM 3D Objects setup path for Phase 5 manual verification.
+This document records the real SAM 3D Objects setup path for manual end-to-end verification.
 
 Sources checked on 2026-05-06:
 
@@ -54,22 +54,36 @@ The upstream guide uses the `facebook/sam-3d-objects` model repo and downloads c
 The command template can use these placeholders:
 
 - `{image}`: input image path
+- `{mask}`: selected object mask path
 - `{output}`: expected output mesh path
 - `{output_dir}`: output mesh directory
 - `{repo}`: SAM 3D repo path
 
-The command must create the file at `{output}` in a mesh format supported by Trimesh, such as `.ply`, `.glb`, `.obj`, or `.stl`.
+The command must create the file at `{output}` in a mesh format supported by Trimesh. GLB is preferred.
+
+The prepared MakeYourBrick wrapper is:
+
+```bash
+python scripts/adapters/run_sam3d_objects_export.py \
+  --repo third_party/sam-3d-objects \
+  --image data/input_images/sample.png \
+  --mask data/masks/sample.png \
+  --output outputs/meshes/raw_model.glb \
+  --splat-output outputs/meshes/raw_splat.ply \
+  --metadata outputs/reports/sam3d_export.json
+```
 
 ## Manual Verification Shape
 
-Once a real SAM adapter command exists, run:
+After the external SAM environment is installed and a sample mask exists, run:
 
 ```bash
 python scripts/image_to_ldr.py \
   --image data/input_images/sample.png \
+  --mask data/masks/sample.png \
   --sam-repo third_party/sam-3d-objects \
-  --sam-command "<your SAM adapter command using {image} and {output}>" \
-  --raw-mesh outputs/meshes/raw_model.ply \
+  --sam-command "python scripts/adapters/run_sam3d_objects_export.py --repo {repo} --image {image} --mask {mask} --output {output} --metadata {output_dir}/sam3d_export.json" \
+  --raw-mesh outputs/meshes/raw_model.glb \
   --target-studs 48 \
   --sample-colors \
   --optimize \
@@ -79,5 +93,4 @@ python scripts/image_to_ldr.py \
 
 ## Important Caveat
 
-The upstream quick-start demo currently demonstrates saving a Gaussian splat PLY. MakeYourBrick's downstream pipeline expects a Trimesh-loadable surface mesh. If the SAM output is a point cloud or Gaussian splat rather than a triangle mesh, an adapter/conversion step is required before voxelization.
-
+The upstream quick-start demo demonstrates saving a Gaussian splat PLY. MakeYourBrick's downstream pipeline expects a Trimesh-loadable triangle mesh. The local wrapper prefers `output["glb"]`, falls back to `output["mesh"][0]`, and saves splat PLY only as an optional debug artifact.

@@ -1,6 +1,6 @@
-# SAM 3D Mesh Export TODO
+# Real SAM 3D Integration Status
 
-This document tracks the revised integration plan for `facebookresearch/sam-3d-objects`.
+This document tracks the current integration status for `facebookresearch/sam-3d-objects`.
 
 The primary path is no longer Gaussian-splat-to-mesh conversion. The preferred path is to use the upstream model's mesh/GLB output directly, then pass that triangle mesh into the existing MakeYourBrick mesh-first pipeline.
 
@@ -33,7 +33,9 @@ The adapter should treat GLB or triangle mesh export as the successful path. Gau
 3. Preserve `output["gs"].save_ply(raw_splat.ply)` as debug output
 4. Fail clearly if only Gaussian splat PLY or point cloud data is available
 
-## Phase A: Mask-Aware Runner Contract
+## Completed: Mask-Aware Runner Contract
+
+Status: completed.
 
 Purpose:
 
@@ -41,21 +43,21 @@ Allow every image-to-mesh runner to receive the selected object mask from the UI
 
 Tasks:
 
-- Add optional `mask_path` to `Sam3DRunner.generate()`.
-- Add `{mask}` command template placeholder.
-- Add optional `mask_path` to `run_from_image()`.
-- Pass backend job `mask_id` artifact into `run_from_image()`.
-- Keep fake runner compatible for local UI tests.
-- Add tests for mask placeholder rendering and backend job mask forwarding.
+- [x] Add optional `mask_path` to `Sam3DRunner.generate()`.
+- [x] Add `{mask}` command template placeholder.
+- [x] Add optional `mask_path` to `run_from_image()`.
+- [x] Pass backend job `mask_id` artifact into `run_from_image()`.
+- [x] Keep fake runner compatible for local UI tests.
+- [x] Add tests for mask placeholder rendering and backend job mask forwarding.
 
 Acceptance criteria:
 
-- Existing fake UI jobs still complete.
-- Command runner can receive `--mask {mask}`.
-- Missing mask paths fail before running an external command.
-- Full test suite passes.
+- [x] Existing fake UI jobs still complete.
+- [x] Command runner can receive `--mask {mask}`.
+- [x] Missing mask paths fail before running an external command.
+- [x] Full test suite passes.
 
-## Phase B: Adapter CLI Mask Support
+## Completed: Adapter CLI Mask Support
 
 Status: completed.
 
@@ -84,7 +86,7 @@ python scripts/adapters/sam3d_to_mesh.py \
   --report outputs/reports/sam3d_adapter.json
 ```
 
-## Phase C: Real SAM Mesh Export Script
+## Implemented: Real SAM Mesh Export Script
 
 Status: implementation completed; real GPU/SAM validation pending.
 
@@ -114,7 +116,7 @@ Acceptance criteria:
 - [x] Script can be used as `MAKEYOURBRICK_SAM_COMMAND`.
 - [ ] The resulting GLB passes `scripts/inspect_mesh.py` in a real SAM 3D environment.
 
-## Phase D: Backend Real SAM Mode
+## Implemented: Backend Real SAM Mode
 
 Status: implementation completed; real GPU/SAM validation pending.
 
@@ -147,7 +149,7 @@ $env:MAKEYOURBRICK_SAM_TIMEOUT_SECONDS = "3600"
 python -m uvicorn makeyourbrick.server.main:app --app-dir src --reload
 ```
 
-## Phase E: Manual Quality Gate
+## Remaining: Manual Quality Gate
 
 Purpose:
 

@@ -2,7 +2,7 @@
 
 MakeYourBrick is a Python pipeline for converting a 2D image or 3D mesh into an LDraw `.ldr` LEGO model.
 
-The local mesh-to-LDraw pipeline, web job stub, mesh inspection, mesh repair, and SAM adapter contract are implemented and tested. Real SAM 3D inference still requires a separate GPU/Linux setup and a verified mesh-producing command.
+The local mesh-to-LDraw pipeline, static web shell, FastAPI job flow, mesh inspection, mesh repair, and SAM 3D adapter contract are implemented and tested. Real SAM 3D inference still requires a separate GPU/Linux setup and one manual validation run.
 
 ## Status
 
@@ -65,7 +65,7 @@ python scripts/mesh_to_ldr.py --mesh data/examples/sample_colored.ply --target-s
 Image to LDraw through a SAM command template:
 
 ```bash
-python scripts/image_to_ldr.py --image data/input_images/sample.png --sam-repo third_party/sam-3d-objects --sam-command "<command that writes {output}>" --target-studs 48 --sample-colors --optimize --report outputs/reports/image_report.json --output outputs/ldr/image_output.ldr
+python scripts/image_to_ldr.py --image data/input_images/sample.png --mask data/masks/sample.png --sam-repo third_party/sam-3d-objects --sam-command "python scripts/adapters/run_sam3d_objects_export.py --repo {repo} --image {image} --mask {mask} --output {output}" --target-studs 48 --sample-colors --optimize --report outputs/reports/image_report.json --output outputs/ldr/image_output.ldr
 ```
 
 ## Documentation
@@ -76,9 +76,7 @@ python scripts/image_to_ldr.py --image data/input_images/sample.png --sam-repo t
 - [Testing](docs/testing.md)
 - [SAM 3D manual setup](docs/sam3d_manual_setup.md)
 - [SAM 3D adapter](docs/sam3d_adapter.md)
-- [SAM 3D mesh export TODO](docs/sam3d_mesh_export_todo.md)
-- [Phase 6 TODO](docs/phase6_todo.md)
-- [UI integration plan](docs/ui_integration_plan.md)
+- [Real SAM 3D integration status](docs/real_sam3d_integration.md)
 - [Roadmap and limitations](docs/roadmap.md)
 - [References](docs/references.md)
 

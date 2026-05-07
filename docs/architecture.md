@@ -7,6 +7,7 @@ MakeYourBrick is a staged image/mesh-to-LDraw pipeline. The stable production pa
 ```text
 image
   -> Sam3DRunner command contract
+  -> optional object mask
   -> raw SAM artifact preservation
   -> triangle mesh artifact (.glb preferred)
   -> mesh inspection
@@ -29,11 +30,12 @@ Location:
 - `src/makeyourbrick/ai/sam3d_runner.py`
 - `src/makeyourbrick/ai/sam3d_adapter.py`
 - `scripts/image_to_ldr.py`
+- `scripts/adapters/run_sam3d_objects_export.py`
 - `scripts/adapters/sam3d_to_mesh.py`
 
-The runner executes a configurable command template. The template can use `{image}`, `{output}`, `{output_dir}`, and `{repo}` placeholders. The command must write a Trimesh-loadable triangle mesh to `{output}`.
+The runner executes a configurable command template. The template can use `{image}`, `{mask}`, `{output}`, `{output_dir}`, and `{repo}` placeholders. The command must write a Trimesh-loadable triangle mesh to `{output}`.
 
-SAM 3D Objects examples export Gaussian splat PLY files by default. These files are preserved as raw artifacts but are not accepted as the standard MakeYourBrick geometry input. The adapter classifies PLY artifacts as mesh PLY, Gaussian splat PLY, or point cloud PLY before deciding whether they can be converted to GLB.
+The preferred SAM 3D Objects path is direct GLB export from the upstream inference output. The wrapper falls back to exporting `output["mesh"][0]` through Trimesh when a GLB object is not available. Gaussian splat PLY files are preserved as debug artifacts only and are not accepted as the standard MakeYourBrick geometry input.
 
 This design keeps the repository testable without installing SAM 3D or requiring a GPU.
 
@@ -100,7 +102,6 @@ The writer emits LDraw line type 1 part references. It supports 0, 90, 180, and 
 ## Directory Layout
 
 ```text
-configs/                Default configuration
 data/                   Input images, example meshes, LDraw palette
 docs/                   Architecture, usage, environment, testing, references
 outputs/                Generated artifacts, ignored except .gitkeep files
@@ -110,6 +111,15 @@ tests/                  Automated test suite and fake SAM command
 third_party/            External repos such as sam-3d-objects, ignored
 ```
 
+### Backend and UI
+
+Location:
+
+- `src/makeyourbrick/server/`
+- `apps/web/`
+
+The backend exposes image upload, placeholder mask generation, job creation, job status, result, artifact download, and configuration endpoints. It defaults to a deterministic fake SAM runner for local development. In `sam3d` mode it requires `mask_id` and runs the configured SAM command template.
+
 ## Current Status
 
-The local mesh-to-LDraw pipeline, web job stub, mesh inspection, repair reports, and SAM adapter contract are implemented and tested. Real SAM 3D inference still needs to be run in a suitable GPU/Linux environment so the upstream mesh-producing command can be finalized.
+The local mesh-to-LDraw pipeline, web job flow, mesh inspection, repair reports, SAM adapter contract, and SAM 3D Objects export wrapper are implemented and tested. Real SAM 3D inference still needs to be run in a suitable GPU/Linux environment to validate the wrapper against the upstream model and record a real sample.

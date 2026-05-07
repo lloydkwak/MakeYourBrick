@@ -19,12 +19,12 @@ No package installation or dev server is required for this milestone.
 - LEGO conversion settings preview
 - JSON export for the selection/config payload
 - optional backend image/selection sync
-- backend pipeline job stub execution
+- backend pipeline job execution
 - result links for generated LDR, report, and raw mesh artifacts
 
 ## Scope
 
-This shell does not call real SAM segmentation or SAM 3D Objects yet. `Run Conversion` calls the local FastAPI job stub, which generates a fake SAM mesh and runs the real MakeYourBrick conversion pipeline.
+This shell does not run real segmentation in the browser. `Run Conversion` calls the local FastAPI job endpoint. By default the backend uses a fake SAM mesh for local development; when the backend is configured with `MAKEYOURBRICK_RUNNER_MODE=sam3d`, the same UI flow sends the selected mask id to the real SAM command path.
 
 ## Backend Workflow
 

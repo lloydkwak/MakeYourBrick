@@ -183,7 +183,7 @@ Backend runner configuration:
 - `MAKEYOURBRICK_RUNNER_MODE=command`: run a command template through `Sam3DRunner`
 - `MAKEYOURBRICK_RUNNER_MODE=sam3d`: alias for command mode when wiring the real SAM adapter
 - `MAKEYOURBRICK_SAM_REPO=third_party/sam-3d-objects`: external repository path
-- `MAKEYOURBRICK_SAM_COMMAND="<command that writes {output}>"`
+- `MAKEYOURBRICK_SAM_COMMAND="<command that reads {image} and {mask}, then writes {output}>"`
 - SAM command placeholders include `{image}`, `{mask}`, `{output}`, `{output_dir}`, and `{repo}`
 - `MAKEYOURBRICK_SAM_TIMEOUT_SECONDS=3600`
 

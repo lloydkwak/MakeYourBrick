@@ -117,4 +117,4 @@ The nested command above is intentionally explicit. For real use, prefer storing
 
 ## Current Limitation
 
-This adapter prepares the contract but does not yet encode a verified SAM 3D Objects inference command. That command must be finalized after running the upstream repository in a suitable GPU/Linux environment and documenting the actual produced artifacts.
+The repository includes a SAM 3D Objects wrapper at `scripts/adapters/run_sam3d_objects_export.py`, but it has not yet been validated against a real GPU/SAM checkout. The next required step is to run that wrapper in the upstream environment, confirm that `raw_model.glb` is produced, and inspect the result before voxelization.

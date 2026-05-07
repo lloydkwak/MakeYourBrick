@@ -22,8 +22,10 @@ The current suite covers:
 - mesh-to-LDraw CLI
 - image-to-LDraw orchestration with a fake SAM command
 - SAM 3D adapter command contract
+- SAM 3D Objects GLB export wrapper behavior
 - FastAPI image upload and selection endpoints
-- FastAPI pipeline job stub endpoints
+- FastAPI pipeline job endpoints
+- backend `sam3d` mode mask validation
 - placeholder segmentation mask generation
 - optimizer report generation
 
@@ -31,7 +33,7 @@ The current suite covers:
 
 The test suite does not require a GPU or SAM 3D Objects installation. Image pipeline tests use `tests/fake_sam3d_command.py`, which emits a small colored mesh artifact.
 
-Backend job tests use `FakeSamMeshRunner`, which creates a deterministic local triangle mesh and then exercises the real mesh cleanup, voxelization, brick optimization, LDraw writer, and report writer.
+Backend job tests use `FakeSamMeshRunner` by default and command-mode fake SAM calls for runner integration. Both create deterministic local triangle meshes and then exercise the real mesh cleanup, voxelization, brick optimization, LDraw writer, and report writer.
 
 ## Manual Smoke Tests
 
@@ -52,8 +54,9 @@ Fake image pipeline:
 ```bash
 python scripts/image_to_ldr.py \
   --image outputs/manual_fake_image.png \
+  --mask outputs/manual_fake_mask.png \
   --sam-repo . \
-  --sam-command "python tests/fake_sam3d_command.py --output {output} --colored-box" \
+  --sam-command "python tests/fake_sam3d_command.py --output {output} --mask {mask} --colored-box" \
   --target-studs 8 \
   --sample-colors \
   --optimize \
@@ -61,10 +64,10 @@ python scripts/image_to_ldr.py \
   --output outputs/ldr/manual_image_output.ldr
 ```
 
-Create the fake image first if needed:
+Create the fake image and mask first if needed:
 
 ```bash
-python -c "from pathlib import Path; Path('outputs/manual_fake_image.png').parent.mkdir(parents=True, exist_ok=True); Path('outputs/manual_fake_image.png').write_bytes(b'fake-image')"
+python -c "from pathlib import Path; Path('outputs/manual_fake_image.png').parent.mkdir(parents=True, exist_ok=True); Path('outputs/manual_fake_image.png').write_bytes(b'fake-image'); Path('outputs/manual_fake_mask.png').write_bytes(b'fake-mask')"
 ```
 
 Local UI/backend smoke test:
