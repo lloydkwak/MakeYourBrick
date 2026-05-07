@@ -15,6 +15,86 @@ from makeyourbrick.mesh.inspect import inspect_mesh
 
 
 MESH_SUFFIXES = {".glb", ".gltf", ".obj", ".ply", ".stl"}
+GAUSSIAN_PLY_PROPERTIES = {
+    "opacity",
+    "scale_0",
+    "scale_1",
+    "scale_2",
+    "rot_0",
+    "rot_1",
+    "rot_2",
+    "rot_3",
+    "f_dc_0",
+    "f_dc_1",
+    "f_dc_2",
+}
+
+
+def read_ply_header(path: Path) -> dict:
+    header_lines: list[str] = []
+    with path.open("rb") as file:
+        for raw_line in file:
+            line = raw_line.decode("ascii", errors="ignore").strip()
+            header_lines.append(line)
+            if line == "end_header":
+                break
+            if len(header_lines) > 2048:
+                raise ValueError(f"PLY header is too large or missing end_header: {path}")
+    if not header_lines or header_lines[0] != "ply":
+        raise ValueError(f"Not a PLY file: {path}")
+
+    elements: dict[str, int] = {}
+    properties: dict[str, list[str]] = {}
+    current_element: str | None = None
+    for line in header_lines:
+        parts = line.split()
+        if not parts:
+            continue
+        if parts[0] == "element" and len(parts) >= 3:
+            current_element = parts[1]
+            elements[current_element] = int(parts[2])
+            properties.setdefault(current_element, [])
+        elif parts[0] == "property" and current_element and len(parts) >= 2:
+            properties[current_element].append(parts[-1])
+    return {"elements": elements, "properties": properties, "header_lines": header_lines}
+
+
+def classify_sam_artifact(path: Path) -> dict:
+    suffix = path.suffix.lower()
+    if suffix == ".ply":
+        header = read_ply_header(path)
+        elements = header["elements"]
+        vertex_properties = set(header["properties"].get("vertex", []))
+        has_faces = elements.get("face", 0) > 0
+        gaussian_markers = sorted(vertex_properties.intersection(GAUSSIAN_PLY_PROPERTIES))
+        if has_faces:
+            artifact_type = "mesh_ply"
+            mesh_compatible = True
+            next_action = "adapt_to_glb"
+        elif gaussian_markers:
+            artifact_type = "gaussian_splat_ply"
+            mesh_compatible = False
+            next_action = "mesh_extraction_required"
+        else:
+            artifact_type = "point_cloud_ply"
+            mesh_compatible = False
+            next_action = "mesh_reconstruction_required"
+        return {
+            "artifact_type": artifact_type,
+            "mesh_compatible": mesh_compatible,
+            "next_action": next_action,
+            "elements": elements,
+            "vertex_properties": sorted(vertex_properties),
+            "gaussian_markers": gaussian_markers,
+        }
+    return {
+        "artifact_type": "mesh_candidate",
+        "mesh_compatible": suffix in MESH_SUFFIXES,
+        "next_action": "inspect_and_adapt",
+        "elements": {},
+        "vertex_properties": [],
+        "gaussian_markers": [],
+    }
 
 
 def render_command(
@@ -129,7 +209,27 @@ def adapt_sam_output(
         )
 
     candidate = candidate_path or find_mesh_candidate([work_dir, output_path.parent], output_path)
+    artifact_report = classify_sam_artifact(candidate)
     source_report = inspect_mesh(candidate)
+    if not artifact_report["mesh_compatible"]:
+        adapter_report = {
+            "repo_path": str(repo_path),
+            "image_path": str(image_path),
+            "candidate_path": str(candidate),
+            "output_path": str(output_path),
+            "source_artifact": artifact_report,
+            "source_inspection": source_report,
+            "output_inspection": None,
+            "status": "failed",
+            "failure_reason": artifact_report["next_action"],
+        }
+        if report_path is not None:
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            report_path.write_text(json.dumps(adapter_report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        raise ValueError(
+            "SAM output is not a triangle mesh artifact. "
+            f"Detected {artifact_report['artifact_type']}; {artifact_report['next_action']}."
+        )
     if not source_report["voxelization_ready"]:
         raise ValueError(
             "SAM output is not a voxelization-ready triangle mesh. "
@@ -146,6 +246,7 @@ def adapt_sam_output(
         "image_path": str(image_path),
         "candidate_path": str(candidate),
         "output_path": str(output_path),
+        "source_artifact": artifact_report,
         "source_inspection": source_report,
         "output_inspection": output_report,
         "status": "completed" if output_report["voxelization_ready"] else "failed",

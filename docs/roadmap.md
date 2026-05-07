@@ -11,26 +11,28 @@
 - LDraw rotation output
 - Optimizer report JSON
 - Image pipeline orchestration through a SAM command contract
+- Local web shell and FastAPI job stub
+- Mesh inspection reports
+- Mesh repair modes
+- SAM adapter contract with PLY artifact classification
 
 ## Next Work
 
-### 1. Real SAM 3D Adapter
+### 1. Real SAM 3D Environment Spike
 
-Write a concrete adapter command for `facebookresearch/sam-3d-objects` that accepts `{image}` and writes a Trimesh-loadable triangle mesh to `{output}`.
+Run `facebookresearch/sam-3d-objects` in a suitable GPU/Linux environment and finalize the upstream command that writes or exposes a triangle mesh.
 
-This is the highest-risk remaining task because upstream SAM examples may produce Gaussian splats or point-cloud-like PLY files rather than triangle meshes.
+This is the highest-risk remaining task because official quickstart examples export Gaussian splat PLY files. These are preserved as raw artifacts, while the MakeYourBrick pipeline requires a triangle mesh.
 
 See `docs/phase6_todo.md` for the detailed preparation plan.
 
-### 1.5 User Interface
+### 1.5 Backend Real Runner Mode
 
-Build a tool UI where users can upload an image, select the target object with point or box prompts, preview the mask, configure LEGO output options, and run the conversion job.
+Replace the hardcoded fake runner in backend jobs with a runner factory that can choose `fake`, `command`, or `sam3d` mode through configuration.
 
-See `docs/ui_integration_plan.md` for the proposed UX, API, repository structure, and milestones.
+### 2. Real Segmentation Backend
 
-### 2. Stronger Mesh Repair
-
-The current mesh cleanup path does not guarantee watertight manifold output. Add `manifold3d` repair or a documented fallback strategy for open/noisy AI-generated meshes.
+Replace placeholder mask generation with a real SAM/SAM 2 segmentation predictor so user point and box prompts produce semantic object masks.
 
 ### 3. Better Color Sampling
 
@@ -57,7 +59,7 @@ The bundled LDraw palette is a starter subset. Replace it with a broader, valida
 ## Current Risk Summary
 
 - Real SAM inference has not been run inside this repository.
-- Real SAM output may need a mesh conversion adapter.
-- Watertight repair is not yet robust enough for all generated meshes.
+- Real SAM output may need a mesh extraction path if only Gaussian splats are available.
+- Watertight repair is explicit but may still approximate difficult AI-generated meshes.
 - Physical buildability is only approximate.
 - LDraw optimized part placement should be visually checked in Stud.io.

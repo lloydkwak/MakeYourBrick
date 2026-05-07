@@ -1,21 +1,23 @@
 # Architecture
 
-MakeYourBrick is a staged image/mesh-to-LDraw pipeline. The current production path is mesh-first, with an image-to-mesh runner contract ready for SAM 3D Objects integration.
+MakeYourBrick is a staged image/mesh-to-LDraw pipeline. The stable production path is mesh-first: every real or generated object must become a triangle mesh before voxelization and LEGO conversion.
 
 ## Pipeline
 
 ```text
 image
   -> Sam3DRunner command contract
-  -> raw mesh artifact
-  -> mesh cleanup
+  -> raw SAM artifact preservation
+  -> triangle mesh artifact (.glb preferred)
+  -> mesh inspection
+  -> mesh repair
   -> voxelization
   -> optional mesh color sampling
   -> LDraw color quantization
   -> brickification
   -> optional greedy brick optimization
   -> LDraw .ldr output
-  -> optional optimizer report JSON
+  -> JSON reports
 ```
 
 ## Main Components
@@ -25,9 +27,13 @@ image
 Location:
 
 - `src/makeyourbrick/ai/sam3d_runner.py`
+- `src/makeyourbrick/ai/sam3d_adapter.py`
 - `scripts/image_to_ldr.py`
+- `scripts/adapters/sam3d_to_mesh.py`
 
-The runner executes a configurable command template. The template can use `{image}`, `{output}`, `{output_dir}`, and `{repo}` placeholders. The command must write a Trimesh-loadable mesh to `{output}`.
+The runner executes a configurable command template. The template can use `{image}`, `{output}`, `{output_dir}`, and `{repo}` placeholders. The command must write a Trimesh-loadable triangle mesh to `{output}`.
+
+SAM 3D Objects examples export Gaussian splat PLY files by default. These files are preserved as raw artifacts but are not accepted as the standard MakeYourBrick geometry input. The adapter classifies PLY artifacts as mesh PLY, Gaussian splat PLY, or point cloud PLY before deciding whether they can be converted to GLB.
 
 This design keeps the repository testable without installing SAM 3D or requiring a GPU.
 
@@ -36,9 +42,11 @@ This design keeps the repository testable without installing SAM 3D or requiring
 Location:
 
 - `src/makeyourbrick/mesh/solidify.py`
+- `src/makeyourbrick/mesh/inspect.py`
+- `src/makeyourbrick/mesh/repair.py`
 - `src/makeyourbrick/mesh/color_sampling.py`
 
-The mesh module loads `.stl`, `.obj`, `.glb`, `.ply`, and other Trimesh-supported formats. It can merge `trimesh.Scene` geometry into one mesh and performs basic cleanup. It does not currently guarantee true watertight manifold repair.
+The mesh module loads `.stl`, `.obj`, `.glb`, mesh `.ply`, and other Trimesh-supported triangle mesh formats. It can merge `trimesh.Scene` geometry into one mesh, inspect compatibility, and repair with explicit modes: `none`, `basic`, `manifold`, and `convex-hull`.
 
 Color sampling currently supports nearest vertex color and nearest face color. Full UV texture sampling is not implemented yet.
 
@@ -104,5 +112,4 @@ third_party/            External repos such as sam-3d-objects, ignored
 
 ## Current Status
 
-The local mesh-to-LDraw pipeline is implemented and tested. The SAM 3D integration layer is implemented as a command contract, but real SAM 3D inference has not been run in this repository.
-
+The local mesh-to-LDraw pipeline, web job stub, mesh inspection, repair reports, and SAM adapter contract are implemented and tested. Real SAM 3D inference still needs to be run in a suitable GPU/Linux environment so the upstream mesh-producing command can be finalized.

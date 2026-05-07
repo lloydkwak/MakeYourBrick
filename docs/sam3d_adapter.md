@@ -7,7 +7,25 @@ It does not assume a stable upstream Python API. Instead, it accepts either:
 - an upstream command template that produces a mesh-like artifact
 - or an existing candidate artifact from a SAM experiment
 
-The adapter inspects the candidate, verifies that it is a voxelization-ready triangle mesh, and exports a normalized mesh file for MakeYourBrick.
+The adapter classifies and inspects the candidate, verifies that it is a voxelization-ready triangle mesh, and exports a normalized mesh file for MakeYourBrick.
+
+SAM 3D Objects official quickstart exports a Gaussian splat PLY through `output["gs"].save_ply("splat.ply")`. That artifact should be preserved for debugging and visualization, but it is not the standard MakeYourBrick geometry input. The LEGO pipeline expects a triangle mesh, preferably GLB.
+
+## Artifact Policy
+
+```text
+raw_splat.ply       Optional preserved SAM Gaussian splat output
+raw_model.glb       Required triangle mesh input for MakeYourBrick
+mesh_inspect.json   Geometry compatibility report
+repair_report.json  Mesh repair report
+output.ldr          Final LDraw model
+```
+
+PLY files are classified before conversion:
+
+- `mesh_ply`: has face elements and can be adapted to GLB
+- `gaussian_splat_ply`: has Gaussian properties such as opacity, scale, rotation, or feature fields; mesh extraction is required
+- `point_cloud_ply`: has vertices without faces or Gaussian properties; mesh reconstruction is required
 
 ## Command Contract
 
@@ -52,7 +70,7 @@ The adapter report includes:
 - output mesh inspection
 - final status
 
-If the candidate is a point cloud, Gaussian splat, empty scene, or unsupported asset type, the adapter fails clearly instead of passing a bad artifact into voxelization.
+If the candidate is a point cloud, Gaussian splat, empty scene, or unsupported asset type, the adapter fails clearly instead of passing a bad artifact into voxelization. The failure report records the detected artifact type and the required next action.
 
 ## Image Pipeline Usage
 

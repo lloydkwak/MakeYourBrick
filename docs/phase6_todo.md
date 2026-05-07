@@ -34,15 +34,16 @@ Already implemented:
 - sampled vertex/face colors
 - greedy optimizer
 - optimizer reports
+- mesh inspection reports
+- explicit mesh repair modes
+- SAM adapter contract and PLY artifact classification
 
 Not yet implemented:
 
-- real SAM 3D adapter command
-- SAM output format inspection
+- verified real SAM 3D inference command
 - point cloud / Gaussian splat to triangle mesh conversion
-- robust watertight repair
 - real image manual verification
-- UI target selection integration
+- real SAM runner mode in the backend
 
 ## Phase 6.1: Real SAM Environment Spike
 
@@ -133,7 +134,7 @@ python scripts/inspect_mesh.py \
 
 Implement the concrete command that `scripts/image_to_ldr.py --sam-command` will call.
 
-Status: contract adapter implemented. The final upstream SAM command still needs to be filled in after a real SAM 3D environment spike.
+Status: contract adapter implemented with PLY classification. The final upstream SAM command still needs to be filled in after a real SAM 3D environment spike.
 
 ### New Files
 
@@ -167,6 +168,12 @@ python scripts/adapters/sam3d_to_mesh.py \
 - Adapter command creates the requested `{output}` file for a known SAM output.
 - `scripts/image_to_ldr.py` can call the adapter without code changes.
 - Failure modes are explicit and actionable.
+
+Additional policy:
+
+- Preserve Gaussian splat PLY as a raw artifact only.
+- Use GLB or another triangle mesh format as the pipeline input.
+- Reject Gaussian splat PLY and point cloud PLY before voxelization unless a mesh extraction fallback is explicitly enabled later.
 
 ## Phase 6.4: Mesh Conversion Fallback
 

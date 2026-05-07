@@ -127,6 +127,8 @@ python scripts/adapters/sam3d_to_mesh.py \
 
 The adapter validates that the selected artifact is a triangle mesh before handing it to voxelization. See `docs/sam3d_adapter.md`.
 
+SAM 3D Objects commonly saves Gaussian splat PLY files. Those files are raw visualization/debug artifacts, not the default LEGO conversion input. If the adapter detects a Gaussian splat PLY or point cloud PLY, it writes a clear failure report and stops before voxelization.
+
 ## Outputs
 
 Generated files are ignored by Git:

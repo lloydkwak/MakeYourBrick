@@ -2,7 +2,7 @@
 
 MakeYourBrick is a Python pipeline for converting a 2D image or 3D mesh into an LDraw `.ldr` LEGO model.
 
-The local mesh-to-LDraw pipeline is implemented and tested. The image pipeline is wired through a SAM 3D Objects command contract, but real SAM 3D inference still requires a separate GPU setup and a mesh-producing adapter.
+The local mesh-to-LDraw pipeline, web job stub, mesh inspection, mesh repair, and SAM adapter contract are implemented and tested. Real SAM 3D inference still requires a separate GPU/Linux setup and a verified mesh-producing command.
 
 ## Status
 
@@ -17,6 +17,9 @@ Implemented:
 - LDraw output with basic rotations
 - optimizer report JSON
 - image-to-LDraw orchestration through a SAM command template
+- local FastAPI backend and static web shell
+- mesh inspection and repair reports
+- SAM adapter contract with PLY artifact classification
 
 Current verification:
 
@@ -25,7 +28,7 @@ python -m compileall src scripts tests/fake_sam3d_command.py
 python -m pytest
 ```
 
-Latest local result: `52 passed`.
+Latest local result: `72 passed`.
 
 ## Installation
 
@@ -69,6 +72,7 @@ python scripts/image_to_ldr.py --image data/input_images/sample.png --sam-repo t
 - [Environment](docs/environment.md)
 - [Testing](docs/testing.md)
 - [SAM 3D manual setup](docs/sam3d_manual_setup.md)
+- [SAM 3D adapter](docs/sam3d_adapter.md)
 - [Phase 6 TODO](docs/phase6_todo.md)
 - [UI integration plan](docs/ui_integration_plan.md)
 - [Roadmap and limitations](docs/roadmap.md)
@@ -77,8 +81,8 @@ python scripts/image_to_ldr.py --image data/input_images/sample.png --sam-repo t
 ## Important Limitations
 
 - Real SAM 3D inference has not been executed in this repository.
-- The SAM command must produce a Trimesh-loadable triangle mesh, not only a Gaussian splat or point cloud.
-- Mesh cleanup does not yet guarantee watertight manifold repair.
+- The SAM command must produce or expose a Trimesh-loadable triangle mesh. Gaussian splat PLY is preserved as a raw artifact but is not the default LEGO conversion input.
+- Mesh repair is explicit and reported, but severe AI-generated meshes may still require approximation.
 - Brick optimization reduces brick count but does not yet score real physical stability.
 - LDraw part origins should be visually checked in Stud.io or another LDraw-compatible tool.
 
