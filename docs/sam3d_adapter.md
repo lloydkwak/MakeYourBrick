@@ -85,14 +85,26 @@ If the candidate is a point cloud, Gaussian splat, empty scene, or unsupported a
 
 ## Image Pipeline Usage
 
-Once a real upstream command is known, use it through the existing image pipeline:
+Use the SAM 3D Objects export wrapper as the upstream command:
+
+```bash
+python scripts/adapters/run_sam3d_objects_export.py \
+  --repo third_party/sam-3d-objects \
+  --image data/input_images/sample.png \
+  --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
+  --output outputs/meshes/raw_model.glb \
+  --splat-output outputs/meshes/raw_splat.ply \
+  --metadata outputs/reports/sam3d_export.json
+```
+
+Once the upstream environment is installed, use that wrapper through the existing image pipeline:
 
 ```bash
 python scripts/image_to_ldr.py \
   --image data/input_images/sample.png \
   --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
   --sam-repo third_party/sam-3d-objects \
-  --sam-command "python scripts/adapters/sam3d_to_mesh.py --repo {repo} --image {image} --mask {mask} --output {output} --sam-command '<upstream command>'" \
+  --sam-command "python scripts/adapters/run_sam3d_objects_export.py --repo {repo} --image {image} --mask {mask} --output {output} --metadata {output_dir}/sam3d_export.json" \
   --target-studs 48 \
   --sample-colors \
   --optimize \

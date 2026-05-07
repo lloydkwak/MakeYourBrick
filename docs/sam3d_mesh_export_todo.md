@@ -86,6 +86,8 @@ python scripts/adapters/sam3d_to_mesh.py \
 
 ## Phase C: Real SAM Mesh Export Script
 
+Status: implementation completed; real GPU/SAM validation pending.
+
 Purpose:
 
 Create the concrete script that imports SAM 3D Objects and exports a MakeYourBrick-ready GLB.
@@ -98,19 +100,19 @@ scripts/adapters/run_sam3d_objects_export.py
 
 Tasks:
 
-- Load image and mask.
-- Run the official SAM 3D Objects inference path.
-- Prefer `output["glb"].export(output_path)`.
-- Fallback to `output["mesh"][0]` to GLB via Trimesh.
-- Optionally save `output["gs"]` as `raw_splat.ply`.
-- Write an adapter metadata JSON.
-- Fail with explicit messages when mesh/GLB output is unavailable.
+- [x] Load image and mask.
+- [x] Run the official SAM 3D Objects inference path.
+- [x] Prefer `output["glb"].export(output_path)`.
+- [x] Fallback to `output["mesh"][0]` to GLB via Trimesh.
+- [x] Optionally save `output["gs"]` as `raw_splat.ply`.
+- [x] Write an adapter metadata JSON.
+- [x] Fail with explicit messages when mesh/GLB output is unavailable.
 
 Acceptance criteria:
 
-- Script has a documented CLI.
-- Script can be used as `MAKEYOURBRICK_SAM_COMMAND`.
-- The resulting GLB passes `scripts/inspect_mesh.py`.
+- [x] Script has a documented CLI.
+- [x] Script can be used as `MAKEYOURBRICK_SAM_COMMAND`.
+- [ ] The resulting GLB passes `scripts/inspect_mesh.py` in a real SAM 3D environment.
 
 ## Phase D: Backend Real SAM Mode
 

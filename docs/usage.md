@@ -129,6 +129,18 @@ python scripts/adapters/sam3d_to_mesh.py \
   --sam-command "<command that reads {image} and {mask}, then writes {output} or files under {work_dir}>"
 ```
 
+Run the prepared SAM 3D Objects GLB export wrapper directly:
+
+```bash
+python scripts/adapters/run_sam3d_objects_export.py \
+  --repo third_party/sam-3d-objects \
+  --image data/input_images/sample.png \
+  --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
+  --output outputs/meshes/raw_model.glb \
+  --splat-output outputs/meshes/raw_splat.ply \
+  --metadata outputs/reports/sam3d_export.json
+```
+
 The adapter validates that the selected artifact is a triangle mesh before handing it to voxelization. See `docs/sam3d_adapter.md`.
 
 SAM 3D Objects commonly saves Gaussian splat PLY files. Those files are raw visualization/debug artifacts, not the default LEGO conversion input. If the adapter detects a Gaussian splat PLY or point cloud PLY, it writes a clear failure report and stops before voxelization.
