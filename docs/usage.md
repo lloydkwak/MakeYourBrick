@@ -112,6 +112,7 @@ Adapt an existing SAM output candidate into a MakeYourBrick mesh:
 python scripts/adapters/sam3d_to_mesh.py \
   --repo third_party/sam-3d-objects \
   --image data/input_images/sample.png \
+  --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
   --candidate path/to/sam/output.glb \
   --output outputs/meshes/raw_model.glb \
   --report outputs/reports/sam3d_adapter.json
@@ -123,8 +124,9 @@ Or wrap an upstream SAM command:
 python scripts/adapters/sam3d_to_mesh.py \
   --repo third_party/sam-3d-objects \
   --image data/input_images/sample.png \
+  --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
   --output outputs/meshes/raw_model.glb \
-  --sam-command "<command that writes {output} or files under {work_dir}>"
+  --sam-command "<command that reads {image} and {mask}, then writes {output} or files under {work_dir}>"
 ```
 
 The adapter validates that the selected artifact is a triangle mesh before handing it to voxelization. See `docs/sam3d_adapter.md`.

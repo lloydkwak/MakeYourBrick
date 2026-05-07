@@ -18,6 +18,11 @@ def make_image(path: Path) -> None:
     path.write_bytes(b"fake-image")
 
 
+def make_mask(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"fake-mask")
+
+
 def make_repo(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
 
@@ -98,6 +103,96 @@ def test_sam3d_adapter_runs_command_template_that_writes_output() -> None:
         assert output.exists()
         assert report["candidate_path"] == str(output)
         assert report["output_inspection"]["face_count"] > 0
+    finally:
+        image.unlink(missing_ok=True)
+        output.unlink(missing_ok=True)
+        report_path.unlink(missing_ok=True)
+
+
+def test_sam3d_adapter_forwards_mask_to_command_and_report() -> None:
+    image = Path("outputs/test_sam_adapter_mask_image.png")
+    mask = Path("outputs/test_sam_adapter_mask.png")
+    output = Path("outputs/meshes/test_sam_adapter_mask_output.glb")
+    report_path = Path("outputs/reports/test_sam_adapter_mask_report.json")
+    record_path = Path("outputs/reports/test_sam_adapter_mask_record.json")
+    try:
+        make_image(image)
+        make_mask(mask)
+        command = (
+            f"{sys.executable} tests/fake_sam3d_command.py "
+            "--output {output} --mask {mask} --record-json "
+            f"{record_path} --colored-box"
+        )
+
+        subprocess.run(
+            [
+                sys.executable,
+                "scripts/adapters/sam3d_to_mesh.py",
+                "--repo",
+                ".",
+                "--image",
+                str(image),
+                "--mask",
+                str(mask),
+                "--sam-command",
+                command,
+                "--output",
+                str(output),
+                "--report",
+                str(report_path),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+        assert output.exists()
+        assert report["mask_path"] == str(mask)
+        assert record["mask"] == str(mask)
+    finally:
+        image.unlink(missing_ok=True)
+        mask.unlink(missing_ok=True)
+        output.unlink(missing_ok=True)
+        report_path.unlink(missing_ok=True)
+        record_path.unlink(missing_ok=True)
+
+
+def test_sam3d_adapter_rejects_missing_mask_before_command() -> None:
+    image = Path("outputs/test_sam_adapter_missing_mask_image.png")
+    output = Path("outputs/meshes/test_sam_adapter_missing_mask_output.glb")
+    report_path = Path("outputs/reports/test_sam_adapter_missing_mask_report.json")
+    try:
+        make_image(image)
+        command = f"{sys.executable} tests/fake_sam3d_command.py --output {{output}} --colored-box"
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/adapters/sam3d_to_mesh.py",
+                "--repo",
+                ".",
+                "--image",
+                str(image),
+                "--mask",
+                "outputs/missing_sam_adapter_mask.png",
+                "--sam-command",
+                command,
+                "--output",
+                str(output),
+                "--report",
+                str(report_path),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode != 0
+        assert "Input mask not found" in result.stderr
+        assert not output.exists()
+        assert not report_path.exists()
     finally:
         image.unlink(missing_ok=True)
         output.unlink(missing_ok=True)

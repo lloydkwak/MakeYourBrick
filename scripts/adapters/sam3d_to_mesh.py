@@ -14,11 +14,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Adapt SAM 3D output into a MakeYourBrick triangle mesh.")
     parser.add_argument("--repo", type=Path, required=True, help="SAM 3D Objects repository path.")
     parser.add_argument("--image", type=Path, required=True, help="Input image path.")
+    parser.add_argument("--mask", type=Path, help="Optional object mask path.")
     parser.add_argument("--output", type=Path, required=True, help="Output triangle mesh path, usually .glb.")
     parser.add_argument(
         "--sam-command",
         help=(
-            "Optional upstream SAM command template. Supports {repo}, {image}, {output}, "
+            "Optional upstream SAM command template. Supports {repo}, {image}, {mask}, {output}, "
             "{output_dir}, and {work_dir}."
         ),
     )
@@ -47,6 +48,7 @@ def main() -> None:
     report = adapt_sam_output(
         repo_path=args.repo,
         image_path=args.image,
+        mask_path=args.mask,
         output_path=args.output,
         command_template=args.sam_command,
         candidate_path=args.candidate,

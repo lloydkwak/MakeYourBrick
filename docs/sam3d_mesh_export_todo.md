@@ -57,17 +57,19 @@ Acceptance criteria:
 
 ## Phase B: Adapter CLI Mask Support
 
+Status: completed.
+
 Purpose:
 
 Prepare `scripts/adapters/sam3d_to_mesh.py` for the real SAM object mask.
 
 Tasks:
 
-- Add `--mask` argument.
-- Add `{mask}` placeholder to adapter command rendering.
-- Include `mask_path` in adapter reports.
-- Validate that `--mask` exists when provided.
-- Add tests for command template mask forwarding.
+- [x] Add `--mask` argument.
+- [x] Add `{mask}` placeholder to adapter command rendering.
+- [x] Include `mask_path` in adapter reports.
+- [x] Validate that `--mask` exists when provided.
+- [x] Add tests for command template mask forwarding.
 
 Acceptance criteria:
 

@@ -102,12 +102,14 @@ def render_command(
     *,
     repo_path: Path,
     image_path: Path,
+    mask_path: Path | None = None,
     output_path: Path,
     work_dir: Path,
 ) -> list[str]:
     rendered = command_template.format(
         repo=str(repo_path),
         image=str(image_path),
+        mask=str(mask_path) if mask_path is not None else "",
         output=str(output_path),
         output_dir=str(output_path.parent),
         work_dir=str(work_dir),
@@ -120,6 +122,7 @@ def run_sam_command(
     *,
     repo_path: Path,
     image_path: Path,
+    mask_path: Path | None = None,
     output_path: Path,
     work_dir: Path,
     timeout_seconds: int,
@@ -129,6 +132,7 @@ def run_sam_command(
         command_template,
         repo_path=repo_path,
         image_path=image_path,
+        mask_path=mask_path,
         output_path=output_path,
         work_dir=work_dir,
     )
@@ -184,6 +188,7 @@ def adapt_sam_output(
     *,
     repo_path: Path,
     image_path: Path,
+    mask_path: Path | None = None,
     output_path: Path,
     command_template: str | None = None,
     candidate_path: Path | None = None,
@@ -195,6 +200,8 @@ def adapt_sam_output(
         raise FileNotFoundError(f"SAM 3D Objects repo not found: {repo_path}")
     if not image_path.exists():
         raise FileNotFoundError(f"Input image not found: {image_path}")
+    if mask_path is not None and not mask_path.exists():
+        raise FileNotFoundError(f"Input mask not found: {mask_path}")
 
     work_dir = work_dir or output_path.parent / "sam3d_adapter_workspace"
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -203,6 +210,7 @@ def adapt_sam_output(
             command_template,
             repo_path=repo_path,
             image_path=image_path,
+            mask_path=mask_path,
             output_path=output_path,
             work_dir=work_dir,
             timeout_seconds=timeout_seconds,
@@ -215,6 +223,7 @@ def adapt_sam_output(
         adapter_report = {
             "repo_path": str(repo_path),
             "image_path": str(image_path),
+            "mask_path": str(mask_path) if mask_path is not None else None,
             "candidate_path": str(candidate),
             "output_path": str(output_path),
             "source_artifact": artifact_report,
@@ -244,6 +253,7 @@ def adapt_sam_output(
     adapter_report = {
         "repo_path": str(repo_path),
         "image_path": str(image_path),
+        "mask_path": str(mask_path) if mask_path is not None else None,
         "candidate_path": str(candidate),
         "output_path": str(output_path),
         "source_artifact": artifact_report,

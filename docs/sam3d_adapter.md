@@ -40,14 +40,16 @@ Preferred real SAM export order:
 python scripts/adapters/sam3d_to_mesh.py \
   --repo third_party/sam-3d-objects \
   --image data/input_images/sample.png \
+  --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
   --output outputs/meshes/raw_model.glb \
-  --sam-command "<upstream command that writes {output} or {work_dir}>"
+  --sam-command "<upstream command that reads {image} and {mask}, then writes {output} or {work_dir}>"
 ```
 
 Supported command placeholders:
 
 - `{repo}`
 - `{image}`
+- `{mask}`
 - `{output}`
 - `{output_dir}`
 - `{work_dir}`
@@ -60,6 +62,7 @@ Use this mode after running SAM manually and locating an output artifact:
 python scripts/adapters/sam3d_to_mesh.py \
   --repo third_party/sam-3d-objects \
   --image data/input_images/sample.png \
+  --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
   --candidate path/to/sam/output.glb \
   --output outputs/meshes/raw_model.glb \
   --report outputs/reports/sam3d_adapter.json
@@ -71,6 +74,7 @@ The adapter report includes:
 
 - repository path
 - input image path
+- optional input mask path
 - selected candidate path
 - output path
 - source mesh inspection
@@ -86,8 +90,9 @@ Once a real upstream command is known, use it through the existing image pipelin
 ```bash
 python scripts/image_to_ldr.py \
   --image data/input_images/sample.png \
+  --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
   --sam-repo third_party/sam-3d-objects \
-  --sam-command "python scripts/adapters/sam3d_to_mesh.py --repo {repo} --image {image} --output {output} --sam-command '<upstream command>'" \
+  --sam-command "python scripts/adapters/sam3d_to_mesh.py --repo {repo} --image {image} --mask {mask} --output {output} --sam-command '<upstream command>'" \
   --target-studs 48 \
   --sample-colors \
   --optimize \
