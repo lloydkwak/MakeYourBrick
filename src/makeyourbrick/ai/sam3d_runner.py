@@ -21,7 +21,7 @@ class Sam3DRunner:
         self.command_template = command_template
         self.timeout_seconds = timeout_seconds
 
-    def _build_command(self, image_path: Path, output_path: Path) -> list[str]:
+    def _build_command(self, image_path: Path, output_path: Path, mask_path: Path | None = None) -> list[str]:
         if not self.command_template:
             raise NotImplementedError(
                 "SAM 3D command template is required. Provide a command containing "
@@ -29,13 +29,14 @@ class Sam3DRunner:
             )
         rendered = self.command_template.format(
             image=str(image_path),
+            mask=str(mask_path) if mask_path is not None else "",
             output=str(output_path),
             output_dir=str(output_path.parent),
             repo=str(self.repo_path),
         )
         return shlex.split(rendered, posix=(os.name != "nt"))
 
-    def generate(self, image_path: Path, output_path: Path) -> MeshArtifact:
+    def generate(self, image_path: Path, output_path: Path, mask_path: Path | None = None) -> MeshArtifact:
         if not self.repo_path.exists():
             raise FileNotFoundError(
                 f"SAM 3D Objects repo not found at {self.repo_path}. "
@@ -43,8 +44,10 @@ class Sam3DRunner:
             )
         if not image_path.exists():
             raise FileNotFoundError(f"Input image not found: {image_path}")
+        if mask_path is not None and not mask_path.exists():
+            raise FileNotFoundError(f"Input mask not found: {mask_path}")
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        command = self._build_command(image_path, output_path)
+        command = self._build_command(image_path, output_path, mask_path)
         result = subprocess.run(
             command,
             cwd=self.repo_path,

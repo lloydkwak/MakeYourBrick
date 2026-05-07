@@ -81,13 +81,14 @@ The report records asset type, geometry count, vertices, faces, bounds, watertig
 
 ## Image to LDraw
 
-The image pipeline requires a SAM-compatible command template that writes a triangle mesh to `{output}`.
+The image pipeline requires a SAM-compatible command template that writes a triangle mesh to `{output}`. If an object mask is available, pass it with `--mask` and use the `{mask}` command placeholder.
 
 ```bash
 python scripts/image_to_ldr.py \
   --image data/input_images/sample.png \
+  --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
   --sam-repo third_party/sam-3d-objects \
-  --sam-command "<command that writes {output}>" \
+  --sam-command "<command that reads {image} and {mask}, then writes {output}>" \
   --target-studs 48 \
   --sample-colors \
   --optimize \
@@ -98,6 +99,7 @@ python scripts/image_to_ldr.py \
 Supported command placeholders:
 
 - `{image}`
+- `{mask}`
 - `{output}`
 - `{output_dir}`
 - `{repo}`
@@ -167,6 +169,7 @@ Backend runner configuration:
 - `MAKEYOURBRICK_RUNNER_MODE=sam3d`: alias for command mode when wiring the real SAM adapter
 - `MAKEYOURBRICK_SAM_REPO=third_party/sam-3d-objects`: external repository path
 - `MAKEYOURBRICK_SAM_COMMAND="<command that writes {output}>"`
+- SAM command placeholders include `{image}`, `{mask}`, `{output}`, `{output_dir}`, and `{repo}`
 - `MAKEYOURBRICK_SAM_TIMEOUT_SECONDS=3600`
 
 Start a browser workflow by opening:

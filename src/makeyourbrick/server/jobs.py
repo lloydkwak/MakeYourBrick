@@ -134,6 +134,11 @@ def run_pipeline_job(
         runner_config = runner_config or JobRunnerConfig()
         runner = build_image_runner(runner_config)
         image_path = storage.image_path(request.image_id)
+        mask_path = None
+        if request.mask_id is not None:
+            mask_path = storage.mask_path(request.image_id, request.mask_id)
+            if not mask_path.exists():
+                raise FileNotFoundError(f"Mask not found: {request.mask_id}")
         raw_mesh_path = storage.job_mesh_dir(request.image_id, job_id) / "raw_model.glb"
         cleaned_mesh_path = storage.job_mesh_dir(request.image_id, job_id) / "cleaned_model.glb"
         voxel_path = storage.job_voxel_dir(request.image_id, job_id) / "model_voxels.npz"
@@ -166,6 +171,7 @@ def run_pipeline_job(
         run_from_image(
             image_path=image_path,
             runner=runner,
+            mask_path=mask_path,
             raw_mesh_path=raw_mesh_path,
             cleaned_mesh_path=cleaned_mesh_path,
             voxel_output_path=voxel_path,

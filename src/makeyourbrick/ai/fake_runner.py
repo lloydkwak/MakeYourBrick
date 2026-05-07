@@ -11,9 +11,11 @@ from makeyourbrick.types import MeshArtifact
 class FakeSamMeshRunner:
     """Deterministic local stand-in for SAM 3D during UI/backend integration."""
 
-    def generate(self, image_path: Path, output_path: Path) -> MeshArtifact:
+    def generate(self, image_path: Path, output_path: Path, mask_path: Path | None = None) -> MeshArtifact:
         if not image_path.exists():
             raise FileNotFoundError(image_path)
+        if mask_path is not None and not mask_path.exists():
+            raise FileNotFoundError(mask_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         mesh = trimesh.creation.box(extents=(1.0, 0.82, 1.18))
         mesh.apply_translation((0.0, 0.0, 0.59))

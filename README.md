@@ -29,7 +29,7 @@ python -m compileall src scripts tests/fake_sam3d_command.py
 python -m pytest
 ```
 
-Latest local result: `73 passed`.
+Latest local result: `76 passed`.
 
 ## Installation
 
@@ -74,6 +74,7 @@ python scripts/image_to_ldr.py --image data/input_images/sample.png --sam-repo t
 - [Testing](docs/testing.md)
 - [SAM 3D manual setup](docs/sam3d_manual_setup.md)
 - [SAM 3D adapter](docs/sam3d_adapter.md)
+- [SAM 3D mesh export TODO](docs/sam3d_mesh_export_todo.md)
 - [Phase 6 TODO](docs/phase6_todo.md)
 - [UI integration plan](docs/ui_integration_plan.md)
 - [Roadmap and limitations](docs/roadmap.md)

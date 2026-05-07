@@ -8,6 +8,7 @@ from pathlib import Path
 
 def test_image_to_ldr_cli_runs_fake_sam_command_to_ldr() -> None:
     image_path = Path("outputs/test_cli_image.png")
+    mask_path = Path("outputs/test_cli_mask.png")
     raw_mesh = Path("outputs/meshes/test_cli_image_raw.ply")
     cleaned_mesh = Path("outputs/meshes/test_cli_image_cleaned.glb")
     voxel_path = Path("outputs/voxels/test_cli_image_voxels.npz")
@@ -16,7 +17,8 @@ def test_image_to_ldr_cli_runs_fake_sam_command_to_ldr() -> None:
     repair_report_path = Path("outputs/reports/test_cli_image_repair_report.json")
     try:
         image_path.write_bytes(b"fake-image")
-        command = f"{sys.executable} tests/fake_sam3d_command.py --output {{output}} --colored-box"
+        mask_path.write_bytes(b"fake-mask")
+        command = f"{sys.executable} tests/fake_sam3d_command.py --output {{output}} --mask {{mask}} --colored-box"
 
         subprocess.run(
             [
@@ -24,6 +26,8 @@ def test_image_to_ldr_cli_runs_fake_sam_command_to_ldr() -> None:
                 "scripts/image_to_ldr.py",
                 "--image",
                 str(image_path),
+                "--mask",
+                str(mask_path),
                 "--sam-repo",
                 ".",
                 "--sam-command",
@@ -63,6 +67,7 @@ def test_image_to_ldr_cli_runs_fake_sam_command_to_ldr() -> None:
         assert report["output_brick_count"] == len(brick_lines)
     finally:
         image_path.unlink(missing_ok=True)
+        mask_path.unlink(missing_ok=True)
         raw_mesh.unlink(missing_ok=True)
         cleaned_mesh.unlink(missing_ok=True)
         voxel_path.unlink(missing_ok=True)

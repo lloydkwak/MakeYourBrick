@@ -15,6 +15,7 @@ from makeyourbrick.pipeline import run_from_image
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Convert an image to an LDraw model through SAM 3D.")
     parser.add_argument("--image", type=Path, required=True, help="Input image path.")
+    parser.add_argument("--mask", type=Path, help="Optional object mask path for SAM 3D object selection.")
     parser.add_argument(
         "--sam-repo",
         type=Path,
@@ -24,7 +25,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--sam-command",
         required=True,
-        help="SAM command template. Supports {image}, {output}, {output_dir}, and {repo}.",
+        help="SAM command template. Supports {image}, {mask}, {output}, {output_dir}, and {repo}.",
     )
     parser.add_argument("--sam-timeout", type=int, default=3600, help="SAM command timeout in seconds.")
     parser.add_argument("--target-studs", type=int, default=48, help="Longest model extent in studs.")
@@ -71,6 +72,7 @@ def main() -> None:
     output_path = run_from_image(
         image_path=args.image,
         runner=runner,
+        mask_path=args.mask,
         raw_mesh_path=args.raw_mesh,
         cleaned_mesh_path=args.cleaned_mesh,
         voxel_output_path=args.voxels,

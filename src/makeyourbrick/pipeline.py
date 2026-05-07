@@ -19,6 +19,7 @@ def run_from_image(
     image_path: Path,
     config: PipelineConfig | None = None,
     runner: object | None = None,
+    mask_path: Path | None = None,
     raw_mesh_path: Path | None = None,
     ldr_output_path: Path | None = None,
     cleaned_mesh_path: Path | None = None,
@@ -44,7 +45,10 @@ def run_from_image(
     voxel_output_path = voxel_output_path or config.paths.voxel_npz
     runner = runner or Sam3DRunner(config.paths.sam3d_repo)
 
-    artifact = runner.generate(image_path, raw_mesh_path)
+    if mask_path is None:
+        artifact = runner.generate(image_path, raw_mesh_path)
+    else:
+        artifact = runner.generate(image_path, raw_mesh_path, mask_path=mask_path)
     if raw_mesh_report_path is not None:
         inspect_mesh_to_file(artifact.path, raw_mesh_report_path)
     return convert_mesh_to_ldr(

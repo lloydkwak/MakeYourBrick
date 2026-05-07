@@ -4,6 +4,8 @@ Phase 6 is the bridge between the tested MakeYourBrick pipeline and a real SAM 3
 
 Real SAM 3D inference is intentionally deferred until a suitable GPU/Linux environment is available. This phase prepares the project so that when SAM 3D is installed, its outputs can be inspected, adapted, repaired, and converted with minimal guesswork.
 
+The current SAM 3D Objects integration direction is tracked in `docs/sam3d_mesh_export_todo.md`. The preferred path is direct GLB or triangle mesh export from SAM 3D Objects, with Gaussian splat PLY kept as a debug artifact.
+
 ## Phase 6 Goal
 
 Make the project ready for real image-to-LDraw execution by adding the missing tooling around SAM output validation and AI-generated mesh robustness.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -87,37 +88,56 @@ def test_job_stub_rejects_missing_image() -> None:
 
 
 def test_job_can_use_command_runner_config() -> None:
+    record_path = Path("outputs/reports/test_server_command_runner_record.json")
     client = make_client(
         JobRunnerConfig(
             mode="command",
             sam_repo=Path("."),
-            sam_command=f"{sys.executable} tests/fake_sam3d_command.py --colored-box --output {{output}}",
+            sam_command=(
+                f"{sys.executable} tests/fake_sam3d_command.py "
+                "--colored-box --output {output} --mask {mask} --record-json "
+                f"{record_path}"
+            ),
             timeout_seconds=10,
         )
     )
-    upload = client.post(
-        "/api/images",
-        files={"file": ("sample.png", make_png_bytes(), "image/png")},
-    ).json()
+    try:
+        upload = client.post(
+            "/api/images",
+            files={"file": ("sample.png", make_png_bytes(), "image/png")},
+        ).json()
+        selection = client.post(
+            f"/api/images/{upload['image_id']}/selection",
+            json={
+                "positive_points": [[12, 10]],
+                "negative_points": [],
+                "box": [4, 4, 28, 20],
+            },
+        ).json()
 
-    response = client.post(
-        "/api/jobs",
-        json={
-            "image_id": upload["image_id"],
-            "target_studs": 8,
-            "sample_colors": True,
-            "optimize": False,
-            "fill": True,
-            "default_color_id": 16,
-            "repair_mode": "basic",
-        },
-    )
+        response = client.post(
+            "/api/jobs",
+            json={
+                "image_id": upload["image_id"],
+                "mask_id": selection["mask_id"],
+                "target_studs": 8,
+                "sample_colors": True,
+                "optimize": False,
+                "fill": True,
+                "default_color_id": 16,
+                "repair_mode": "basic",
+            },
+        )
 
-    assert response.status_code == 200
-    job = response.json()
-    status = client.get(f"/api/jobs/{job['job_id']}").json()
-    assert status["status"] == "completed"
-    assert status["message"] == "LDraw output and report generated"
+        assert response.status_code == 200
+        job = response.json()
+        status = client.get(f"/api/jobs/{job['job_id']}").json()
+        assert status["status"] == "completed"
+        assert status["message"] == "LDraw output and report generated"
 
-    result = client.get(f"/api/jobs/{job['job_id']}/result").json()
-    assert result["brick_count"] > 0
+        result = client.get(f"/api/jobs/{job['job_id']}/result").json()
+        command_record = json.loads(record_path.read_text(encoding="utf-8"))
+        assert result["brick_count"] > 0
+        assert command_record["mask"].endswith(f"{selection['mask_id']}.png")
+    finally:
+        record_path.unlink(missing_ok=True)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -50,6 +51,49 @@ def test_sam3d_runner_executes_command_and_returns_mesh_artifact() -> None:
     finally:
         image_path.unlink(missing_ok=True)
         output_path.unlink(missing_ok=True)
+
+
+def test_sam3d_runner_passes_mask_placeholder() -> None:
+    image_path = Path("outputs/test_sam_input.png")
+    mask_path = Path("outputs/test_sam_mask.png")
+    output_path = Path("outputs/meshes/test_sam_output.glb")
+    record_path = Path("outputs/reports/test_sam_command_record.json")
+    try:
+        image_path.write_bytes(b"fake")
+        mask_path.write_bytes(b"mask")
+        command = (
+            f"{sys.executable} tests/fake_sam3d_command.py "
+            "--output {output} --mask {mask} --record-json "
+            f"{record_path}"
+        )
+        runner = Sam3DRunner(Path("."), command_template=command, timeout_seconds=10)
+
+        artifact = runner.generate(image_path, output_path, mask_path=mask_path)
+        command_record = json.loads(record_path.read_text(encoding="utf-8"))
+
+        assert artifact.path == output_path
+        assert command_record["mask"] == str(mask_path)
+    finally:
+        image_path.unlink(missing_ok=True)
+        mask_path.unlink(missing_ok=True)
+        output_path.unlink(missing_ok=True)
+        record_path.unlink(missing_ok=True)
+
+
+def test_sam3d_runner_rejects_missing_mask() -> None:
+    image_path = Path("outputs/test_sam_input.png")
+    try:
+        image_path.write_bytes(b"fake")
+        runner = Sam3DRunner(Path("."), command_template="python fake.py")
+
+        with pytest.raises(FileNotFoundError, match="Input mask"):
+            runner.generate(
+                image_path,
+                Path("outputs/meshes/test_sam_output.glb"),
+                mask_path=Path("outputs/missing_mask.png"),
+            )
+    finally:
+        image_path.unlink(missing_ok=True)
 
 
 def test_sam3d_runner_reports_failed_command() -> None:

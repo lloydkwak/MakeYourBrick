@@ -9,7 +9,7 @@ It does not assume a stable upstream Python API. Instead, it accepts either:
 
 The adapter classifies and inspects the candidate, verifies that it is a voxelization-ready triangle mesh, and exports a normalized mesh file for MakeYourBrick.
 
-SAM 3D Objects official quickstart exports a Gaussian splat PLY through `output["gs"].save_ply("splat.ply")`. That artifact should be preserved for debugging and visualization, but it is not the standard MakeYourBrick geometry input. The LEGO pipeline expects a triangle mesh, preferably GLB.
+SAM 3D Objects official quickstart exports a Gaussian splat PLY through `output["gs"].save_ply("splat.ply")`. The upstream pipeline also exposes mesh/GLB post-processing paths. MakeYourBrick should prefer direct GLB or triangle mesh export and preserve Gaussian splat PLY only for debugging and visualization.
 
 ## Artifact Policy
 
@@ -26,6 +26,13 @@ PLY files are classified before conversion:
 - `mesh_ply`: has face elements and can be adapted to GLB
 - `gaussian_splat_ply`: has Gaussian properties such as opacity, scale, rotation, or feature fields; mesh extraction is required
 - `point_cloud_ply`: has vertices without faces or Gaussian properties; mesh reconstruction is required
+
+Preferred real SAM export order:
+
+1. `output["glb"].export(raw_model.glb)`
+2. convert `output["mesh"][0]` to GLB through Trimesh
+3. save `output["gs"]` as an optional debug PLY
+4. fail before voxelization if no mesh output is available
 
 ## Command Contract
 
