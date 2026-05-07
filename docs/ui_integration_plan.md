@@ -538,6 +538,19 @@ Done criteria:
 
 - The real adapter can satisfy the same runner contract as `FakeSamMeshRunner.generate(image_path, output_path)`.
 
+Implementation status:
+
+- Implemented contract adapter module at `src/makeyourbrick/ai/sam3d_adapter.py`.
+- Added CLI adapter at `scripts/adapters/sam3d_to_mesh.py`.
+- The adapter validates `--repo` and `--image`, optionally runs a command template, locates candidate mesh artifacts, inspects them, and exports a normalized output mesh.
+- It accepts either a direct `--candidate` artifact or an upstream `--sam-command`.
+- It rejects non-triangle-mesh outputs clearly before voxelization.
+- Added adapter report documentation in `docs/sam3d_adapter.md`.
+
+Current limitation:
+
+- The final upstream SAM 3D Objects command is still unknown until a GPU/Linux SAM environment is exercised. The adapter contract is ready for that command once confirmed.
+
 ### Milestone UI-3.8: Mesh Repair Modes
 
 Purpose:

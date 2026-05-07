@@ -133,6 +133,8 @@ python scripts/inspect_mesh.py \
 
 Implement the concrete command that `scripts/image_to_ldr.py --sam-command` will call.
 
+Status: contract adapter implemented. The final upstream SAM command still needs to be filled in after a real SAM 3D environment spike.
+
 ### New Files
 
 ```text

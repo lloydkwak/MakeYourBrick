@@ -21,6 +21,7 @@ The current suite covers:
 - voxel artifact save/load
 - mesh-to-LDraw CLI
 - image-to-LDraw orchestration with a fake SAM command
+- SAM 3D adapter command contract
 - FastAPI image upload and selection endpoints
 - FastAPI pipeline job stub endpoints
 - placeholder segmentation mask generation

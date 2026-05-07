@@ -102,6 +102,31 @@ Supported command placeholders:
 - `{output_dir}`
 - `{repo}`
 
+## SAM 3D Adapter
+
+Adapt an existing SAM output candidate into a MakeYourBrick mesh:
+
+```bash
+python scripts/adapters/sam3d_to_mesh.py \
+  --repo third_party/sam-3d-objects \
+  --image data/input_images/sample.png \
+  --candidate path/to/sam/output.glb \
+  --output outputs/meshes/raw_model.glb \
+  --report outputs/reports/sam3d_adapter.json
+```
+
+Or wrap an upstream SAM command:
+
+```bash
+python scripts/adapters/sam3d_to_mesh.py \
+  --repo third_party/sam-3d-objects \
+  --image data/input_images/sample.png \
+  --output outputs/meshes/raw_model.glb \
+  --sam-command "<command that writes {output} or files under {work_dir}>"
+```
+
+The adapter validates that the selected artifact is a triangle mesh before handing it to voxelization. See `docs/sam3d_adapter.md`.
+
 ## Outputs
 
 Generated files are ignored by Git:
