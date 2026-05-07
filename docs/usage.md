@@ -158,7 +158,16 @@ Backend endpoints:
 - `GET /api/jobs/{job_id}/result`
 - `GET /api/jobs/{job_id}/files/{kind}`
 
-The current job endpoint is a local stub. It uses a deterministic fake SAM mesh and then runs the real MakeYourBrick conversion pipeline, producing LDR, voxel, mesh, mesh inspection, mesh repair, and optimizer report artifacts under `outputs/ui_sessions/<image_id>/jobs/<job_id>/`.
+The job endpoint defaults to a deterministic fake SAM mesh and then runs the real MakeYourBrick conversion pipeline, producing LDR, voxel, mesh, mesh inspection, mesh repair, and optimizer report artifacts under `outputs/ui_sessions/<image_id>/jobs/<job_id>/`.
+
+Backend runner configuration:
+
+- `MAKEYOURBRICK_RUNNER_MODE=fake`: default local integration runner
+- `MAKEYOURBRICK_RUNNER_MODE=command`: run a command template through `Sam3DRunner`
+- `MAKEYOURBRICK_RUNNER_MODE=sam3d`: alias for command mode when wiring the real SAM adapter
+- `MAKEYOURBRICK_SAM_REPO=third_party/sam-3d-objects`: external repository path
+- `MAKEYOURBRICK_SAM_COMMAND="<command that writes {output}>"`
+- `MAKEYOURBRICK_SAM_TIMEOUT_SECONDS=3600`
 
 Start a browser workflow by opening:
 

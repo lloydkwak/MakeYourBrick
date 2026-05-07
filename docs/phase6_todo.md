@@ -37,13 +37,14 @@ Already implemented:
 - mesh inspection reports
 - explicit mesh repair modes
 - SAM adapter contract and PLY artifact classification
+- backend job runner mode selection: `fake`, `command`, and `sam3d`
 
 Not yet implemented:
 
 - verified real SAM 3D inference command
 - point cloud / Gaussian splat to triangle mesh conversion
 - real image manual verification
-- real SAM runner mode in the backend
+- real SAM backend configuration using a verified adapter command
 
 ## Phase 6.1: Real SAM Environment Spike
 
@@ -135,6 +136,8 @@ python scripts/inspect_mesh.py \
 Implement the concrete command that `scripts/image_to_ldr.py --sam-command` will call.
 
 Status: contract adapter implemented with PLY classification. The final upstream SAM command still needs to be filled in after a real SAM 3D environment spike.
+
+Backend status: jobs can already select `fake`, `command`, or `sam3d` runner mode through environment configuration. The `sam3d` mode still depends on a verified command template.
 
 ### New Files
 

@@ -15,6 +15,7 @@
 - Mesh inspection reports
 - Mesh repair modes
 - SAM adapter contract with PLY artifact classification
+- Backend job runner selection for fake, command, and SAM adapter modes
 
 ## Next Work
 
@@ -26,9 +27,9 @@ This is the highest-risk remaining task because official quickstart examples exp
 
 See `docs/phase6_todo.md` for the detailed preparation plan.
 
-### 1.5 Backend Real Runner Mode
+### 1.5 Real SAM Backend Configuration
 
-Replace the hardcoded fake runner in backend jobs with a runner factory that can choose `fake`, `command`, or `sam3d` mode through configuration.
+Point backend `sam3d` mode at the verified adapter command after the real SAM environment spike. The selection mechanism is implemented; the remaining work is the real upstream command and manual validation.
 
 ### 2. Real Segmentation Backend
 

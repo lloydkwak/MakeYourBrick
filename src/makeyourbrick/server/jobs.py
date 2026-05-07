@@ -1,14 +1,38 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Lock
 
 from makeyourbrick.ai.fake_runner import FakeSamMeshRunner
+from makeyourbrick.ai.sam3d_runner import Sam3DRunner
 from makeyourbrick.pipeline import run_from_image
 from makeyourbrick.server.schemas import JobRequest, JobResultResponse, JobStatusResponse
 from makeyourbrick.server.storage import SessionStorage
+
+
+@dataclass(frozen=True)
+class JobRunnerConfig:
+    mode: str = "fake"
+    sam_repo: Path = Path("third_party/sam-3d-objects")
+    sam_command: str | None = None
+    timeout_seconds: int = 3600
+
+    @classmethod
+    def from_env(cls) -> "JobRunnerConfig":
+        timeout_text = os.environ.get("MAKEYOURBRICK_SAM_TIMEOUT_SECONDS", "3600")
+        try:
+            timeout_seconds = int(timeout_text)
+        except ValueError as error:
+            raise ValueError("MAKEYOURBRICK_SAM_TIMEOUT_SECONDS must be an integer.") from error
+        return cls(
+            mode=os.environ.get("MAKEYOURBRICK_RUNNER_MODE", "fake"),
+            sam_repo=Path(os.environ.get("MAKEYOURBRICK_SAM_REPO", "third_party/sam-3d-objects")),
+            sam_command=os.environ.get("MAKEYOURBRICK_SAM_COMMAND"),
+            timeout_seconds=timeout_seconds,
+        )
 
 
 @dataclass
@@ -84,8 +108,31 @@ def to_status_response(record: JobRecord) -> JobStatusResponse:
     )
 
 
-def run_pipeline_job(job_id: str, request: JobRequest, storage: SessionStorage, registry: JobRegistry) -> None:
+def build_image_runner(config: JobRunnerConfig) -> object:
+    mode = config.mode.strip().lower()
+    if mode == "fake":
+        return FakeSamMeshRunner()
+    if mode in {"command", "sam3d"}:
+        if not config.sam_command:
+            raise ValueError("MAKEYOURBRICK_SAM_COMMAND is required when runner mode is 'command' or 'sam3d'.")
+        return Sam3DRunner(
+            repo_path=config.sam_repo,
+            command_template=config.sam_command,
+            timeout_seconds=config.timeout_seconds,
+        )
+    raise ValueError(f"Unsupported job runner mode: {config.mode}")
+
+
+def run_pipeline_job(
+    job_id: str,
+    request: JobRequest,
+    storage: SessionStorage,
+    registry: JobRegistry,
+    runner_config: JobRunnerConfig | None = None,
+) -> None:
     try:
+        runner_config = runner_config or JobRunnerConfig()
+        runner = build_image_runner(runner_config)
         image_path = storage.image_path(request.image_id)
         raw_mesh_path = storage.job_mesh_dir(request.image_id, job_id) / "raw_model.glb"
         cleaned_mesh_path = storage.job_mesh_dir(request.image_id, job_id) / "cleaned_model.glb"
@@ -99,7 +146,7 @@ def run_pipeline_job(job_id: str, request: JobRequest, storage: SessionStorage, 
             status="running",
             stage="reconstruction",
             progress=0.15,
-            message="Generating fake SAM mesh",
+            message=f"Generating mesh with {runner_config.mode} runner",
             paths={
                 "raw_mesh": raw_mesh_path,
                 "cleaned_mesh": cleaned_mesh_path,
@@ -118,7 +165,7 @@ def run_pipeline_job(job_id: str, request: JobRequest, storage: SessionStorage, 
         )
         run_from_image(
             image_path=image_path,
-            runner=FakeSamMeshRunner(),
+            runner=runner,
             raw_mesh_path=raw_mesh_path,
             cleaned_mesh_path=cleaned_mesh_path,
             voxel_output_path=voxel_path,

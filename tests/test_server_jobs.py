@@ -1,17 +1,19 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from makeyourbrick.server.jobs import JobRunnerConfig
 from makeyourbrick.server.main import create_app
 from makeyourbrick.server.storage import SessionStorage
 from tests.test_server_api import make_png_bytes
 
 
-def make_client() -> TestClient:
+def make_client(runner_config: JobRunnerConfig | None = None) -> TestClient:
     storage = SessionStorage(Path("outputs/test_ui_job_sessions"))
-    return TestClient(create_app(storage))
+    return TestClient(create_app(storage, runner_config=runner_config))
 
 
 def test_job_stub_generates_ldr_report_and_artifact_links() -> None:
@@ -82,3 +84,40 @@ def test_job_stub_rejects_missing_image() -> None:
     response = client.post("/api/jobs", json={"image_id": "missing"})
 
     assert response.status_code == 404
+
+
+def test_job_can_use_command_runner_config() -> None:
+    client = make_client(
+        JobRunnerConfig(
+            mode="command",
+            sam_repo=Path("."),
+            sam_command=f"{sys.executable} tests/fake_sam3d_command.py --colored-box --output {{output}}",
+            timeout_seconds=10,
+        )
+    )
+    upload = client.post(
+        "/api/images",
+        files={"file": ("sample.png", make_png_bytes(), "image/png")},
+    ).json()
+
+    response = client.post(
+        "/api/jobs",
+        json={
+            "image_id": upload["image_id"],
+            "target_studs": 8,
+            "sample_colors": True,
+            "optimize": False,
+            "fill": True,
+            "default_color_id": 16,
+            "repair_mode": "basic",
+        },
+    )
+
+    assert response.status_code == 200
+    job = response.json()
+    status = client.get(f"/api/jobs/{job['job_id']}").json()
+    assert status["status"] == "completed"
+    assert status["message"] == "LDraw output and report generated"
+
+    result = client.get(f"/api/jobs/{job['job_id']}/result").json()
+    assert result["brick_count"] > 0

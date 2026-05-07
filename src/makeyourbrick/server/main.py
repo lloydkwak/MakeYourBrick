@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from PIL import Image, UnidentifiedImageError
 
-from makeyourbrick.server.jobs import JobRegistry, run_pipeline_job, to_status_response
+from makeyourbrick.server.jobs import JobRegistry, JobRunnerConfig, run_pipeline_job, to_status_response
 from makeyourbrick.server.masks import create_placeholder_mask
 from makeyourbrick.server.schemas import (
     HealthResponse,
@@ -21,7 +21,11 @@ from makeyourbrick.server.schemas import (
 from makeyourbrick.server.storage import SessionStorage
 
 
-def create_app(storage: SessionStorage | None = None, registry: JobRegistry | None = None) -> FastAPI:
+def create_app(
+    storage: SessionStorage | None = None,
+    registry: JobRegistry | None = None,
+    runner_config: JobRunnerConfig | None = None,
+) -> FastAPI:
     app = FastAPI(title="MakeYourBrick API", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
@@ -32,6 +36,7 @@ def create_app(storage: SessionStorage | None = None, registry: JobRegistry | No
     )
     app.state.storage = storage or SessionStorage()
     app.state.jobs = registry or JobRegistry()
+    app.state.runner_config = runner_config or JobRunnerConfig.from_env()
 
     @app.get("/api/health", response_model=HealthResponse)
     def health() -> HealthResponse:
@@ -107,7 +112,14 @@ def create_app(storage: SessionStorage | None = None, registry: JobRegistry | No
             raise HTTPException(status_code=404, detail=f"Mask not found: {request.mask_id}")
         job_id = app.state.storage.new_id()
         record = app.state.jobs.create(request.image_id, job_id)
-        background_tasks.add_task(run_pipeline_job, job_id, request, app.state.storage, app.state.jobs)
+        background_tasks.add_task(
+            run_pipeline_job,
+            job_id,
+            request,
+            app.state.storage,
+            app.state.jobs,
+            app.state.runner_config,
+        )
         return to_status_response(record)
 
     @app.get("/api/jobs/{job_id}", response_model=JobStatusResponse)
