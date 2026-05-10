@@ -51,6 +51,22 @@ Convert with greedy brick optimization and write a report:
 python scripts/mesh_to_ldr.py --mesh data/examples/sample_colored.ply --target-studs 8 --sample-colors --optimize --report outputs/reports/mesh_report.json --output outputs/ldr/sampled_color_mesh.ldr
 ```
 
+Convert with Studio-like sculpture options:
+
+```bash
+python scripts/mesh_to_ldr.py \
+  --mesh data/examples/sample.stl \
+  --target-studs 48 \
+  --optimize \
+  --optimizer layered \
+  --sculpture-mode shell \
+  --wall-thickness 1 \
+  --base-thickness 2 \
+  --steps-by-layer \
+  --report outputs/reports/sculpture_report.json \
+  --output outputs/ldr/sculpture_output.ldr
+```
+
 Convert with an explicit mesh repair mode and repair report:
 
 ```bash
@@ -92,6 +108,11 @@ python scripts/image_to_ldr.py \
   --target-studs 48 \
   --sample-colors \
   --optimize \
+  --optimizer layered \
+  --sculpture-mode shell \
+  --wall-thickness 1 \
+  --base-thickness 2 \
+  --steps-by-layer \
   --report outputs/reports/image_report.json \
   --output outputs/ldr/image_output.ldr
 ```
@@ -103,6 +124,14 @@ Supported command placeholders:
 - `{output}`
 - `{output_dir}`
 - `{repo}`
+
+Sculpture options:
+
+- `--sculpture-mode solid|shell`: keep a fully solid model or hollow the interior
+- `--wall-thickness`: number of voxel/stud layers to keep from the surface in shell mode
+- `--base-thickness`: number of bottom layers to force solid
+- `--optimizer greedy|layered`: largest-first greedy optimizer or support/seam-aware optimizer
+- `--steps-by-layer`: insert `0 STEP` markers between vertical layers in the LDR file
 
 ## SAM 3D Adapter
 
@@ -198,6 +227,14 @@ python -m uvicorn makeyourbrick.server.main:app --app-dir src --reload
 ```
 
 In `sam3d` mode, `POST /api/jobs` requires a `mask_id`. The UI flow should upload an image, submit a selection, then start the conversion job with the returned mask id.
+
+Backend job requests also accept:
+
+- `optimizer`: `greedy` or `layered`
+- `sculpture_mode`: `solid` or `shell`
+- `wall_thickness`
+- `base_thickness`
+- `steps_by_layer`
 
 Start a browser workflow by opening:
 

@@ -5,13 +5,14 @@ from pathlib import Path
 from makeyourbrick.ai.sam3d_runner import Sam3DRunner
 from makeyourbrick.brickify.colors import load_ldraw_palette
 from makeyourbrick.config import PipelineConfig
-from makeyourbrick.brickify.optimizer import brickify_1x1, greedy_brickify
-from makeyourbrick.brickify.report import build_brick_report, write_brick_report
+from makeyourbrick.brickify.optimizer import brickify_1x1, greedy_brickify, layered_brickify
+from makeyourbrick.brickify.report import build_brick_report, build_stability_report, write_brick_report
 from makeyourbrick.io.ldr_writer import write_ldr
 from makeyourbrick.mesh.inspect import inspect_mesh_to_file
 from makeyourbrick.mesh.repair import repair_mesh, write_repair_report
 from makeyourbrick.mesh.solidify import clean_mesh, load_mesh
 from makeyourbrick.types import MeshArtifact
+from makeyourbrick.voxel.sculpture import apply_sculpture_mode
 from makeyourbrick.voxel.voxelize import compute_pitch, load_voxel_artifact, voxelize_mesh
 
 
@@ -36,6 +37,11 @@ def run_from_image(
     raw_mesh_report_path: Path | None = None,
     repair_mode: str = "basic",
     repair_report_path: Path | None = None,
+    sculpture_mode: str = "solid",
+    wall_thickness: int = 1,
+    base_thickness: int = 0,
+    optimizer: str = "greedy",
+    steps_by_layer: bool = False,
 ) -> Path:
     """Run the full pipeline from a single image to an LDR file."""
     config = config or PipelineConfig()
@@ -67,6 +73,11 @@ def run_from_image(
         report_path=report_path,
         repair_mode=repair_mode,
         repair_report_path=repair_report_path,
+        sculpture_mode=sculpture_mode,
+        wall_thickness=wall_thickness,
+        base_thickness=base_thickness,
+        optimizer=optimizer,
+        steps_by_layer=steps_by_layer,
     )
 
 
@@ -92,6 +103,11 @@ def convert_mesh_to_ldr(
     report_path: Path | None = None,
     repair_mode: str = "basic",
     repair_report_path: Path | None = None,
+    sculpture_mode: str = "solid",
+    wall_thickness: int = 1,
+    base_thickness: int = 0,
+    optimizer: str = "greedy",
+    steps_by_layer: bool = False,
 ) -> Path:
     """Convert an existing mesh file to a 1x1-brick LDraw file."""
     if repair_mode == "basic" and repair_report_path is None:
@@ -120,11 +136,50 @@ def convert_mesh_to_ldr(
         sample_colors=sample_colors,
     )
     occupancy, color_ids, _rgb, _origin, _pitch = load_voxel_artifact(voxel_output_path)
+    occupancy, color_ids = apply_sculpture_mode(
+        occupancy,
+        color_ids,
+        mode=sculpture_mode,
+        wall_thickness=wall_thickness,
+        base_thickness=base_thickness,
+    )
     input_bricks = brickify_1x1(occupancy, color_ids)
-    bricks = greedy_brickify(occupancy, color_ids) if optimize else input_bricks
+    if optimizer not in {"greedy", "layered"}:
+        raise ValueError(f"Unsupported optimizer: {optimizer}")
+    if optimize:
+        bricks = (
+            layered_brickify(occupancy, color_ids)
+            if optimizer == "layered"
+            else greedy_brickify(occupancy, color_ids)
+        )
+    else:
+        bricks = input_bricks
     if report_path is not None:
         write_brick_report(
-            build_brick_report(occupancy, input_bricks, bricks, optimized=optimize),
+            build_brick_report(
+                occupancy,
+                input_bricks,
+                bricks,
+                optimized=optimize,
+                optimizer=optimizer if optimize else "none",
+                sculpture={
+                    "mode": sculpture_mode,
+                    "wall_thickness": int(wall_thickness),
+                    "base_thickness": int(base_thickness),
+                },
+                stability=build_stability_report(
+                    bricks,
+                    occupancy.shape,
+                    sculpture_mode=sculpture_mode,
+                    wall_thickness=wall_thickness,
+                    base_thickness=base_thickness,
+                ),
+            ),
             report_path,
         )
-    return write_ldr(bricks, ldr_output_path, title=f"Mesh conversion: {mesh_path.name}")
+    return write_ldr(
+        bricks,
+        ldr_output_path,
+        title=f"Mesh conversion: {mesh_path.name}",
+        step_by_layer=steps_by_layer,
+    )

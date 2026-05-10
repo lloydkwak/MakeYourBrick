@@ -179,6 +179,9 @@ def test_mesh_to_ldr_cli_can_write_optimizer_report() -> None:
         report = json.loads(report_path.read_text(encoding="utf-8"))
         repair_report = json.loads(repair_report_path.read_text(encoding="utf-8"))
         assert report["optimized"] is True
+        assert report["optimizer"] == "greedy"
+        assert report["sculpture"]["mode"] == "solid"
+        assert report["stability"]["layer_count"] > 0
         assert repair_report["mode_requested"] == "basic"
         assert repair_report["after"]["is_watertight"] is True
         assert report["input_brick_count"] == 729
@@ -191,6 +194,62 @@ def test_mesh_to_ldr_cli_can_write_optimizer_report() -> None:
         ldr_path.unlink(missing_ok=True)
         report_path.unlink(missing_ok=True)
         repair_report_path.unlink(missing_ok=True)
+
+
+def test_mesh_to_ldr_cli_supports_sculpture_shell_layered_steps() -> None:
+    input_mesh = Path("outputs/meshes/test_cli_sculpture_box.stl")
+    cleaned_mesh = Path("outputs/meshes/test_cli_sculpture_cleaned.glb")
+    voxel_path = Path("outputs/voxels/test_cli_sculpture_voxels.npz")
+    ldr_path = Path("outputs/ldr/test_cli_sculpture_mesh.ldr")
+    report_path = Path("outputs/reports/test_cli_sculpture_report.json")
+    try:
+        input_mesh.parent.mkdir(parents=True, exist_ok=True)
+        trimesh.creation.box(extents=(1, 1, 1)).export(input_mesh)
+
+        subprocess.run(
+            [
+                sys.executable,
+                "scripts/mesh_to_ldr.py",
+                "--mesh",
+                str(input_mesh),
+                "--target-studs",
+                "8",
+                "--optimize",
+                "--optimizer",
+                "layered",
+                "--sculpture-mode",
+                "shell",
+                "--wall-thickness",
+                "1",
+                "--base-thickness",
+                "1",
+                "--steps-by-layer",
+                "--cleaned-mesh",
+                str(cleaned_mesh),
+                "--voxels",
+                str(voxel_path),
+                "--output",
+                str(ldr_path),
+                "--report",
+                str(report_path),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        assert "0 STEP" in ldr_path.read_text(encoding="utf-8")
+        assert report["optimizer"] == "layered"
+        assert report["sculpture"]["mode"] == "shell"
+        assert report["sculpture"]["base_thickness"] == 1
+        assert report["stability"]["average_support_ratio"] >= 0
+    finally:
+        input_mesh.unlink(missing_ok=True)
+        cleaned_mesh.unlink(missing_ok=True)
+        voxel_path.unlink(missing_ok=True)
+        ldr_path.unlink(missing_ok=True)
+        report_path.unlink(missing_ok=True)
 
 
 def test_mesh_to_ldr_cli_can_sample_mesh_colors_and_write_report() -> None:

@@ -189,10 +189,15 @@ def run_pipeline_job(
             default_color_id=request.default_color_id,
             sample_colors=request.sample_colors,
             optimize=request.optimize,
+            optimizer=request.optimizer,
             report_path=report_path,
             raw_mesh_report_path=mesh_inspect_path,
             repair_mode=request.repair_mode,
             repair_report_path=repair_report_path,
+            sculpture_mode=request.sculpture_mode,
+            wall_thickness=request.wall_thickness,
+            base_thickness=request.base_thickness,
+            steps_by_layer=request.steps_by_layer,
         )
         report = json.loads(report_path.read_text(encoding="utf-8"))
         mesh_inspect = json.loads(mesh_inspect_path.read_text(encoding="utf-8"))

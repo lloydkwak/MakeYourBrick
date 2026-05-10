@@ -13,10 +13,10 @@ image
   -> mesh inspection
   -> mesh repair
   -> voxelization
+  -> sculpture occupancy mode
   -> optional mesh color sampling
   -> LDraw color quantization
-  -> brickification
-  -> optional greedy brick optimization
+  -> brickification or layer-aware optimization
   -> LDraw .ldr output
   -> JSON reports
 ```
@@ -89,7 +89,20 @@ The optimizer uses a deterministic greedy placement strategy:
 2x4 -> 1x4 -> 2x2 -> 1x2 -> 1x1
 ```
 
-It preserves occupancy and color boundaries. It does not yet evaluate real-world structural stability.
+It preserves occupancy and color boundaries. The optional `layered` optimizer scores candidate bricks by area, support ratio, overhang penalty, and vertical seam alignment. Reports include stability metrics such as unsupported brick count, floating brick count, average support ratio, seam alignment score, and layer count.
+
+### Sculpture Mode
+
+Location:
+
+- `src/makeyourbrick/voxel/sculpture.py`
+
+Sculpture mode post-processes the voxel occupancy before brick placement:
+
+- `solid`: keep the filled voxel model
+- `shell`: keep surface voxels, optional wall thickness, and solid base layers
+
+This mirrors the useful parts of Studio-style sculpture import while keeping the original voxel artifact available for inspection.
 
 ### LDraw Output
 
@@ -98,6 +111,8 @@ Location:
 - `src/makeyourbrick/io/ldr_writer.py`
 
 The writer emits LDraw line type 1 part references. It supports 0, 90, 180, and 270 degree rotations around the vertical axis.
+
+When `steps_by_layer` is enabled, the writer inserts `0 STEP` markers between vertical layers so LDraw viewers can show a layer-by-layer build sequence.
 
 ## Directory Layout
 

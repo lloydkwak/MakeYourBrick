@@ -9,6 +9,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from makeyourbrick.pipeline import convert_mesh_to_ldr
 from makeyourbrick.mesh.repair import REPAIR_MODES
+from makeyourbrick.voxel.sculpture import SCULPTURE_MODES
 
 
 def parse_args() -> argparse.Namespace:
@@ -32,6 +33,21 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--no-fill", action="store_true", help="Skip voxel fill.")
     parser.add_argument("--optimize", action="store_true", help="Merge voxels into larger bricks.")
+    parser.add_argument(
+        "--optimizer",
+        choices=("greedy", "layered"),
+        default="greedy",
+        help="Brick optimizer to use when --optimize is enabled.",
+    )
+    parser.add_argument(
+        "--sculpture-mode",
+        choices=SCULPTURE_MODES,
+        default="solid",
+        help="Voxel occupancy mode before brickification.",
+    )
+    parser.add_argument("--wall-thickness", type=int, default=1, help="Shell wall thickness in studs.")
+    parser.add_argument("--base-thickness", type=int, default=0, help="Solid base thickness in layers.")
+    parser.add_argument("--steps-by-layer", action="store_true", help="Insert LDraw 0 STEP markers per layer.")
     parser.add_argument(
         "--sample-colors",
         action="store_true",
@@ -80,10 +96,15 @@ def main() -> None:
         default_rgb=tuple(args.rgb) if args.rgb else None,
         palette_path=args.palette,
         optimize=args.optimize,
+        optimizer=args.optimizer,
         sample_colors=args.sample_colors,
         report_path=args.report,
         repair_mode=args.repair_mode,
         repair_report_path=args.repair_report,
+        sculpture_mode=args.sculpture_mode,
+        wall_thickness=args.wall_thickness,
+        base_thickness=args.base_thickness,
+        steps_by_layer=args.steps_by_layer,
     )
     print(f"Wrote LDraw model to {output_path}")
 

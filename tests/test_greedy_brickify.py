@@ -7,6 +7,9 @@ from makeyourbrick.brickify.optimizer import (
     bricks_to_occupancy,
     can_place_brick,
     greedy_brickify,
+    layered_brickify,
+    seam_overlap_ratio,
+    support_ratio_for_area,
 )
 from makeyourbrick.voxel.synthetic import make_solid_box
 
@@ -72,3 +75,27 @@ def test_greedy_brickify_preserves_sparse_occupancy() -> None:
     assert {brick.part_id for brick in optimized} == {"3004.dat", "3005.dat"}
     np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)
 
+
+def test_support_ratio_for_area_detects_partial_support() -> None:
+    used = np.zeros((3, 2, 3), dtype=bool)
+    used[0, 0, 0] = True
+    used[1, 0, 0] = True
+
+    assert support_ratio_for_area(used, 0, 1, 0, 2, 2) == 0.5
+    assert support_ratio_for_area(used, 0, 0, 0, 2, 2) == 1.0
+
+
+def test_seam_overlap_ratio_detects_aligned_edges() -> None:
+    lower = [brickify_1x1(*make_solid_box((2, 1, 1), color_id=16))[0]]
+
+    assert seam_overlap_ratio(lower, 1, 0, 0, 1, 1) > 0
+
+
+def test_layered_brickify_preserves_occupancy_and_color_boundaries() -> None:
+    occupancy, color_ids = make_solid_box((4, 2, 2), color_id=16)
+    color_ids[2:, :, :] = 14
+
+    optimized = layered_brickify(occupancy, color_ids)
+
+    assert {brick.color_id for brick in optimized} == {14, 16}
+    np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)

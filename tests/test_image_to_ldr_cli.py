@@ -36,6 +36,9 @@ def test_image_to_ldr_cli_runs_fake_sam_command_to_ldr() -> None:
                 "8",
                 "--sample-colors",
                 "--optimize",
+                "--optimizer",
+                "layered",
+                "--steps-by-layer",
                 "--raw-mesh",
                 str(raw_mesh),
                 "--cleaned-mesh",
@@ -63,6 +66,9 @@ def test_image_to_ldr_cli_runs_fake_sam_command_to_ldr() -> None:
         assert brick_lines
         assert all(line.split()[1] == "14" for line in brick_lines)
         assert report["optimized"] is True
+        assert report["optimizer"] == "layered"
+        assert report["stability"]["layer_count"] > 0
+        assert "0 STEP" in ldr_path.read_text(encoding="utf-8")
         assert repair_report["mode_requested"] == "basic"
         assert report["output_brick_count"] == len(brick_lines)
     finally:

@@ -92,6 +92,45 @@ def mark_used(used: np.ndarray, brick: Brick) -> None:
     ] = True
 
 
+def support_ratio_for_area(
+    occupied_or_used: np.ndarray,
+    x: int,
+    y: int,
+    z: int,
+    width: int,
+    depth: int,
+) -> float:
+    if y <= 0:
+        return 1.0
+    support = occupied_or_used[x : x + width, y - 1, z : z + depth]
+    area = width * depth
+    return float(support.sum() / area) if area else 0.0
+
+
+def seam_overlap_ratio(bricks: list[Brick], y: int, x: int, z: int, width: int, depth: int) -> float:
+    lower_layer = [brick for brick in bricks if brick.y == y - 1]
+    if y <= 0 or not lower_layer:
+        return 0.0
+    current_edges = set()
+    for edge_x in (x, x + width):
+        for edge_z in range(z, z + depth + 1):
+            current_edges.add(("x", edge_x, edge_z))
+    for edge_z in (z, z + depth):
+        for edge_x in range(x, x + width + 1):
+            current_edges.add(("z", edge_z, edge_x))
+    lower_edges = set()
+    for brick in lower_layer:
+        for edge_x in (brick.x, brick.x + brick.width):
+            for edge_z in range(brick.z, brick.z + brick.depth + 1):
+                lower_edges.add(("x", edge_x, edge_z))
+        for edge_z in (brick.z, brick.z + brick.depth):
+            for edge_x in range(brick.x, brick.x + brick.width + 1):
+                lower_edges.add(("z", edge_z, edge_x))
+    if not current_edges:
+        return 0.0
+    return len(current_edges.intersection(lower_edges)) / len(current_edges)
+
+
 def greedy_brickify(
     occupancy: np.ndarray,
     color_ids: np.ndarray,
@@ -150,6 +189,94 @@ def greedy_brickify(
             )
             bricks.append(brick)
             mark_used(used, brick)
+    return bricks
+
+
+def layered_candidate_score(
+    *,
+    placed_bricks: list[Brick],
+    used: np.ndarray,
+    x: int,
+    y: int,
+    z: int,
+    width: int,
+    depth: int,
+) -> float:
+    area = width * depth
+    support_ratio = support_ratio_for_area(used, x, y, z, width, depth)
+    seam_overlap = seam_overlap_ratio(placed_bricks, y, x, z, width, depth)
+    overhang_penalty = 1.0 - support_ratio
+    return (area * 10.0) + (support_ratio * 4.0) - (overhang_penalty * 8.0) - (seam_overlap * 2.0)
+
+
+def layered_brickify(
+    occupancy: np.ndarray,
+    color_ids: np.ndarray,
+    brick_specs: tuple[BrickSpec, ...] = DEFAULT_BRICKS,
+    allow_rotations: bool = True,
+) -> list[Brick]:
+    _validate_voxel_inputs(occupancy, color_ids)
+    used = np.zeros_like(occupancy, dtype=bool)
+    bricks: list[Brick] = []
+
+    for x, y, z in iter_occupied_voxels(occupancy):
+        if used[x, y, z]:
+            continue
+        color_id = int(color_ids[x, y, z])
+        candidates: list[tuple[float, Brick]] = []
+        for spec in brick_specs:
+            for width, depth, rotation_degrees in candidate_orientations(spec, allow_rotations):
+                if can_place_brick(
+                    occupancy,
+                    used,
+                    color_ids,
+                    x,
+                    y,
+                    z,
+                    width,
+                    depth,
+                    spec.height,
+                    color_id,
+                ):
+                    score = layered_candidate_score(
+                        placed_bricks=bricks,
+                        used=used,
+                        x=x,
+                        y=y,
+                        z=z,
+                        width=width,
+                        depth=depth,
+                    )
+                    candidates.append(
+                        (
+                            score,
+                            Brick(
+                                part_id=spec.part_id,
+                                color_id=color_id,
+                                x=int(x),
+                                y=int(y),
+                                z=int(z),
+                                width=int(width),
+                                depth=int(depth),
+                                height=int(spec.height),
+                                rotation_degrees=rotation_degrees,
+                            ),
+                        )
+                    )
+        if candidates:
+            _score, brick = max(candidates, key=lambda item: item[0])
+        else:
+            brick = Brick(
+                part_id="3005.dat",
+                color_id=color_id,
+                x=int(x),
+                y=int(y),
+                z=int(z),
+                width=1,
+                depth=1,
+            )
+        bricks.append(brick)
+        mark_used(used, brick)
     return bricks
 
 

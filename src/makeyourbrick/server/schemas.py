@@ -44,9 +44,14 @@ class JobRequest(BaseModel):
     target_studs: int = Field(default=48, ge=8, le=128)
     sample_colors: bool = True
     optimize: bool = True
+    optimizer: Literal["greedy", "layered"] = "greedy"
     fill: bool = True
     default_color_id: int = Field(default=16, ge=0, le=999)
     repair_mode: Literal["none", "basic", "manifold", "convex-hull"] = "basic"
+    sculpture_mode: Literal["solid", "shell"] = "solid"
+    wall_thickness: int = Field(default=1, ge=1, le=16)
+    base_thickness: int = Field(default=0, ge=0, le=64)
+    steps_by_layer: bool = False
 
 
 class JobStatusResponse(BaseModel):

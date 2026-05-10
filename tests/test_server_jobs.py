@@ -40,9 +40,14 @@ def test_job_stub_generates_ldr_report_and_artifact_links() -> None:
             "target_studs": 8,
             "sample_colors": True,
             "optimize": True,
+            "optimizer": "layered",
             "fill": True,
             "default_color_id": 16,
             "repair_mode": "basic",
+            "sculpture_mode": "shell",
+            "wall_thickness": 1,
+            "base_thickness": 1,
+            "steps_by_layer": True,
         },
     )
 
@@ -76,7 +81,12 @@ def test_job_stub_generates_ldr_report_and_artifact_links() -> None:
 
     report_response = client.get(result["report_url"])
     assert report_response.status_code == 200
-    assert report_response.json()["output_brick_count"] == result["brick_count"]
+    report = report_response.json()
+    assert report["output_brick_count"] == result["brick_count"]
+    assert report["optimizer"] == "layered"
+    assert report["sculpture"]["mode"] == "shell"
+    assert report["stability"]["layer_count"] > 0
+    assert "0 STEP" in ldr_response.text
 
 
 def test_job_stub_rejects_missing_image() -> None:

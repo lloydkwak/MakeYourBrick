@@ -23,6 +23,7 @@ Implemented:
 - backend runner selection for fake, command, and SAM adapter modes
 - SAM 3D Objects GLB export wrapper
 - backend `sam3d` mode mask validation and config endpoint
+- Studio-like sculpture mode, layer steps, layered optimizer, and stability report metrics
 
 Current verification:
 
@@ -31,7 +32,7 @@ python -m compileall src scripts tests/fake_sam3d_command.py
 python -m pytest
 ```
 
-Latest local result: `84 passed`.
+Latest local result: `97 passed`.
 
 ## Installation
 
@@ -77,6 +78,7 @@ python scripts/image_to_ldr.py --image data/input_images/sample.png --mask data/
 - [SAM 3D manual setup](docs/sam3d_manual_setup.md)
 - [SAM 3D adapter](docs/sam3d_adapter.md)
 - [Real SAM 3D integration status](docs/real_sam3d_integration.md)
+- [Sculpture brickification TODO](docs/sculpture_brickification_todo.md)
 - [Roadmap and limitations](docs/roadmap.md)
 - [References](docs/references.md)
 

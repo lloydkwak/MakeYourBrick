@@ -18,6 +18,7 @@
 - Backend job runner selection for fake, command, and SAM adapter modes
 - SAM 3D Objects GLB export wrapper
 - Backend `sam3d` mode mask validation and config endpoint
+- Studio-like sculpture options: shell mode, base thickness, layer steps, layered optimizer, and stability metrics
 
 ## Next Work
 
@@ -47,10 +48,8 @@ The current LDraw writer uses a simple grid-to-LDU mapping. Visually verify opti
 
 ### 5. Structural Stability
 
-Greedy optimization reduces brick count but does not guarantee physical stability. Add:
+Layered optimization now reports basic support and seam metrics. Further work can add:
 
-- support ratio checks
-- floating brick detection
 - overhang limits
 - staggered placement preference
 - stability score inspired by StableLego and related LEGO optimization work

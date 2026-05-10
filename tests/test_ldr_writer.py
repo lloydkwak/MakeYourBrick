@@ -66,3 +66,37 @@ def test_write_ldr_includes_header_and_all_bricks() -> None:
         assert len([line for line in lines if line.startswith("1 ")]) == 2
     finally:
         output_path.unlink(missing_ok=True)
+
+
+def test_write_ldr_can_insert_steps_between_layers() -> None:
+    output_path = Path("outputs/ldr/test_writer_steps.ldr")
+    bricks = [
+        Brick("3005.dat", color_id=16, x=0, y=0, z=0, width=1, depth=1),
+        Brick("3005.dat", color_id=16, x=1, y=0, z=0, width=1, depth=1),
+        Brick("3005.dat", color_id=16, x=0, y=1, z=0, width=1, depth=1),
+        Brick("3005.dat", color_id=16, x=0, y=2, z=0, width=1, depth=1),
+    ]
+
+    try:
+        write_ldr(bricks, output_path, title="Layered", step_by_layer=True)
+
+        lines = output_path.read_text(encoding="utf-8").splitlines()
+        assert lines.count("0 STEP") == 2
+        assert lines.index("0 STEP") > 3
+    finally:
+        output_path.unlink(missing_ok=True)
+
+
+def test_write_ldr_omits_layer_steps_by_default() -> None:
+    output_path = Path("outputs/ldr/test_writer_no_steps.ldr")
+    bricks = [
+        Brick("3005.dat", color_id=16, x=0, y=0, z=0, width=1, depth=1),
+        Brick("3005.dat", color_id=16, x=0, y=1, z=0, width=1, depth=1),
+    ]
+
+    try:
+        write_ldr(bricks, output_path)
+
+        assert "0 STEP" not in output_path.read_text(encoding="utf-8")
+    finally:
+        output_path.unlink(missing_ok=True)

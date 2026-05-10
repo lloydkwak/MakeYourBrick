@@ -12,6 +12,10 @@ The current suite covers:
 - synthetic voxel generation
 - 1x1 brickification
 - greedy brick optimization
+- layered brick optimization
+- sculpture shell occupancy mode
+- LDraw layer step output
+- stability report metrics
 - LDraw coordinate and rotation output
 - color palette loading and CIELAB quantization
 - mesh loading and cleanup
