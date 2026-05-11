@@ -9,10 +9,12 @@ from makeyourbrick.voxel.sculpture import (
     apply_voxel_smoothing,
     fill_2d_holes,
     fill_horizontal_layer_holes,
+    fill_vertical_layer_gaps,
     lattice_infill_mask,
     lattice_spacing_for_density,
     rib_infill_mask,
     smooth_2d_contour,
+    smooth_studio_layers,
     preprocess_shell_occupancy,
     preprocess_solid_occupancy,
     surface_mask,
@@ -246,6 +248,40 @@ def test_contour_voxel_smoothing_applies_layer_cleanup() -> None:
 
     assert smoothed[2, 0, 2]
     assert not smoothed[4, 0, 2]
+
+
+def test_fill_vertical_layer_gaps_fills_missing_middle_voxels() -> None:
+    occupancy = np.zeros((3, 3, 3), dtype=bool)
+    occupancy[1, 0, 1] = True
+    occupancy[1, 2, 1] = True
+
+    filled = fill_vertical_layer_gaps(occupancy)
+
+    assert filled[1, 1, 1]
+
+
+def test_studio_voxel_smoothing_fills_layer_holes_and_vertical_gaps() -> None:
+    occupancy = np.zeros((5, 3, 5), dtype=bool)
+    occupancy[1:4, 0, 1:4] = True
+    occupancy[2, 0, 2] = False
+    occupancy[1:4, 2, 1:4] = True
+    occupancy[4, 1, 4] = True
+
+    smoothed = smooth_studio_layers(occupancy)
+
+    assert smoothed[2, 0, 2]
+    assert smoothed[2, 1, 2]
+    assert not smoothed[4, 1, 4]
+
+
+def test_studio_voxel_smoothing_preset_is_available() -> None:
+    occupancy = np.zeros((3, 3, 3), dtype=bool)
+    occupancy[1, 0, 1] = True
+    occupancy[1, 2, 1] = True
+
+    smoothed = apply_voxel_smoothing(occupancy, "studio")
+
+    assert smoothed[1, 1, 1]
 
 
 def test_shell_base_anchoring_adds_minimal_vertical_support() -> None:

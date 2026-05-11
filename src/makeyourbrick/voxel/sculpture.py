@@ -6,8 +6,8 @@ import numpy as np
 
 SCULPTURE_MODES = ("solid", "shell", "density")
 SculptureMode = Literal["solid", "shell", "density"]
-VOXEL_SMOOTHING_PRESETS = ("none", "light", "contour")
-VoxelSmoothing = Literal["none", "light", "contour"]
+VOXEL_SMOOTHING_PRESETS = ("none", "light", "contour", "studio")
+VoxelSmoothing = Literal["none", "light", "contour", "studio"]
 INFILL_PATTERNS = ("lattice", "ribs")
 InfillPattern = Literal["lattice", "ribs"]
 
@@ -134,6 +134,8 @@ def apply_voxel_smoothing(occupancy: np.ndarray, preset: VoxelSmoothing = "none"
         raise ValueError(f"Unsupported voxel smoothing preset: {preset}")
     if preset == "none":
         return occupancy.astype(bool)
+    if preset == "studio":
+        return smooth_studio_layers(close_single_voxel_gaps(occupancy))
     smoothed = close_single_voxel_gaps(occupancy)
     smoothed = remove_light_layer_spurs(smoothed)
     if preset == "contour":
@@ -199,6 +201,36 @@ def smooth_layer_contours(occupancy: np.ndarray) -> np.ndarray:
     smoothed = occupancy.astype(bool).copy()
     for y in range(smoothed.shape[1]):
         smoothed[:, y, :] = smooth_2d_contour(smoothed[:, y, :])
+    return smoothed
+
+
+def fill_vertical_layer_gaps(occupancy: np.ndarray) -> np.ndarray:
+    if occupancy.ndim != 3:
+        raise ValueError("Occupancy must be a 3D array.")
+    filled = occupancy.astype(bool).copy()
+    if filled.shape[1] < 3:
+        return filled
+    above = filled[:, :-2, :]
+    current = filled[:, 1:-1, :]
+    below = filled[:, 2:, :]
+    current[(~current) & above & below] = True
+    filled[:, 1:-1, :] = current
+    return filled
+
+
+def smooth_studio_layers(occupancy: np.ndarray, iterations: int = 2) -> np.ndarray:
+    if occupancy.ndim != 3:
+        raise ValueError("Occupancy must be a 3D array.")
+    smoothed = occupancy.astype(bool).copy()
+    for _ in range(max(1, iterations)):
+        smoothed = fill_vertical_layer_gaps(smoothed)
+        for y in range(smoothed.shape[1]):
+            layer = fill_2d_holes(smoothed[:, y, :])
+            counts = layer_neighbor_count(layer)
+            layer[(~layer) & (counts >= 3)] = True
+            smoothed[:, y, :] = layer
+        smoothed = fill_vertical_layer_gaps(smoothed)
+        smoothed = remove_light_layer_spurs(smoothed)
     return smoothed
 
 

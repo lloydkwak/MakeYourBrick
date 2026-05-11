@@ -317,6 +317,13 @@ Tasks:
 - [x] Add optional Studio-style target footprint scaling before voxelization.
 - [x] Add density sculpture mode with shell/base plus deterministic lattice infill.
 - [x] Add ribbed internal support infill with staggered X/Z support lines and vertical posts.
+- [x] Add Studio-like layer smoothing preset for filled layer holes, vertical layer gaps, and isolated protrusion cleanup.
+
+Latest Studio smoothing diagnostic:
+
+- `voxelizer=slice`, target footprint `38x37`, solid, `voxel_smoothing=studio` IoU: `0.309009`, missing `571`, extra `13320`.
+- Compared with unsmoothed solid (`0.309746`, missing `611`, extra `13143`), the Studio smoothing preset slightly reduces missing surface cells while preserving the layer-filled sculpture behavior.
+- Interpretation: this is the better visual candidate when the priority is clean, layer-filled Studio-like surfaces. Density/rib modes are useful for reducing interior mass, but they can expose holes and support patterns on the visible model.
 
 Acceptance criteria:
 

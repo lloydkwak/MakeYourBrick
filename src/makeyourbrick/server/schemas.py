@@ -56,7 +56,7 @@ class JobRequest(BaseModel):
     sculpture_mode: Literal["solid", "shell", "density"] = "solid"
     wall_thickness: int = Field(default=1, ge=1, le=16)
     base_thickness: int = Field(default=0, ge=0, le=64)
-    voxel_smoothing: Literal["none", "light", "contour"] = "none"
+    voxel_smoothing: Literal["none", "light", "contour", "studio"] = "none"
     infill_density: float = Field(default=0.35, ge=0.0, le=1.0)
     infill_pattern: Literal["lattice", "ribs"] = "lattice"
     steps_by_layer: bool = False
