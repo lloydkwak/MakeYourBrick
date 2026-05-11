@@ -43,6 +43,7 @@ def run_from_image(
     sculpture_mode: str = "solid",
     wall_thickness: int = 1,
     base_thickness: int = 0,
+    voxel_smoothing: str = "none",
     optimizer: str = "greedy",
     steps_by_layer: bool = False,
 ) -> Path:
@@ -81,6 +82,7 @@ def run_from_image(
         sculpture_mode=sculpture_mode,
         wall_thickness=wall_thickness,
         base_thickness=base_thickness,
+        voxel_smoothing=voxel_smoothing,
         optimizer=optimizer,
         steps_by_layer=steps_by_layer,
     )
@@ -113,6 +115,7 @@ def convert_mesh_to_ldr(
     sculpture_mode: str = "solid",
     wall_thickness: int = 1,
     base_thickness: int = 0,
+    voxel_smoothing: str = "none",
     optimizer: str = "greedy",
     steps_by_layer: bool = False,
 ) -> Path:
@@ -151,6 +154,7 @@ def convert_mesh_to_ldr(
         mode=sculpture_mode,
         wall_thickness=wall_thickness,
         base_thickness=base_thickness,
+        voxel_smoothing=voxel_smoothing,
     )
     input_bricks = brickify_1x1(occupancy, color_ids)
     if optimizer not in {"greedy", "layered"}:
@@ -175,6 +179,7 @@ def convert_mesh_to_ldr(
                     "mode": sculpture_mode,
                     "wall_thickness": int(wall_thickness),
                     "base_thickness": int(base_thickness),
+                    "voxel_smoothing": voxel_smoothing,
                 },
                 mesh_orientation=orientation_report,
                 stability=build_stability_report(

@@ -49,6 +49,7 @@ def compare_mesh_samples(
     sculpture_mode: str = "shell",
     wall_thickness: int = 1,
     base_thickness: int = 1,
+    voxel_smoothing: str = "none",
     optimizer: str = "layered",
 ) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -70,6 +71,7 @@ def compare_mesh_samples(
             sculpture_mode=sculpture_mode,
             wall_thickness=wall_thickness,
             base_thickness=base_thickness,
+            voxel_smoothing=voxel_smoothing,
             steps_by_layer=True,
             report_path=report_path,
         )
@@ -92,6 +94,7 @@ def compare_mesh_samples(
         "sculpture_mode": sculpture_mode,
         "wall_thickness": int(wall_thickness),
         "base_thickness": int(base_thickness),
+        "voxel_smoothing": voxel_smoothing,
         "optimizer": optimizer,
     }
     summary_path = output_dir / "mesh_sample_comparison.json"

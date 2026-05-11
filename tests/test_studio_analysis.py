@@ -11,6 +11,8 @@ from makeyourbrick.studio.analysis import (
     footprint_cells,
     parse_ldr_parts,
     summarize_layer_diffs,
+    summarize_layer_profiles,
+    summarize_profile_deltas,
     summarize_ldr_parts,
 )
 from makeyourbrick.studio.analysis import StudioPartFootprint
@@ -126,3 +128,32 @@ def test_find_best_xz_alignment_handles_rotated_candidate() -> None:
     assert aligned == reference
     assert report["transform"] in {"rotate_90", "rotate_270", "mirror_diagonal", "mirror_antidiagonal"}
     assert report["iou"] == 1.0
+
+
+def test_summarize_layer_profiles_reports_area_and_bounds_curves() -> None:
+    reference = {(0, 0, 0), (1, 0, 0), (0, 1, 0)}
+    candidate = {(0, 0, 0), (1, 0, 0), (2, 0, 0), (0, 1, 0), (1, 1, 0)}
+
+    profiles = summarize_layer_profiles(reference, candidate)
+
+    assert profiles[0]["layer"] == 0
+    assert profiles[0]["reference_area"] == 2
+    assert profiles[0]["candidate_area"] == 3
+    assert profiles[0]["area_delta"] == 1
+    assert profiles[0]["reference_width"] == 2
+    assert profiles[0]["candidate_width"] == 3
+    assert profiles[1]["area_ratio"] == 2.0
+
+
+def test_summarize_profile_deltas_reports_global_size_ratios() -> None:
+    reference = {(0, 0, 0), (1, 0, 0), (0, 1, 0)}
+    candidate = {(0, 0, 0), (1, 0, 0), (2, 0, 0), (0, 1, 0), (1, 1, 0)}
+    profiles = summarize_layer_profiles(reference, candidate)
+
+    summary = summarize_profile_deltas(reference, candidate, profiles)
+
+    assert summary["total_area_delta"] == 2
+    assert summary["total_area_ratio"] == 1.666667
+    assert summary["global_width_ratio"] == 1.5
+    assert summary["global_depth_ratio"] == 1.0
+    assert summary["global_layer_ratio"] == 1.0

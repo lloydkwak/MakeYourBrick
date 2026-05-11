@@ -11,7 +11,7 @@ from makeyourbrick.ai.sam3d_runner import Sam3DRunner
 from makeyourbrick.mesh.orient import UP_AXIS_OPTIONS
 from makeyourbrick.mesh.repair import REPAIR_MODES
 from makeyourbrick.pipeline import run_from_image
-from makeyourbrick.voxel.sculpture import SCULPTURE_MODES
+from makeyourbrick.voxel.sculpture import SCULPTURE_MODES, VOXEL_SMOOTHING_PRESETS
 from makeyourbrick.voxel.voxelize import VOXELIZERS
 
 
@@ -70,6 +70,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--wall-thickness", type=int, default=1, help="Shell wall thickness in studs.")
     parser.add_argument("--base-thickness", type=int, default=0, help="Solid base thickness in layers.")
+    parser.add_argument(
+        "--voxel-smoothing",
+        choices=VOXEL_SMOOTHING_PRESETS,
+        default="none",
+        help="Optional sculpture voxel cleanup preset.",
+    )
     parser.add_argument("--steps-by-layer", action="store_true", help="Insert LDraw 0 STEP markers per layer.")
     parser.add_argument("--raw-mesh", type=Path, default=Path("outputs/meshes/raw_model.glb"))
     parser.add_argument("--cleaned-mesh", type=Path, default=Path("outputs/meshes/watertight_model.glb"))
@@ -124,6 +130,7 @@ def main() -> None:
         sculpture_mode=args.sculpture_mode,
         wall_thickness=args.wall_thickness,
         base_thickness=args.base_thickness,
+        voxel_smoothing=args.voxel_smoothing,
         steps_by_layer=args.steps_by_layer,
     )
     print(f"Wrote LDraw model to {output_path}")

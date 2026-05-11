@@ -6,6 +6,7 @@ import pytest
 from makeyourbrick.voxel.sculpture import (
     anchor_shell_to_base,
     apply_sculpture_mode,
+    apply_voxel_smoothing,
     fill_2d_holes,
     fill_horizontal_layer_holes,
     preprocess_shell_occupancy,
@@ -128,6 +129,27 @@ def test_shell_preprocess_closes_single_voxel_gaps_and_removes_isolated_features
     assert not processed[0, 0, 0]
 
 
+def test_light_voxel_smoothing_removes_unsupported_layer_spurs() -> None:
+    occupancy = np.zeros((5, 1, 5), dtype=bool)
+    occupancy[1:4, 0, 2] = True
+    occupancy[4, 0, 2] = True
+
+    smoothed = apply_voxel_smoothing(occupancy, "light")
+
+    assert smoothed[2, 0, 2]
+    assert not smoothed[4, 0, 2]
+
+
+def test_light_voxel_smoothing_preserves_vertically_supported_tips() -> None:
+    occupancy = np.zeros((3, 2, 3), dtype=bool)
+    occupancy[1, :, 1] = True
+
+    smoothed = apply_voxel_smoothing(occupancy, "light")
+
+    assert smoothed[1, 0, 1]
+    assert smoothed[1, 1, 1]
+
+
 def test_shell_base_anchoring_adds_minimal_vertical_support() -> None:
     shell = np.zeros((3, 4, 3), dtype=bool)
     occupancy = np.zeros_like(shell)
@@ -151,3 +173,6 @@ def test_sculpture_mode_validates_inputs() -> None:
 
     with pytest.raises(ValueError, match="Unsupported"):
         apply_sculpture_mode(occupancy, color_ids, mode="hollow")
+
+    with pytest.raises(ValueError, match="smoothing"):
+        apply_sculpture_mode(occupancy, color_ids, voxel_smoothing="heavy")

@@ -53,6 +53,7 @@ class JobRequest(BaseModel):
     sculpture_mode: Literal["solid", "shell"] = "solid"
     wall_thickness: int = Field(default=1, ge=1, le=16)
     base_thickness: int = Field(default=0, ge=0, le=64)
+    voxel_smoothing: Literal["none", "light"] = "none"
     steps_by_layer: bool = False
 
 

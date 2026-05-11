@@ -6,15 +6,24 @@ import numpy as np
 
 SCULPTURE_MODES = ("solid", "shell")
 SculptureMode = Literal["solid", "shell"]
+VOXEL_SMOOTHING_PRESETS = ("none", "light")
+VoxelSmoothing = Literal["none", "light"]
 
 
-def validate_sculpture_options(mode: str, wall_thickness: int, base_thickness: int) -> None:
+def validate_sculpture_options(
+    mode: str,
+    wall_thickness: int,
+    base_thickness: int,
+    voxel_smoothing: str = "none",
+) -> None:
     if mode not in SCULPTURE_MODES:
         raise ValueError(f"Unsupported sculpture mode: {mode}")
     if wall_thickness < 1:
         raise ValueError("wall_thickness must be at least 1.")
     if base_thickness < 0:
         raise ValueError("base_thickness must be non-negative.")
+    if voxel_smoothing not in VOXEL_SMOOTHING_PRESETS:
+        raise ValueError(f"Unsupported voxel smoothing preset: {voxel_smoothing}")
 
 
 def surface_mask(occupancy: np.ndarray) -> np.ndarray:
@@ -60,6 +69,34 @@ def neighbor_count(mask: np.ndarray) -> np.ndarray:
     return counts
 
 
+def horizontal_neighbor_count(mask: np.ndarray) -> np.ndarray:
+    if mask.ndim != 3:
+        raise ValueError("Mask must be a 3D array.")
+    padded = np.pad(mask.astype(bool), 1, mode="constant", constant_values=False)
+    counts = np.zeros(mask.shape, dtype=np.int16)
+    for dx, dz in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        counts += padded[
+            1 + dx : 1 + dx + mask.shape[0],
+            1 : 1 + mask.shape[1],
+            1 + dz : 1 + dz + mask.shape[2],
+        ]
+    return counts
+
+
+def vertical_neighbor_count(mask: np.ndarray) -> np.ndarray:
+    if mask.ndim != 3:
+        raise ValueError("Mask must be a 3D array.")
+    padded = np.pad(mask.astype(bool), 1, mode="constant", constant_values=False)
+    counts = np.zeros(mask.shape, dtype=np.int16)
+    for dy in (-1, 1):
+        counts += padded[
+            1 : 1 + mask.shape[0],
+            1 + dy : 1 + dy + mask.shape[1],
+            1 : 1 + mask.shape[2],
+        ]
+    return counts
+
+
 def close_single_voxel_gaps(occupancy: np.ndarray) -> np.ndarray:
     occupancy = occupancy.astype(bool)
     closed = occupancy.copy()
@@ -72,6 +109,26 @@ def remove_isolated_features(occupancy: np.ndarray) -> np.ndarray:
     opened = occupancy.copy()
     opened[occupancy & (neighbor_count(occupancy) == 0)] = False
     return opened
+
+
+def remove_light_layer_spurs(occupancy: np.ndarray) -> np.ndarray:
+    occupancy = occupancy.astype(bool)
+    smoothed = occupancy.copy()
+    horizontal_counts = horizontal_neighbor_count(occupancy)
+    vertical_counts = vertical_neighbor_count(occupancy)
+    spurs = occupancy & (horizontal_counts <= 1) & (vertical_counts == 0)
+    smoothed[spurs] = False
+    return smoothed
+
+
+def apply_voxel_smoothing(occupancy: np.ndarray, preset: VoxelSmoothing = "none") -> np.ndarray:
+    if preset not in VOXEL_SMOOTHING_PRESETS:
+        raise ValueError(f"Unsupported voxel smoothing preset: {preset}")
+    if preset == "none":
+        return occupancy.astype(bool)
+    smoothed = close_single_voxel_gaps(occupancy)
+    smoothed = remove_light_layer_spurs(smoothed)
+    return smoothed
 
 
 def fill_2d_holes(layer: np.ndarray) -> np.ndarray:
@@ -232,12 +289,13 @@ def apply_sculpture_mode(
     mode: SculptureMode = "solid",
     wall_thickness: int = 1,
     base_thickness: int = 0,
+    voxel_smoothing: VoxelSmoothing = "none",
 ) -> tuple[np.ndarray, np.ndarray]:
-    validate_sculpture_options(mode, wall_thickness, base_thickness)
+    validate_sculpture_options(mode, wall_thickness, base_thickness, voxel_smoothing)
     if color_ids.shape != occupancy.shape:
         raise ValueError("Color id array must have the same shape as occupancy.")
     occupancy = occupancy.astype(bool)
-    solid_occupancy = preprocess_solid_occupancy(occupancy)
+    solid_occupancy = apply_voxel_smoothing(preprocess_solid_occupancy(occupancy), voxel_smoothing)
     if mode == "solid":
         return solid_occupancy, repair_sculpture_colors(occupancy, solid_occupancy, color_ids)
 

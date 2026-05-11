@@ -177,6 +177,18 @@ def xz_bounds(cells: set[tuple[int, int, int]]) -> dict[str, list[int]] | None:
     }
 
 
+def bounds_size(bounds: dict[str, list[int]] | None, axis: str) -> int:
+    if bounds is None:
+        return 0
+    return int(bounds[axis][1] - bounds[axis][0])
+
+
+def safe_ratio(numerator: float, denominator: float) -> float | None:
+    if denominator == 0:
+        return None
+    return round(numerator / denominator, 6)
+
+
 def iou_for_cells(reference_cells: set[tuple[int, int, int]], candidate_cells: set[tuple[int, int, int]]) -> float:
     union = reference_cells | candidate_cells
     if not union:
@@ -262,6 +274,73 @@ def summarize_layer_diffs(
     return diffs
 
 
+def summarize_layer_profiles(
+    reference_cells: set[tuple[int, int, int]],
+    candidate_cells: set[tuple[int, int, int]],
+) -> list[dict]:
+    layers = sorted({cell[1] for cell in reference_cells | candidate_cells})
+    profiles: list[dict] = []
+    for layer in layers:
+        reference_layer = {cell for cell in reference_cells if cell[1] == layer}
+        candidate_layer = {cell for cell in candidate_cells if cell[1] == layer}
+        reference_bounds = xz_bounds(reference_layer)
+        candidate_bounds = xz_bounds(candidate_layer)
+        reference_area = len(reference_layer)
+        candidate_area = len(candidate_layer)
+        reference_width = bounds_size(reference_bounds, "x")
+        reference_depth = bounds_size(reference_bounds, "z")
+        candidate_width = bounds_size(candidate_bounds, "x")
+        candidate_depth = bounds_size(candidate_bounds, "z")
+        profiles.append(
+            {
+                "layer": layer,
+                "reference_area": reference_area,
+                "candidate_area": candidate_area,
+                "area_delta": candidate_area - reference_area,
+                "area_ratio": safe_ratio(candidate_area, reference_area),
+                "reference_width": reference_width,
+                "candidate_width": candidate_width,
+                "width_delta": candidate_width - reference_width,
+                "width_ratio": safe_ratio(candidate_width, reference_width),
+                "reference_depth": reference_depth,
+                "candidate_depth": candidate_depth,
+                "depth_delta": candidate_depth - reference_depth,
+                "depth_ratio": safe_ratio(candidate_depth, reference_depth),
+                "reference_bounds_xz": reference_bounds,
+                "candidate_bounds_xz": candidate_bounds,
+            }
+        )
+    return profiles
+
+
+def summarize_profile_deltas(
+    reference_cells: set[tuple[int, int, int]],
+    candidate_cells: set[tuple[int, int, int]],
+    layer_profiles: list[dict],
+) -> dict:
+    reference_bounds = cell_bounds(reference_cells)
+    candidate_bounds = cell_bounds(candidate_cells)
+    reference_area = len(reference_cells)
+    candidate_area = len(candidate_cells)
+    width_ratio = safe_ratio(bounds_size(candidate_bounds, "x"), bounds_size(reference_bounds, "x"))
+    depth_ratio = safe_ratio(bounds_size(candidate_bounds, "z"), bounds_size(reference_bounds, "z"))
+    layer_ratio = safe_ratio(bounds_size(candidate_bounds, "layers"), bounds_size(reference_bounds, "layers"))
+    area_ratio = safe_ratio(candidate_area, reference_area)
+    area_deltas = [profile["area_delta"] for profile in layer_profiles]
+    return {
+        "reference_total_area": reference_area,
+        "candidate_total_area": candidate_area,
+        "total_area_delta": candidate_area - reference_area,
+        "total_area_ratio": area_ratio,
+        "global_width_ratio": width_ratio,
+        "global_depth_ratio": depth_ratio,
+        "global_layer_ratio": layer_ratio,
+        "mean_layer_area_delta": round(sum(area_deltas) / len(area_deltas), 6) if area_deltas else 0.0,
+        "most_underfilled_layers": sorted(layer_profiles, key=lambda item: item["area_delta"])[:10],
+        "most_overfilled_layers": sorted(layer_profiles, key=lambda item: item["area_delta"], reverse=True)[:10],
+    }
+
+
 def summarize_ldr_parts(
     parts: list[LdrPart],
     footprints: dict[str, StudioPartFootprint] | None = None,
@@ -327,6 +406,7 @@ def compare_ldr_footprints(
     extra = candidate_cells - reference_cells
     union = reference_cells | candidate_cells
     layer_diffs = summarize_layer_diffs(reference_cells, candidate_cells)
+    layer_profiles = summarize_layer_profiles(reference_cells, candidate_cells)
     return {
         "reference_voxel_count": len(reference_cells),
         "candidate_voxel_count": len(candidate_cells),
@@ -339,6 +419,8 @@ def compare_ldr_footprints(
         "reference_bounds_studs": cell_bounds(reference_cells),
         "candidate_bounds_studs": cell_bounds(candidate_cells),
         "layer_diffs": layer_diffs,
+        "layer_profiles": layer_profiles,
+        "profile_summary": summarize_profile_deltas(reference_cells, candidate_cells, layer_profiles),
         "worst_missing_layers": sorted(layer_diffs, key=lambda item: item["missing_voxels"], reverse=True)[:10],
         "worst_extra_layers": sorted(layer_diffs, key=lambda item: item["extra_voxels"], reverse=True)[:10],
         "worst_iou_layers": sorted(layer_diffs, key=lambda item: item["iou"])[:10],

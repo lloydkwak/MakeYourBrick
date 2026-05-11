@@ -299,7 +299,7 @@ Latest queen diagnostic:
 
 ## Phase 11: Studio-Guided Voxel Tuning
 
-Status: planned.
+Status: in progress.
 
 Purpose:
 
@@ -307,9 +307,9 @@ Use the Phase 10 diagnostics to improve mesh-to-voxel behavior before further br
 
 Tasks:
 
-- [ ] Add layer profile reports for reference vs candidate width/depth/area curves.
-- [ ] Detect candidate under-scale or axis compression from layer bounds.
-- [ ] Add optional voxel smoothing presets for sculpture imports.
+- [x] Add layer profile reports for reference vs candidate width/depth/area curves.
+- [x] Detect candidate under-scale or axis compression from layer bounds.
+- [x] Add optional voxel smoothing presets for sculpture imports.
 - [ ] Improve ray voxelizer column filling near thin silhouettes.
 - [ ] Add contour cleanup to remove isolated protrusions per layer.
 - [ ] Re-run queen comparison after each tuning change and track IoU, missing, and extra deltas.
@@ -319,3 +319,9 @@ Acceptance criteria:
 - [ ] Queen output has fewer visible holes and fewer isolated protrusions.
 - [ ] Studio comparison IoU improves over the Phase 10 baseline.
 - [ ] Layer-level extra/missing spikes are reduced in the lower and middle layers.
+
+Latest light smoothing diagnostic:
+
+- Baseline IoU: `0.125026`, missing `4954`, extra `7846`.
+- `voxel_smoothing=light` IoU: `0.125188`, missing `4952`, extra `7843`.
+- Interpretation: light smoothing removes a few unsupported protrusions without changing scale. The main quality gap is still voxel fill/profile shape, not isolated spur cleanup alone.

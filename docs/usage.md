@@ -64,6 +64,7 @@ python scripts/mesh_to_ldr.py \
   --sculpture-mode shell \
   --wall-thickness 1 \
   --base-thickness 2 \
+  --voxel-smoothing light \
   --steps-by-layer \
   --report outputs/reports/sculpture_report.json \
   --output outputs/ldr/sculpture_output.ldr
@@ -144,6 +145,7 @@ Sculpture options:
 - `--sculpture-mode solid|shell`: keep a fully solid model or hollow the interior
 - `--wall-thickness`: number of voxel/stud layers to keep from the surface in shell mode
 - `--base-thickness`: number of bottom layers to force solid
+- `--voxel-smoothing none|light`: optional cleanup for isolated layer protrusions
 - `--optimizer greedy|layered`: largest-first greedy optimizer or support/seam-aware optimizer
 - `--steps-by-layer`: insert `0 STEP` markers between vertical layers in the LDR file
 
@@ -277,6 +279,7 @@ Backend job requests also accept:
 - `sculpture_mode`: `solid` or `shell`
 - `wall_thickness`
 - `base_thickness`
+- `voxel_smoothing`: `none` or `light`
 - `steps_by_layer`
 
 Start a browser workflow by opening:

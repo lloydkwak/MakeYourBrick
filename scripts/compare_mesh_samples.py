@@ -8,7 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from makeyourbrick.quality.mesh_samples import SAMPLE_NAMES, compare_mesh_samples
-from makeyourbrick.voxel.sculpture import SCULPTURE_MODES
+from makeyourbrick.voxel.sculpture import SCULPTURE_MODES, VOXEL_SMOOTHING_PRESETS
 
 
 def parse_args() -> argparse.Namespace:
@@ -35,6 +35,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--wall-thickness", type=int, default=1, help="Shell wall thickness in studs.")
     parser.add_argument("--base-thickness", type=int, default=1, help="Solid base thickness in layers.")
+    parser.add_argument(
+        "--voxel-smoothing",
+        choices=VOXEL_SMOOTHING_PRESETS,
+        default="none",
+        help="Optional sculpture voxel cleanup preset.",
+    )
     return parser.parse_args()
 
 
@@ -47,6 +53,7 @@ def main() -> None:
         sculpture_mode=args.sculpture_mode,
         wall_thickness=args.wall_thickness,
         base_thickness=args.base_thickness,
+        voxel_smoothing=args.voxel_smoothing,
     )
     print(f"Wrote mesh sample comparison to {summary['summary_path']}")
 
