@@ -50,6 +50,7 @@ def compare_mesh_samples(
     wall_thickness: int = 1,
     base_thickness: int = 1,
     voxel_smoothing: str = "none",
+    infill_density: float = 0.35,
     optimizer: str = "layered",
 ) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -72,6 +73,7 @@ def compare_mesh_samples(
             wall_thickness=wall_thickness,
             base_thickness=base_thickness,
             voxel_smoothing=voxel_smoothing,
+            infill_density=infill_density,
             steps_by_layer=True,
             report_path=report_path,
         )
@@ -95,6 +97,7 @@ def compare_mesh_samples(
         "wall_thickness": int(wall_thickness),
         "base_thickness": int(base_thickness),
         "voxel_smoothing": voxel_smoothing,
+        "infill_density": float(infill_density),
         "optimizer": optimizer,
     }
     summary_path = output_dir / "mesh_sample_comparison.json"

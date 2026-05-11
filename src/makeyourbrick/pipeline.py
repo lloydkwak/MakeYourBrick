@@ -48,6 +48,7 @@ def run_from_image(
     wall_thickness: int = 1,
     base_thickness: int = 0,
     voxel_smoothing: str = "none",
+    infill_density: float = 0.35,
     optimizer: str = "greedy",
     steps_by_layer: bool = False,
 ) -> Path:
@@ -90,6 +91,7 @@ def run_from_image(
         wall_thickness=wall_thickness,
         base_thickness=base_thickness,
         voxel_smoothing=voxel_smoothing,
+        infill_density=infill_density,
         optimizer=optimizer,
         steps_by_layer=steps_by_layer,
     )
@@ -126,6 +128,7 @@ def convert_mesh_to_ldr(
     wall_thickness: int = 1,
     base_thickness: int = 0,
     voxel_smoothing: str = "none",
+    infill_density: float = 0.35,
     optimizer: str = "greedy",
     steps_by_layer: bool = False,
 ) -> Path:
@@ -172,6 +175,7 @@ def convert_mesh_to_ldr(
         wall_thickness=wall_thickness,
         base_thickness=base_thickness,
         voxel_smoothing=voxel_smoothing,
+        infill_density=infill_density,
     )
     input_bricks = brickify_1x1(occupancy, color_ids)
     if optimizer not in {"greedy", "layered"}:
@@ -197,6 +201,7 @@ def convert_mesh_to_ldr(
                     "wall_thickness": int(wall_thickness),
                     "base_thickness": int(base_thickness),
                     "voxel_smoothing": voxel_smoothing,
+                    "infill_density": float(infill_density),
                 },
                 mesh_orientation=orientation_report,
                 footprint_scale=footprint_scale_report,

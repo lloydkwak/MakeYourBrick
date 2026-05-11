@@ -315,6 +315,7 @@ Tasks:
 - [ ] Re-run queen comparison after each tuning change and track IoU, missing, and extra deltas.
 - [x] Add layer-slice voxelizer that cuts the mesh per LEGO layer and fills projected contours.
 - [x] Add optional Studio-style target footprint scaling before voxelization.
+- [x] Add density sculpture mode with shell/base plus deterministic lattice infill.
 
 Acceptance criteria:
 
@@ -346,3 +347,9 @@ Latest Studio-like slice and footprint diagnostics:
 - `voxelizer=slice`, target footprint `38x37`, shell wall `1` IoU: `0.167224`, missing `5034`, extra `3676`.
 - `voxelizer=slice`, target footprint `38x37`, shell wall `2` IoU: `0.183744`, missing `4658`, extra `4782`.
 - Interpretation: layer slicing plus explicit footprint scaling is the first major improvement. It fixes most of the missing reference footprint but overfills the interior, so the next Studio-like step is density/fill control rather than another axis fix.
+
+Latest density fill diagnostics:
+
+- `voxelizer=slice`, target footprint `38x37`, density mode `0.35` IoU: `0.227501`, missing `3795`, extra `6351`.
+- `voxelizer=slice`, target footprint `38x37`, density mode `0.65` IoU: `0.254558`, missing `2957`, extra `8247`.
+- Interpretation: density mode provides a controllable middle ground between shell and solid. On the queen sample, higher density recovers more reference cells but still does not beat full solid IoU because Studio's actual placement appears to use structured internal support/bridging, not simple uniform lattice infill.

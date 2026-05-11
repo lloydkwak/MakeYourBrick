@@ -64,9 +64,10 @@ python scripts/mesh_to_ldr.py \
   --ray-fill wide \
   --optimize \
   --optimizer layered \
-  --sculpture-mode shell \
+  --sculpture-mode density \
   --wall-thickness 1 \
   --base-thickness 2 \
+  --infill-density 0.35 \
   --voxel-smoothing light \
   --steps-by-layer \
   --report outputs/reports/sculpture_report.json \
@@ -148,9 +149,10 @@ Supported command placeholders:
 
 Sculpture options:
 
-- `--sculpture-mode solid|shell`: keep a fully solid model or hollow the interior
+- `--sculpture-mode solid|shell|density`: keep a fully solid model, hollow the interior, or keep shell/base plus deterministic lattice infill
 - `--wall-thickness`: number of voxel/stud layers to keep from the surface in shell mode
 - `--base-thickness`: number of bottom layers to force solid
+- `--infill-density`: target interior lattice density for `density` sculpture mode
 - `--voxel-smoothing none|light|contour`: optional cleanup for isolated protrusions and layer contours
 - `--optimizer greedy|layered`: largest-first greedy optimizer or support/seam-aware optimizer
 - `--steps-by-layer`: insert `0 STEP` markers between vertical layers in the LDR file
@@ -282,9 +284,10 @@ In `sam3d` mode, `POST /api/jobs` requires a `mask_id`. The UI flow should uploa
 Backend job requests also accept:
 
 - `optimizer`: `greedy` or `layered`
-- `sculpture_mode`: `solid` or `shell`
+- `sculpture_mode`: `solid`, `shell`, or `density`
 - `wall_thickness`
 - `base_thickness`
+- `infill_density`
 - `voxel_smoothing`: `none`, `light`, or `contour`
 - `ray_fill`: `wide` or `balanced`
 - `steps_by_layer`

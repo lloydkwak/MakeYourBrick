@@ -4,8 +4,8 @@ from typing import Literal
 
 import numpy as np
 
-SCULPTURE_MODES = ("solid", "shell")
-SculptureMode = Literal["solid", "shell"]
+SCULPTURE_MODES = ("solid", "shell", "density")
+SculptureMode = Literal["solid", "shell", "density"]
 VOXEL_SMOOTHING_PRESETS = ("none", "light", "contour")
 VoxelSmoothing = Literal["none", "light", "contour"]
 
@@ -15,6 +15,7 @@ def validate_sculpture_options(
     wall_thickness: int,
     base_thickness: int,
     voxel_smoothing: str = "none",
+    infill_density: float = 0.35,
 ) -> None:
     if mode not in SCULPTURE_MODES:
         raise ValueError(f"Unsupported sculpture mode: {mode}")
@@ -24,6 +25,8 @@ def validate_sculpture_options(
         raise ValueError("base_thickness must be non-negative.")
     if voxel_smoothing not in VOXEL_SMOOTHING_PRESETS:
         raise ValueError(f"Unsupported voxel smoothing preset: {voxel_smoothing}")
+    if not 0.0 <= infill_density <= 1.0:
+        raise ValueError("infill_density must be between 0.0 and 1.0.")
 
 
 def surface_mask(occupancy: np.ndarray) -> np.ndarray:
@@ -270,6 +273,37 @@ def base_fill_mask(occupancy: np.ndarray, base_thickness: int) -> np.ndarray:
     return base
 
 
+def lattice_spacing_for_density(density: float) -> int:
+    if not 0.0 <= density <= 1.0:
+        raise ValueError("density must be between 0.0 and 1.0.")
+    if density <= 0.0:
+        return 0
+    if density >= 1.0:
+        return 1
+    best_spacing = 2
+    best_error = float("inf")
+    for spacing in range(2, 33):
+        ratio = (2.0 / spacing) - (1.0 / (spacing * spacing))
+        error = abs(ratio - density)
+        if error < best_error:
+            best_spacing = spacing
+            best_error = error
+    return best_spacing
+
+
+def lattice_infill_mask(occupancy: np.ndarray, density: float) -> np.ndarray:
+    if occupancy.ndim != 3:
+        raise ValueError("Occupancy must be a 3D array.")
+    spacing = lattice_spacing_for_density(density)
+    if spacing == 0:
+        return np.zeros_like(occupancy, dtype=bool)
+    if spacing == 1:
+        return occupancy.astype(bool)
+    x_indices, _y_indices, z_indices = np.indices(occupancy.shape)
+    lattice = ((x_indices % spacing) == 0) | ((z_indices % spacing) == 0)
+    return occupancy.astype(bool) & lattice
+
+
 def connected_components(mask: np.ndarray) -> list[list[tuple[int, int, int]]]:
     if mask.ndim != 3:
         raise ValueError("Mask must be a 3D array.")
@@ -324,8 +358,9 @@ def apply_sculpture_mode(
     wall_thickness: int = 1,
     base_thickness: int = 0,
     voxel_smoothing: VoxelSmoothing = "none",
+    infill_density: float = 0.35,
 ) -> tuple[np.ndarray, np.ndarray]:
-    validate_sculpture_options(mode, wall_thickness, base_thickness, voxel_smoothing)
+    validate_sculpture_options(mode, wall_thickness, base_thickness, voxel_smoothing, infill_density)
     if color_ids.shape != occupancy.shape:
         raise ValueError("Color id array must have the same shape as occupancy.")
     occupancy = occupancy.astype(bool)
@@ -336,7 +371,8 @@ def apply_sculpture_mode(
     shell_occupancy = solid_occupancy
     shell = dilate_within_occupancy(surface_mask(shell_occupancy), shell_occupancy, wall_thickness - 1)
     retained = shell | base_fill_mask(shell_occupancy, base_thickness)
+    if mode == "density":
+        interior = shell_occupancy & ~retained
+        retained |= lattice_infill_mask(interior, infill_density)
     retained = anchor_shell_to_base(retained, shell_occupancy, base_thickness)
-    retained_colors = color_ids.copy()
-    retained_colors[~retained] = 0
-    return retained, retained_colors
+    return retained, repair_sculpture_colors(occupancy, retained, color_ids)

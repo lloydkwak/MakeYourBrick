@@ -9,6 +9,8 @@ from makeyourbrick.voxel.sculpture import (
     apply_voxel_smoothing,
     fill_2d_holes,
     fill_horizontal_layer_holes,
+    lattice_infill_mask,
+    lattice_spacing_for_density,
     smooth_2d_contour,
     preprocess_shell_occupancy,
     preprocess_solid_occupancy,
@@ -59,6 +61,43 @@ def test_shell_mode_fills_requested_base_layers() -> None:
     assert shell[:, 0, :].all()
     assert shell[:, 1, :].all()
     assert not shell[2, 2, 2]
+
+
+def test_density_mode_keeps_shell_base_and_lattice_infill() -> None:
+    occupancy = np.ones((7, 5, 7), dtype=bool)
+    color_ids = np.full(occupancy.shape, 16, dtype=np.int32)
+
+    density, density_colors = apply_sculpture_mode(
+        occupancy,
+        color_ids,
+        mode="density",
+        wall_thickness=1,
+        base_thickness=1,
+        infill_density=0.35,
+    )
+    shell, _shell_colors = apply_sculpture_mode(
+        occupancy,
+        color_ids,
+        mode="shell",
+        wall_thickness=1,
+        base_thickness=1,
+    )
+
+    assert shell.sum() < density.sum() < occupancy.sum()
+    assert density[:, 0, :].all()
+    assert density[0, 2, 0]
+    assert not density[2, 2, 2]
+    assert density_colors[density].min() == 16
+
+
+def test_lattice_infill_density_bounds() -> None:
+    occupancy = np.ones((8, 1, 8), dtype=bool)
+
+    assert lattice_spacing_for_density(0.0) == 0
+    assert lattice_spacing_for_density(1.0) == 1
+    assert not lattice_infill_mask(occupancy, 0.0).any()
+    assert lattice_infill_mask(occupancy, 1.0).all()
+    assert 0 < lattice_infill_mask(occupancy, 0.35).sum() < occupancy.sum()
 
 
 def test_wall_thickness_can_retain_full_small_model() -> None:
@@ -201,3 +240,6 @@ def test_sculpture_mode_validates_inputs() -> None:
 
     with pytest.raises(ValueError, match="smoothing"):
         apply_sculpture_mode(occupancy, color_ids, voxel_smoothing="heavy")
+
+    with pytest.raises(ValueError, match="infill_density"):
+        apply_sculpture_mode(occupancy, color_ids, mode="density", infill_density=1.5)

@@ -36,6 +36,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--wall-thickness", type=int, default=1, help="Shell wall thickness in studs.")
     parser.add_argument("--base-thickness", type=int, default=1, help="Solid base thickness in layers.")
     parser.add_argument(
+        "--infill-density",
+        type=float,
+        default=0.35,
+        help="Interior lattice density used by --sculpture-mode density.",
+    )
+    parser.add_argument(
         "--voxel-smoothing",
         choices=VOXEL_SMOOTHING_PRESETS,
         default="none",
@@ -53,6 +59,7 @@ def main() -> None:
         sculpture_mode=args.sculpture_mode,
         wall_thickness=args.wall_thickness,
         base_thickness=args.base_thickness,
+        infill_density=args.infill_density,
         voxel_smoothing=args.voxel_smoothing,
     )
     print(f"Wrote mesh sample comparison to {summary['summary_path']}")

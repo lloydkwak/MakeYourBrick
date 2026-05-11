@@ -64,6 +64,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--wall-thickness", type=int, default=1, help="Shell wall thickness in studs.")
     parser.add_argument("--base-thickness", type=int, default=0, help="Solid base thickness in layers.")
     parser.add_argument(
+        "--infill-density",
+        type=float,
+        default=0.35,
+        help="Interior lattice density used by --sculpture-mode density.",
+    )
+    parser.add_argument(
         "--voxel-smoothing",
         choices=VOXEL_SMOOTHING_PRESETS,
         default="none",
@@ -138,6 +144,7 @@ def main() -> None:
         wall_thickness=args.wall_thickness,
         base_thickness=args.base_thickness,
         voxel_smoothing=args.voxel_smoothing,
+        infill_density=args.infill_density,
         steps_by_layer=args.steps_by_layer,
     )
     print(f"Wrote LDraw model to {output_path}")
