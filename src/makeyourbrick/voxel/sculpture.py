@@ -6,8 +6,8 @@ import numpy as np
 
 SCULPTURE_MODES = ("solid", "shell")
 SculptureMode = Literal["solid", "shell"]
-VOXEL_SMOOTHING_PRESETS = ("none", "light")
-VoxelSmoothing = Literal["none", "light"]
+VOXEL_SMOOTHING_PRESETS = ("none", "light", "contour")
+VoxelSmoothing = Literal["none", "light", "contour"]
 
 
 def validate_sculpture_options(
@@ -128,7 +128,23 @@ def apply_voxel_smoothing(occupancy: np.ndarray, preset: VoxelSmoothing = "none"
         return occupancy.astype(bool)
     smoothed = close_single_voxel_gaps(occupancy)
     smoothed = remove_light_layer_spurs(smoothed)
+    if preset == "contour":
+        smoothed = smooth_layer_contours(smoothed)
+        smoothed = remove_light_layer_spurs(smoothed)
     return smoothed
+
+
+def layer_neighbor_count(layer: np.ndarray) -> np.ndarray:
+    if layer.ndim != 2:
+        raise ValueError("Layer must be a 2D array.")
+    padded = np.pad(layer.astype(bool), 1, mode="constant", constant_values=False)
+    counts = np.zeros(layer.shape, dtype=np.int16)
+    for dx, dz in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        counts += padded[
+            1 + dx : 1 + dx + layer.shape[0],
+            1 + dz : 1 + dz + layer.shape[1],
+        ]
+    return counts
 
 
 def fill_2d_holes(layer: np.ndarray) -> np.ndarray:
@@ -158,6 +174,24 @@ def fill_2d_holes(layer: np.ndarray) -> np.ndarray:
                 outside[nx, nz] = True
                 stack.append((nx, nz))
     return layer | (~layer & ~outside)
+
+
+def smooth_2d_contour(layer: np.ndarray) -> np.ndarray:
+    layer = fill_2d_holes(layer)
+    counts = layer_neighbor_count(layer)
+    smoothed = layer.copy()
+    smoothed[(~layer) & (counts >= 3)] = True
+    smoothed[layer & (counts <= 1)] = False
+    return smoothed
+
+
+def smooth_layer_contours(occupancy: np.ndarray) -> np.ndarray:
+    if occupancy.ndim != 3:
+        raise ValueError("Occupancy must be a 3D array.")
+    smoothed = occupancy.astype(bool).copy()
+    for y in range(smoothed.shape[1]):
+        smoothed[:, y, :] = smooth_2d_contour(smoothed[:, y, :])
+    return smoothed
 
 
 def fill_horizontal_layer_holes(occupancy: np.ndarray) -> np.ndarray:

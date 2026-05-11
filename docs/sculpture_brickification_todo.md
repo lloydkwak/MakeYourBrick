@@ -311,7 +311,7 @@ Tasks:
 - [x] Detect candidate under-scale or axis compression from layer bounds.
 - [x] Add optional voxel smoothing presets for sculpture imports.
 - [x] Improve ray voxelizer column filling near thin silhouettes.
-- [ ] Add contour cleanup to remove isolated protrusions per layer.
+- [x] Add contour cleanup to remove isolated protrusions per layer.
 - [ ] Re-run queen comparison after each tuning change and track IoU, missing, and extra deltas.
 
 Acceptance criteria:
@@ -330,3 +330,9 @@ Latest balanced ray-fill diagnostic:
 
 - `ray_fill=balanced` IoU: `0.124726`, missing `4964`, extra `7801`.
 - Interpretation: balanced odd-hit pairing reduces extra filled cells, but slightly lowers IoU on the queen sample. It remains an opt-in mode; default ray behavior stays `wide`.
+
+Latest contour smoothing diagnostic:
+
+- `voxel_smoothing=contour` IoU: `0.124838`, missing `4957`, extra `7844`.
+- Profile hints still flag compressed width, compressed depth, and overfilled layers.
+- Interpretation: local contour cleanup is not enough for the queen mismatch. The next correction needs profile-aware scale/axis handling or a different silhouette sampling strategy, not only per-layer smoothing.

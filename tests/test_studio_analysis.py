@@ -5,6 +5,7 @@ from pathlib import Path
 
 from makeyourbrick.studio.analysis import (
     align_cells_to_reference_origin,
+    build_profile_correction_hints,
     compare_ldr_footprints,
     extract_model_ldr,
     find_best_xz_alignment,
@@ -157,3 +158,21 @@ def test_summarize_profile_deltas_reports_global_size_ratios() -> None:
     assert summary["global_width_ratio"] == 1.5
     assert summary["global_depth_ratio"] == 1.0
     assert summary["global_layer_ratio"] == 1.0
+
+
+def test_build_profile_correction_hints_flags_compressed_overfilled_output() -> None:
+    hints = build_profile_correction_hints(
+        {
+            "global_width_ratio": 0.65,
+            "global_depth_ratio": 0.7,
+            "global_layer_ratio": 1.0,
+            "total_area_ratio": 1.4,
+        }
+    )
+
+    assert {hint["type"] for hint in hints} == {
+        "compressed_width",
+        "compressed_depth",
+        "overfilled_layers",
+    }
+    assert all("suggestion" in hint for hint in hints)

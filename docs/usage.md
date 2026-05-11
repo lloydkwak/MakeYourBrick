@@ -147,7 +147,7 @@ Sculpture options:
 - `--sculpture-mode solid|shell`: keep a fully solid model or hollow the interior
 - `--wall-thickness`: number of voxel/stud layers to keep from the surface in shell mode
 - `--base-thickness`: number of bottom layers to force solid
-- `--voxel-smoothing none|light`: optional cleanup for isolated layer protrusions
+- `--voxel-smoothing none|light|contour`: optional cleanup for isolated protrusions and layer contours
 - `--optimizer greedy|layered`: largest-first greedy optimizer or support/seam-aware optimizer
 - `--steps-by-layer`: insert `0 STEP` markers between vertical layers in the LDR file
 
@@ -281,7 +281,7 @@ Backend job requests also accept:
 - `sculpture_mode`: `solid` or `shell`
 - `wall_thickness`
 - `base_thickness`
-- `voxel_smoothing`: `none` or `light`
+- `voxel_smoothing`: `none`, `light`, or `contour`
 - `ray_fill`: `wide` or `balanced`
 - `steps_by_layer`
 

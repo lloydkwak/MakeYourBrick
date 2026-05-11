@@ -9,6 +9,7 @@ from makeyourbrick.voxel.sculpture import (
     apply_voxel_smoothing,
     fill_2d_holes,
     fill_horizontal_layer_holes,
+    smooth_2d_contour,
     preprocess_shell_occupancy,
     preprocess_solid_occupancy,
     surface_mask,
@@ -148,6 +149,30 @@ def test_light_voxel_smoothing_preserves_vertically_supported_tips() -> None:
 
     assert smoothed[1, 0, 1]
     assert smoothed[1, 1, 1]
+
+
+def test_smooth_2d_contour_fills_corners_and_removes_spurs() -> None:
+    layer = np.zeros((5, 5), dtype=bool)
+    layer[1:4, 1:4] = True
+    layer[2, 2] = False
+    layer[4, 2] = True
+
+    smoothed = smooth_2d_contour(layer)
+
+    assert smoothed[2, 2]
+    assert not smoothed[4, 2]
+
+
+def test_contour_voxel_smoothing_applies_layer_cleanup() -> None:
+    occupancy = np.zeros((5, 1, 5), dtype=bool)
+    occupancy[1:4, 0, 1:4] = True
+    occupancy[2, 0, 2] = False
+    occupancy[4, 0, 2] = True
+
+    smoothed = apply_voxel_smoothing(occupancy, "contour")
+
+    assert smoothed[2, 0, 2]
+    assert not smoothed[4, 0, 2]
 
 
 def test_shell_base_anchoring_adds_minimal_vertical_support() -> None:

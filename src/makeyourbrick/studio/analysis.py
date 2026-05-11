@@ -341,6 +341,60 @@ def summarize_profile_deltas(
     }
 
 
+def build_profile_correction_hints(profile_summary: dict) -> list[dict]:
+    hints: list[dict] = []
+    width_ratio = profile_summary.get("global_width_ratio")
+    depth_ratio = profile_summary.get("global_depth_ratio")
+    layer_ratio = profile_summary.get("global_layer_ratio")
+    area_ratio = profile_summary.get("total_area_ratio")
+    if isinstance(width_ratio, (int, float)) and width_ratio < 0.9:
+        hints.append(
+            {
+                "type": "compressed_width",
+                "severity": "high" if width_ratio < 0.75 else "medium",
+                "ratio": width_ratio,
+                "suggestion": "Increase horizontal sampling resolution or inspect X-axis scaling/orientation.",
+            }
+        )
+    if isinstance(depth_ratio, (int, float)) and depth_ratio < 0.9:
+        hints.append(
+            {
+                "type": "compressed_depth",
+                "severity": "high" if depth_ratio < 0.75 else "medium",
+                "ratio": depth_ratio,
+                "suggestion": "Increase depth sampling resolution or inspect Z-axis scaling/orientation.",
+            }
+        )
+    if isinstance(layer_ratio, (int, float)) and (layer_ratio < 0.9 or layer_ratio > 1.1):
+        hints.append(
+            {
+                "type": "height_mismatch",
+                "severity": "medium",
+                "ratio": layer_ratio,
+                "suggestion": "Check target-studs scaling and source up-axis detection.",
+            }
+        )
+    if isinstance(area_ratio, (int, float)) and area_ratio > 1.15:
+        hints.append(
+            {
+                "type": "overfilled_layers",
+                "severity": "high" if area_ratio > 1.35 else "medium",
+                "ratio": area_ratio,
+                "suggestion": "Use contour cleanup or a less aggressive ray-fill mode before optimizer work.",
+            }
+        )
+    if isinstance(area_ratio, (int, float)) and area_ratio < 0.85:
+        hints.append(
+            {
+                "type": "underfilled_layers",
+                "severity": "medium",
+                "ratio": area_ratio,
+                "suggestion": "Use a broader ray-fill mode or reduce contour cleanup aggressiveness.",
+            }
+        )
+    return hints
+
+
 def summarize_ldr_parts(
     parts: list[LdrPart],
     footprints: dict[str, StudioPartFootprint] | None = None,
@@ -407,6 +461,7 @@ def compare_ldr_footprints(
     union = reference_cells | candidate_cells
     layer_diffs = summarize_layer_diffs(reference_cells, candidate_cells)
     layer_profiles = summarize_layer_profiles(reference_cells, candidate_cells)
+    profile_summary = summarize_profile_deltas(reference_cells, candidate_cells, layer_profiles)
     return {
         "reference_voxel_count": len(reference_cells),
         "candidate_voxel_count": len(candidate_cells),
@@ -420,7 +475,8 @@ def compare_ldr_footprints(
         "candidate_bounds_studs": cell_bounds(candidate_cells),
         "layer_diffs": layer_diffs,
         "layer_profiles": layer_profiles,
-        "profile_summary": summarize_profile_deltas(reference_cells, candidate_cells, layer_profiles),
+        "profile_summary": profile_summary,
+        "profile_correction_hints": build_profile_correction_hints(profile_summary),
         "worst_missing_layers": sorted(layer_diffs, key=lambda item: item["missing_voxels"], reverse=True)[:10],
         "worst_extra_layers": sorted(layer_diffs, key=lambda item: item["extra_voxels"], reverse=True)[:10],
         "worst_iou_layers": sorted(layer_diffs, key=lambda item: item["iou"])[:10],
