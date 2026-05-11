@@ -163,6 +163,19 @@ python scripts/compare_mesh_samples.py --target-studs 8
 
 The comparison script creates sphere, bust-like, and object-like meshes, converts them with shell sculpture mode and the layered optimizer, and writes a JSON summary under `outputs/quality/mesh_samples`.
 
+Compare a Studio `.io` reference against a MakeYourBrick LDR output:
+
+```bash
+python scripts/compare_studio_ldr.py \
+  --reference queen.io \
+  --candidate outputs/ldr/queen_ray_solid_60.ldr \
+  --studio-dir "Studio 2.0" \
+  --alignment best-xz \
+  --output outputs/reports/queen_studio_vs_ray_comparison.json
+```
+
+The Studio comparison script uses `.io`/LDraw output as black-box reference data. It reports total footprint IoU, missing/extra cells, selected X/Z alignment, and layer-by-layer missing/extra diagnostics.
+
 ## SAM 3D Adapter
 
 Adapt an existing SAM output candidate into a MakeYourBrick mesh:

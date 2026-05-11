@@ -7,8 +7,10 @@ from makeyourbrick.studio.analysis import (
     align_cells_to_reference_origin,
     compare_ldr_footprints,
     extract_model_ldr,
+    find_best_xz_alignment,
     footprint_cells,
     parse_ldr_parts,
+    summarize_layer_diffs,
     summarize_ldr_parts,
 )
 from makeyourbrick.studio.analysis import StudioPartFootprint
@@ -84,3 +86,43 @@ def test_align_cells_to_reference_origin_translates_candidate_minimum() -> None:
 
     assert (10, 2, -4) in aligned
     assert (11, 2, -4) in aligned
+
+
+def test_summarize_layer_diffs_reports_per_layer_mismatch() -> None:
+    reference = {(0, 0, 0), (1, 0, 0), (0, 1, 0)}
+    candidate = {(0, 0, 0), (2, 0, 0), (0, 2, 0)}
+
+    diffs = summarize_layer_diffs(reference, candidate)
+
+    assert [diff["layer"] for diff in diffs] == [0, 1, 2]
+    assert diffs[0]["shared_voxels"] == 1
+    assert diffs[0]["missing_voxels"] == 1
+    assert diffs[0]["extra_voxels"] == 1
+    assert diffs[1]["candidate_voxels"] == 0
+    assert diffs[2]["reference_voxels"] == 0
+
+
+def test_compare_ldr_footprints_includes_layer_diagnostics() -> None:
+    footprints = {"3005.dat": StudioPartFootprint("3005.dat", width=1, depth=1)}
+    reference = parse_ldr_parts(
+        "1 16 0 0 0 1 0 0 0 1 0 0 0 1 3005.dat\n"
+        "1 16 0 -24 0 1 0 0 0 1 0 0 0 1 3005.dat\n"
+    )
+    candidate = parse_ldr_parts("1 16 20 0 0 1 0 0 0 1 0 0 0 1 3005.dat\n")
+
+    report = compare_ldr_footprints(reference, candidate, footprints, align_origin=False)
+
+    assert report["layer_diffs"][0]["layer"] == 0
+    assert report["worst_missing_layers"][0]["missing_voxels"] == 1
+    assert report["worst_extra_layers"][0]["extra_voxels"] == 1
+
+
+def test_find_best_xz_alignment_handles_rotated_candidate() -> None:
+    reference = {(0, 0, 0), (1, 0, 0), (2, 0, 0)}
+    candidate = {(0, 0, 0), (0, 0, 1), (0, 0, 2)}
+
+    aligned, report = find_best_xz_alignment(reference, candidate)
+
+    assert aligned == reference
+    assert report["transform"] in {"rotate_90", "rotate_270", "mirror_diagonal", "mirror_antidiagonal"}
+    assert report["iou"] == 1.0

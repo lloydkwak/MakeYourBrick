@@ -6,7 +6,7 @@ import zipfile
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 STUD_LDU = 20
 BRICK_HEIGHT_LDU = 24
@@ -135,8 +135,16 @@ def align_cells_to_reference_origin(
     reference_cells: set[tuple[int, int, int]],
     candidate_cells: set[tuple[int, int, int]],
 ) -> set[tuple[int, int, int]]:
+    aligned, _ = align_cells_to_reference_origin_with_offset(reference_cells, candidate_cells)
+    return aligned
+
+
+def align_cells_to_reference_origin_with_offset(
+    reference_cells: set[tuple[int, int, int]],
+    candidate_cells: set[tuple[int, int, int]],
+) -> tuple[set[tuple[int, int, int]], tuple[int, int, int]]:
     if not reference_cells or not candidate_cells:
-        return candidate_cells
+        return candidate_cells, (0, 0, 0)
     ref_min = tuple(min(cell[index] for cell in reference_cells) for index in range(3))
     cand_min = tuple(min(cell[index] for cell in candidate_cells) for index in range(3))
     offset = tuple(ref_min[index] - cand_min[index] for index in range(3))
@@ -147,7 +155,111 @@ def align_cells_to_reference_origin(
             cell[2] + offset[2],
         )
         for cell in candidate_cells
+    }, offset
+
+
+def cell_bounds(cells: set[tuple[int, int, int]]) -> dict[str, list[int]] | None:
+    if not cells:
+        return None
+    return {
+        "x": [min(cell[0] for cell in cells), max(cell[0] for cell in cells) + 1],
+        "layers": [min(cell[1] for cell in cells), max(cell[1] for cell in cells) + 1],
+        "z": [min(cell[2] for cell in cells), max(cell[2] for cell in cells) + 1],
     }
+
+
+def xz_bounds(cells: set[tuple[int, int, int]]) -> dict[str, list[int]] | None:
+    if not cells:
+        return None
+    return {
+        "x": [min(cell[0] for cell in cells), max(cell[0] for cell in cells) + 1],
+        "z": [min(cell[2] for cell in cells), max(cell[2] for cell in cells) + 1],
+    }
+
+
+def iou_for_cells(reference_cells: set[tuple[int, int, int]], candidate_cells: set[tuple[int, int, int]]) -> float:
+    union = reference_cells | candidate_cells
+    if not union:
+        return 1.0
+    return len(reference_cells & candidate_cells) / len(union)
+
+
+def _transform_cells_xz(
+    cells: set[tuple[int, int, int]],
+    transform: Callable[[int, int], tuple[int, int]],
+) -> set[tuple[int, int, int]]:
+    return {(new_x, y, new_z) for x, y, z in cells for new_x, new_z in [transform(x, z)]}
+
+
+XZ_ALIGNMENT_TRANSFORMS: dict[str, Callable[[int, int], tuple[int, int]]] = {
+    "identity": lambda x, z: (x, z),
+    "rotate_90": lambda x, z: (-z, x),
+    "rotate_180": lambda x, z: (-x, -z),
+    "rotate_270": lambda x, z: (z, -x),
+    "mirror_x": lambda x, z: (-x, z),
+    "mirror_z": lambda x, z: (x, -z),
+    "mirror_diagonal": lambda x, z: (z, x),
+    "mirror_antidiagonal": lambda x, z: (-z, -x),
+}
+
+
+def find_best_xz_alignment(
+    reference_cells: set[tuple[int, int, int]],
+    candidate_cells: set[tuple[int, int, int]],
+) -> tuple[set[tuple[int, int, int]], dict]:
+    best_cells, best_offset = align_cells_to_reference_origin_with_offset(reference_cells, candidate_cells)
+    best_score = iou_for_cells(reference_cells, best_cells)
+    best_report = {
+        "mode": "best-xz",
+        "transform": "identity",
+        "offset": list(best_offset),
+        "iou": round(best_score, 6),
+    }
+    for transform_name, transform in XZ_ALIGNMENT_TRANSFORMS.items():
+        transformed = _transform_cells_xz(candidate_cells, transform)
+        aligned, offset = align_cells_to_reference_origin_with_offset(reference_cells, transformed)
+        score = iou_for_cells(reference_cells, aligned)
+        if score > best_score:
+            best_score = score
+            best_cells = aligned
+            best_report = {
+                "mode": "best-xz",
+                "transform": transform_name,
+                "offset": list(offset),
+                "iou": round(score, 6),
+            }
+    return best_cells, best_report
+
+
+def summarize_layer_diffs(
+    reference_cells: set[tuple[int, int, int]],
+    candidate_cells: set[tuple[int, int, int]],
+) -> list[dict]:
+    layers = sorted({cell[1] for cell in reference_cells | candidate_cells})
+    diffs: list[dict] = []
+    for layer in layers:
+        reference_layer = {cell for cell in reference_cells if cell[1] == layer}
+        candidate_layer = {cell for cell in candidate_cells if cell[1] == layer}
+        shared = reference_layer & candidate_layer
+        missing = reference_layer - candidate_layer
+        extra = candidate_layer - reference_layer
+        union = reference_layer | candidate_layer
+        diffs.append(
+            {
+                "layer": layer,
+                "reference_voxels": len(reference_layer),
+                "candidate_voxels": len(candidate_layer),
+                "shared_voxels": len(shared),
+                "missing_voxels": len(missing),
+                "extra_voxels": len(extra),
+                "iou": round(len(shared) / len(union), 6) if union else 1.0,
+                "reference_bounds_xz": xz_bounds(reference_layer),
+                "candidate_bounds_xz": xz_bounds(candidate_layer),
+                "missing_bounds_xz": xz_bounds(missing),
+                "extra_bounds_xz": xz_bounds(extra),
+            }
+        )
+    return diffs
 
 
 def summarize_ldr_parts(
@@ -188,14 +300,7 @@ def summarize_ldr_parts(
             sorted(Counter(part.part_id for part in parts if normalized_part_id(part.part_id) not in footprints).items())
         )
         if cells:
-            cell_x = [cell[0] for cell in cells]
-            cell_y = [cell[1] for cell in cells]
-            cell_z = [cell[2] for cell in cells]
-            summary["footprint_bounds_studs"] = {
-                "x": [min(cell_x), max(cell_x) + 1],
-                "layers": [min(cell_y), max(cell_y) + 1],
-                "z": [min(cell_z), max(cell_z) + 1],
-            }
+            summary["footprint_bounds_studs"] = cell_bounds(cells)
     return summary
 
 
@@ -205,15 +310,23 @@ def compare_ldr_footprints(
     footprints: dict[str, StudioPartFootprint],
     *,
     align_origin: bool = True,
+    alignment: str = "origin",
 ) -> dict:
+    if alignment not in {"none", "origin", "best-xz"}:
+        raise ValueError(f"Unsupported alignment mode: {alignment}")
     reference_cells = footprint_cells(reference_parts, footprints)
     candidate_cells = footprint_cells(candidate_parts, footprints)
-    if align_origin:
-        candidate_cells = align_cells_to_reference_origin(reference_cells, candidate_cells)
+    alignment_report = {"mode": "none", "transform": "identity", "offset": [0, 0, 0]}
+    if align_origin and alignment == "origin":
+        candidate_cells, offset = align_cells_to_reference_origin_with_offset(reference_cells, candidate_cells)
+        alignment_report = {"mode": "origin", "transform": "identity", "offset": list(offset)}
+    elif alignment == "best-xz":
+        candidate_cells, alignment_report = find_best_xz_alignment(reference_cells, candidate_cells)
     shared = reference_cells & candidate_cells
     missing = reference_cells - candidate_cells
     extra = candidate_cells - reference_cells
     union = reference_cells | candidate_cells
+    layer_diffs = summarize_layer_diffs(reference_cells, candidate_cells)
     return {
         "reference_voxel_count": len(reference_cells),
         "candidate_voxel_count": len(candidate_cells),
@@ -221,7 +334,14 @@ def compare_ldr_footprints(
         "missing_voxel_count": len(missing),
         "extra_voxel_count": len(extra),
         "iou": round(len(shared) / len(union), 6) if union else 1.0,
-        "aligned_origin": bool(align_origin),
+        "aligned_origin": alignment == "best-xz" or (alignment == "origin" and align_origin),
+        "alignment": alignment_report,
+        "reference_bounds_studs": cell_bounds(reference_cells),
+        "candidate_bounds_studs": cell_bounds(candidate_cells),
+        "layer_diffs": layer_diffs,
+        "worst_missing_layers": sorted(layer_diffs, key=lambda item: item["missing_voxels"], reverse=True)[:10],
+        "worst_extra_layers": sorted(layer_diffs, key=lambda item: item["extra_voxels"], reverse=True)[:10],
+        "worst_iou_layers": sorted(layer_diffs, key=lambda item: item["iou"])[:10],
         "reference_summary": summarize_ldr_parts(reference_parts, footprints),
         "candidate_summary": summarize_ldr_parts(candidate_parts, footprints),
     }

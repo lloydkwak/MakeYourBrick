@@ -32,6 +32,12 @@ def parse_args() -> argparse.Namespace:
         default=Path("outputs/reports/studio_ldr_comparison.json"),
         help="Output JSON comparison path.",
     )
+    parser.add_argument(
+        "--alignment",
+        choices=("origin", "best-xz", "none"),
+        default="best-xz",
+        help="Candidate alignment strategy before footprint comparison.",
+    )
     return parser.parse_args()
 
 
@@ -40,13 +46,18 @@ def main() -> None:
     footprints = load_studio_brick_footprints(args.studio_dir)
     reference_parts = parse_ldr_parts(extract_model_ldr(args.reference))
     candidate_parts = parse_ldr_parts(extract_model_ldr(args.candidate))
-    report = compare_ldr_footprints(reference_parts, candidate_parts, footprints)
+    report = compare_ldr_footprints(reference_parts, candidate_parts, footprints, alignment=args.alignment)
     report["reference"] = str(args.reference)
     report["candidate"] = str(args.candidate)
     report["studio_dir"] = str(args.studio_dir)
+    report["alignment_mode"] = args.alignment
     write_json(report, args.output)
     print(f"Wrote Studio comparison report to {args.output}")
     print(f"IoU={report['iou']} missing={report['missing_voxel_count']} extra={report['extra_voxel_count']}")
+    print(
+        "Alignment="
+        f"{report['alignment']['transform']} offset={report['alignment']['offset']}"
+    )
 
 
 if __name__ == "__main__":

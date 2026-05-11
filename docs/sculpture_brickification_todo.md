@@ -251,3 +251,71 @@ Acceptance criteria:
 
 - [x] `queen.obj` can be converted with `--up-axis auto --voxelizer ray --target-studs 60`.
 - [x] The generated model is upright, layer-stepped, and one connected component.
+
+## Phase 10: Studio Reference Diff Diagnostics
+
+Status: completed.
+
+Purpose:
+
+Use user-generated Studio `.io` outputs as black-box reference data, then measure where MakeYourBrick output diverges layer by layer without copying Studio internals.
+
+Tasks:
+
+- [x] Parse Studio `.io` archives and embedded LDraw model files.
+- [x] Load rectangular brick footprint metadata from Studio's split/merge catalog when available locally.
+- [x] Convert reference and candidate LDR parts into stud footprint cells.
+- [x] Compare total shared, missing, and extra footprint occupancy.
+- [x] Add X/Z alignment modes:
+  - `origin`
+  - `best-xz`
+  - `none`
+- [x] Try axis-aligned X/Z rotations and mirrors in `best-xz` mode to avoid false negatives from coordinate convention differences.
+- [x] Add per-layer diff diagnostics:
+  - reference voxels
+  - candidate voxels
+  - shared voxels
+  - missing voxels
+  - extra voxels
+  - layer IoU
+  - missing and extra X/Z bounds
+- [x] Add worst-layer summaries for missing, extra, and IoU.
+- [x] Add tests for layer diagnostics and best X/Z alignment.
+
+Acceptance criteria:
+
+- [x] `scripts/compare_studio_ldr.py` writes a JSON report with layer-by-layer differences.
+- [x] The queen comparison runs against `queen.io` and `outputs/ldr/queen_ray_solid_60.ldr`.
+- [x] Diagnostics show the current output still diverges strongly from Studio, especially around lower/middle layers.
+
+Latest queen diagnostic:
+
+- Alignment selected by `best-xz`: `mirror_x`, offset `[23, 2, -35]`.
+- IoU: `0.125026`.
+- Missing footprint cells: `4954`.
+- Extra footprint cells: `7846`.
+- Worst missing layers: 4, 3, 5, 2, 6.
+- Worst extra layers: 5, 9, 10, 8, 7.
+
+## Phase 11: Studio-Guided Voxel Tuning
+
+Status: planned.
+
+Purpose:
+
+Use the Phase 10 diagnostics to improve mesh-to-voxel behavior before further brick optimizer changes.
+
+Tasks:
+
+- [ ] Add layer profile reports for reference vs candidate width/depth/area curves.
+- [ ] Detect candidate under-scale or axis compression from layer bounds.
+- [ ] Add optional voxel smoothing presets for sculpture imports.
+- [ ] Improve ray voxelizer column filling near thin silhouettes.
+- [ ] Add contour cleanup to remove isolated protrusions per layer.
+- [ ] Re-run queen comparison after each tuning change and track IoU, missing, and extra deltas.
+
+Acceptance criteria:
+
+- [ ] Queen output has fewer visible holes and fewer isolated protrusions.
+- [ ] Studio comparison IoU improves over the Phase 10 baseline.
+- [ ] Layer-level extra/missing spikes are reduced in the lower and middle layers.
