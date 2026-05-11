@@ -204,6 +204,7 @@ def run_pipeline_job(
             base_thickness=request.base_thickness,
             voxel_smoothing=request.voxel_smoothing,
             infill_density=request.infill_density,
+            infill_pattern=request.infill_pattern,
             steps_by_layer=request.steps_by_layer,
         )
         report = json.loads(report_path.read_text(encoding="utf-8"))

@@ -316,6 +316,7 @@ Tasks:
 - [x] Add layer-slice voxelizer that cuts the mesh per LEGO layer and fills projected contours.
 - [x] Add optional Studio-style target footprint scaling before voxelization.
 - [x] Add density sculpture mode with shell/base plus deterministic lattice infill.
+- [x] Add ribbed internal support infill with staggered X/Z support lines and vertical posts.
 
 Acceptance criteria:
 
@@ -353,3 +354,9 @@ Latest density fill diagnostics:
 - `voxelizer=slice`, target footprint `38x37`, density mode `0.35` IoU: `0.227501`, missing `3795`, extra `6351`.
 - `voxelizer=slice`, target footprint `38x37`, density mode `0.65` IoU: `0.254558`, missing `2957`, extra `8247`.
 - Interpretation: density mode provides a controllable middle ground between shell and solid. On the queen sample, higher density recovers more reference cells but still does not beat full solid IoU because Studio's actual placement appears to use structured internal support/bridging, not simple uniform lattice infill.
+
+Latest ribbed support diagnostics:
+
+- `voxelizer=slice`, target footprint `38x37`, density `0.65`, ribs IoU: `0.254856`, missing `3109`, extra `7633`.
+- `voxelizer=slice`, target footprint `38x37`, density `0.45`, ribs IoU: `0.242814`, missing `3725`, extra `5811`.
+- Interpretation: ribbed support keeps a similar IoU to lattice at the same density while reducing extra cells. It is a better internal support direction than uniform lattice, but still needs reference-guided layer density selection or a brick-level support planner to match Studio more closely.

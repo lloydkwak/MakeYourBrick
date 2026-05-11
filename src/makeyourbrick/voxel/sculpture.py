@@ -8,6 +8,8 @@ SCULPTURE_MODES = ("solid", "shell", "density")
 SculptureMode = Literal["solid", "shell", "density"]
 VOXEL_SMOOTHING_PRESETS = ("none", "light", "contour")
 VoxelSmoothing = Literal["none", "light", "contour"]
+INFILL_PATTERNS = ("lattice", "ribs")
+InfillPattern = Literal["lattice", "ribs"]
 
 
 def validate_sculpture_options(
@@ -16,6 +18,7 @@ def validate_sculpture_options(
     base_thickness: int,
     voxel_smoothing: str = "none",
     infill_density: float = 0.35,
+    infill_pattern: str = "lattice",
 ) -> None:
     if mode not in SCULPTURE_MODES:
         raise ValueError(f"Unsupported sculpture mode: {mode}")
@@ -27,6 +30,8 @@ def validate_sculpture_options(
         raise ValueError(f"Unsupported voxel smoothing preset: {voxel_smoothing}")
     if not 0.0 <= infill_density <= 1.0:
         raise ValueError("infill_density must be between 0.0 and 1.0.")
+    if infill_pattern not in INFILL_PATTERNS:
+        raise ValueError(f"Unsupported infill pattern: {infill_pattern}")
 
 
 def surface_mask(occupancy: np.ndarray) -> np.ndarray:
@@ -304,6 +309,29 @@ def lattice_infill_mask(occupancy: np.ndarray, density: float) -> np.ndarray:
     return occupancy.astype(bool) & lattice
 
 
+def rib_infill_mask(occupancy: np.ndarray, density: float) -> np.ndarray:
+    if occupancy.ndim != 3:
+        raise ValueError("Occupancy must be a 3D array.")
+    spacing = lattice_spacing_for_density(density)
+    if spacing == 0:
+        return np.zeros_like(occupancy, dtype=bool)
+    if spacing == 1:
+        return occupancy.astype(bool)
+    x_indices, y_indices, z_indices = np.indices(occupancy.shape)
+    x_ribs = (x_indices % spacing) == (y_indices % spacing)
+    z_ribs = (z_indices % spacing) == ((y_indices + spacing // 2) % spacing)
+    vertical_posts = ((x_indices % spacing) == 0) & ((z_indices % spacing) == 0)
+    return occupancy.astype(bool) & (x_ribs | z_ribs | vertical_posts)
+
+
+def infill_mask(occupancy: np.ndarray, density: float, pattern: InfillPattern = "lattice") -> np.ndarray:
+    if pattern == "lattice":
+        return lattice_infill_mask(occupancy, density)
+    if pattern == "ribs":
+        return rib_infill_mask(occupancy, density)
+    raise ValueError(f"Unsupported infill pattern: {pattern}")
+
+
 def connected_components(mask: np.ndarray) -> list[list[tuple[int, int, int]]]:
     if mask.ndim != 3:
         raise ValueError("Mask must be a 3D array.")
@@ -359,8 +387,16 @@ def apply_sculpture_mode(
     base_thickness: int = 0,
     voxel_smoothing: VoxelSmoothing = "none",
     infill_density: float = 0.35,
+    infill_pattern: InfillPattern = "lattice",
 ) -> tuple[np.ndarray, np.ndarray]:
-    validate_sculpture_options(mode, wall_thickness, base_thickness, voxel_smoothing, infill_density)
+    validate_sculpture_options(
+        mode,
+        wall_thickness,
+        base_thickness,
+        voxel_smoothing,
+        infill_density,
+        infill_pattern,
+    )
     if color_ids.shape != occupancy.shape:
         raise ValueError("Color id array must have the same shape as occupancy.")
     occupancy = occupancy.astype(bool)
@@ -373,6 +409,6 @@ def apply_sculpture_mode(
     retained = shell | base_fill_mask(shell_occupancy, base_thickness)
     if mode == "density":
         interior = shell_occupancy & ~retained
-        retained |= lattice_infill_mask(interior, infill_density)
+        retained |= infill_mask(interior, infill_density, infill_pattern)
     retained = anchor_shell_to_base(retained, shell_occupancy, base_thickness)
     return retained, repair_sculpture_colors(occupancy, retained, color_ids)

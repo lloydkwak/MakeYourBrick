@@ -8,7 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from makeyourbrick.quality.mesh_samples import SAMPLE_NAMES, compare_mesh_samples
-from makeyourbrick.voxel.sculpture import SCULPTURE_MODES, VOXEL_SMOOTHING_PRESETS
+from makeyourbrick.voxel.sculpture import INFILL_PATTERNS, SCULPTURE_MODES, VOXEL_SMOOTHING_PRESETS
 
 
 def parse_args() -> argparse.Namespace:
@@ -42,6 +42,12 @@ def parse_args() -> argparse.Namespace:
         help="Interior lattice density used by --sculpture-mode density.",
     )
     parser.add_argument(
+        "--infill-pattern",
+        choices=INFILL_PATTERNS,
+        default="lattice",
+        help="Interior support pattern used by --sculpture-mode density.",
+    )
+    parser.add_argument(
         "--voxel-smoothing",
         choices=VOXEL_SMOOTHING_PRESETS,
         default="none",
@@ -60,6 +66,7 @@ def main() -> None:
         wall_thickness=args.wall_thickness,
         base_thickness=args.base_thickness,
         infill_density=args.infill_density,
+        infill_pattern=args.infill_pattern,
         voxel_smoothing=args.voxel_smoothing,
     )
     print(f"Wrote mesh sample comparison to {summary['summary_path']}")

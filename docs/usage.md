@@ -68,6 +68,7 @@ python scripts/mesh_to_ldr.py \
   --wall-thickness 1 \
   --base-thickness 2 \
   --infill-density 0.35 \
+  --infill-pattern ribs \
   --voxel-smoothing light \
   --steps-by-layer \
   --report outputs/reports/sculpture_report.json \
@@ -153,6 +154,7 @@ Sculpture options:
 - `--wall-thickness`: number of voxel/stud layers to keep from the surface in shell mode
 - `--base-thickness`: number of bottom layers to force solid
 - `--infill-density`: target interior lattice density for `density` sculpture mode
+- `--infill-pattern lattice|ribs`: choose uniform lattice infill or staggered Studio-like internal support ribs
 - `--voxel-smoothing none|light|contour`: optional cleanup for isolated protrusions and layer contours
 - `--optimizer greedy|layered`: largest-first greedy optimizer or support/seam-aware optimizer
 - `--steps-by-layer`: insert `0 STEP` markers between vertical layers in the LDR file
@@ -288,6 +290,7 @@ Backend job requests also accept:
 - `wall_thickness`
 - `base_thickness`
 - `infill_density`
+- `infill_pattern`: `lattice` or `ribs`
 - `voxel_smoothing`: `none`, `light`, or `contour`
 - `ray_fill`: `wide` or `balanced`
 - `steps_by_layer`

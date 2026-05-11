@@ -11,7 +11,7 @@ from makeyourbrick.ai.sam3d_runner import Sam3DRunner
 from makeyourbrick.mesh.orient import UP_AXIS_OPTIONS
 from makeyourbrick.mesh.repair import REPAIR_MODES
 from makeyourbrick.pipeline import run_from_image
-from makeyourbrick.voxel.sculpture import SCULPTURE_MODES, VOXEL_SMOOTHING_PRESETS
+from makeyourbrick.voxel.sculpture import INFILL_PATTERNS, SCULPTURE_MODES, VOXEL_SMOOTHING_PRESETS
 from makeyourbrick.voxel.voxelize import RAY_FILL_MODES, VOXELIZERS
 
 
@@ -85,6 +85,12 @@ def parse_args() -> argparse.Namespace:
         help="Interior lattice density used by --sculpture-mode density.",
     )
     parser.add_argument(
+        "--infill-pattern",
+        choices=INFILL_PATTERNS,
+        default="lattice",
+        help="Interior support pattern used by --sculpture-mode density.",
+    )
+    parser.add_argument(
         "--voxel-smoothing",
         choices=VOXEL_SMOOTHING_PRESETS,
         default="none",
@@ -149,6 +155,7 @@ def main() -> None:
         base_thickness=args.base_thickness,
         voxel_smoothing=args.voxel_smoothing,
         infill_density=args.infill_density,
+        infill_pattern=args.infill_pattern,
         steps_by_layer=args.steps_by_layer,
     )
     print(f"Wrote LDraw model to {output_path}")

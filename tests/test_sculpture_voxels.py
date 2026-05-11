@@ -11,6 +11,7 @@ from makeyourbrick.voxel.sculpture import (
     fill_horizontal_layer_holes,
     lattice_infill_mask,
     lattice_spacing_for_density,
+    rib_infill_mask,
     smooth_2d_contour,
     preprocess_shell_occupancy,
     preprocess_solid_occupancy,
@@ -90,6 +91,27 @@ def test_density_mode_keeps_shell_base_and_lattice_infill() -> None:
     assert density_colors[density].min() == 16
 
 
+def test_density_mode_can_use_rib_support_infill() -> None:
+    occupancy = np.ones((8, 4, 8), dtype=bool)
+    color_ids = np.full(occupancy.shape, 16, dtype=np.int32)
+
+    density, _colors = apply_sculpture_mode(
+        occupancy,
+        color_ids,
+        mode="density",
+        wall_thickness=1,
+        base_thickness=1,
+        infill_density=0.35,
+        infill_pattern="ribs",
+    )
+
+    assert density[:, 0, :].all()
+    assert density[0, 2, 0]
+    assert density[2, 2, 0]
+    assert density[0, 2, 4]
+    assert not density[3, 2, 3]
+
+
 def test_lattice_infill_density_bounds() -> None:
     occupancy = np.ones((8, 1, 8), dtype=bool)
 
@@ -98,6 +120,18 @@ def test_lattice_infill_density_bounds() -> None:
     assert not lattice_infill_mask(occupancy, 0.0).any()
     assert lattice_infill_mask(occupancy, 1.0).all()
     assert 0 < lattice_infill_mask(occupancy, 0.35).sum() < occupancy.sum()
+
+
+def test_rib_infill_staggers_support_lines_by_layer() -> None:
+    occupancy = np.ones((8, 4, 8), dtype=bool)
+
+    ribs = rib_infill_mask(occupancy, 0.35)
+
+    assert ribs[0, 0, 0]
+    assert ribs[5, 0, 0]
+    assert ribs[1, 1, 0]
+    assert not ribs[1, 0, 1]
+    assert 0 < ribs.sum() < occupancy.sum()
 
 
 def test_wall_thickness_can_retain_full_small_model() -> None:
@@ -243,3 +277,6 @@ def test_sculpture_mode_validates_inputs() -> None:
 
     with pytest.raises(ValueError, match="infill_density"):
         apply_sculpture_mode(occupancy, color_ids, mode="density", infill_density=1.5)
+
+    with pytest.raises(ValueError, match="infill pattern"):
+        apply_sculpture_mode(occupancy, color_ids, mode="density", infill_pattern="random")
