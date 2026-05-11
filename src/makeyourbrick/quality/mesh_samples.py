@@ -53,6 +53,7 @@ def compare_mesh_samples(
     infill_density: float = 0.35,
     infill_pattern: str = "lattice",
     optimizer: str = "layered",
+    brick_palette: str = "full",
 ) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
     sample_reports = []
@@ -70,6 +71,7 @@ def compare_mesh_samples(
             target_longest_studs=target_studs,
             optimize=True,
             optimizer=optimizer,
+            brick_palette=brick_palette,
             sculpture_mode=sculpture_mode,
             wall_thickness=wall_thickness,
             base_thickness=base_thickness,
@@ -102,6 +104,7 @@ def compare_mesh_samples(
         "infill_density": float(infill_density),
         "infill_pattern": infill_pattern,
         "optimizer": optimizer,
+        "brick_palette": brick_palette,
     }
     summary_path = output_dir / "mesh_sample_comparison.json"
     summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")

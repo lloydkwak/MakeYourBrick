@@ -41,6 +41,7 @@ def test_job_stub_generates_ldr_report_and_artifact_links() -> None:
             "sample_colors": True,
             "optimize": True,
             "optimizer": "layered",
+            "brick_palette": "studio",
             "fill": True,
             "default_color_id": 16,
             "repair_mode": "basic",
@@ -84,6 +85,7 @@ def test_job_stub_generates_ldr_report_and_artifact_links() -> None:
     report = report_response.json()
     assert report["output_brick_count"] == result["brick_count"]
     assert report["optimizer"] == "layered"
+    assert report["brick_palette"] == "studio"
     assert report["sculpture"]["mode"] == "shell"
     assert report["stability"]["layer_count"] > 0
     assert "0 STEP" in ldr_response.text

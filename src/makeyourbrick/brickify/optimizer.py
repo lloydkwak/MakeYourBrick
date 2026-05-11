@@ -20,6 +20,30 @@ DEFAULT_BRICKS = (
     BrickSpec("3005.dat", 1, 1),
 )
 
+STUDIO_SCULPTURE_BRICKS = (
+    BrickSpec("3008.dat", 1, 8),
+    BrickSpec("3007.dat", 2, 8),
+    BrickSpec("3009.dat", 1, 6),
+    BrickSpec("2456.dat", 2, 6),
+    BrickSpec("3010.dat", 1, 4),
+    BrickSpec("3001.dat", 2, 4),
+    BrickSpec("3622.dat", 1, 3),
+    BrickSpec("3002.dat", 2, 3),
+    BrickSpec("3004.dat", 1, 2),
+    BrickSpec("3003.dat", 2, 2),
+    BrickSpec("3005.dat", 1, 1),
+)
+
+BRICK_PALETTES = ("full", "studio")
+
+
+def brick_specs_for_palette(palette: str) -> tuple[BrickSpec, ...]:
+    if palette == "full":
+        return DEFAULT_BRICKS
+    if palette == "studio":
+        return STUDIO_SCULPTURE_BRICKS
+    raise ValueError(f"Unsupported brick palette: {palette}")
+
 
 def _validate_voxel_inputs(occupancy: np.ndarray, color_ids: np.ndarray) -> None:
     if occupancy.ndim != 3:

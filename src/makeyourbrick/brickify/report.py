@@ -20,6 +20,7 @@ def build_brick_report(
     output_bricks: list[Brick],
     optimized: bool,
     optimizer: str = "greedy",
+    brick_palette: str = "full",
     stability: dict | None = None,
     sculpture: dict | None = None,
     mesh_orientation: dict | None = None,
@@ -32,6 +33,7 @@ def build_brick_report(
     report = {
         "optimized": bool(optimized),
         "optimizer": optimizer,
+        "brick_palette": brick_palette,
         "occupancy_shape": [int(value) for value in occupancy.shape],
         "occupied_voxel_count": int(occupancy.sum()),
         "input_brick_count": int(input_count),

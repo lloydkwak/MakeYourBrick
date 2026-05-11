@@ -232,14 +232,29 @@ def _points_inside_polyline(points: np.ndarray, polyline: np.ndarray, tolerance:
     return inside | on_boundary
 
 
-def _points_inside_contours(points: np.ndarray, contours: list[np.ndarray], tolerance: float) -> np.ndarray:
+def _points_inside_contours(
+    points: np.ndarray,
+    contours: list[np.ndarray],
+    tolerance: float,
+    fill_rule: str = "xor",
+) -> np.ndarray:
+    if fill_rule not in {"xor", "union"}:
+        raise ValueError(f"Unsupported contour fill rule: {fill_rule}")
     inside = np.zeros(len(points), dtype=bool)
     for contour in contours:
-        inside ^= _points_inside_polyline(points, contour, tolerance)
+        contour_inside = _points_inside_polyline(points, contour, tolerance)
+        if fill_rule == "union":
+            inside |= contour_inside
+        else:
+            inside ^= contour_inside
     return inside
 
 
-def voxelize_mesh_with_layer_slices(mesh, pitch: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def voxelize_mesh_with_layer_slices(
+    mesh,
+    pitch: float,
+    contour_fill_rule: str = "union",
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     bounds = np.asarray(mesh.bounds, dtype=np.float64)
     extents = np.asarray(mesh.extents, dtype=np.float64)
     shape = np.maximum(1, np.ceil(extents / pitch).astype(int))
@@ -265,7 +280,12 @@ def voxelize_mesh_with_layer_slices(mesh, pitch: float) -> tuple[np.ndarray, np.
         ]
         if not contours:
             continue
-        inside = _points_inside_contours(layer_points, contours, tolerance=tolerance)
+        inside = _points_inside_contours(
+            layer_points,
+            contours,
+            tolerance=tolerance,
+            fill_rule=contour_fill_rule,
+        )
         occupancy[:, y_index, :] = inside.reshape(shape[0], shape[2])
     indices, points = occupied_indices_to_center_points(occupancy, origin, pitch)
     return occupancy, origin, points_for_indices(occupancy, indices, points)

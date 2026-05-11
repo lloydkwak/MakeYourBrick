@@ -92,6 +92,16 @@ def test_points_inside_contours_uses_even_odd_holes() -> None:
     np.testing.assert_array_equal(inside, np.asarray([True, False, False]))
 
 
+def test_points_inside_contours_can_union_open_sculpture_contours() -> None:
+    outer = np.asarray([[0, 0], [4, 0], [4, 4], [0, 4], [0, 0]], dtype=np.float64)
+    overlapping = np.asarray([[1, 1], [1, 3], [3, 3], [3, 1], [1, 1]], dtype=np.float64)
+    points = np.asarray([[0.5, 0.5], [2.0, 2.0], [4.5, 2.0]], dtype=np.float64)
+
+    inside = _points_inside_contours(points, [outer, overlapping], tolerance=1e-8, fill_rule="union")
+
+    np.testing.assert_array_equal(inside, np.asarray([True, True, False]))
+
+
 def test_layer_slice_voxelizer_fills_box_layers() -> None:
     mesh = trimesh.creation.box(extents=(1, 1, 1))
 

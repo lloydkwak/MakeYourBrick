@@ -7,6 +7,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
+from makeyourbrick.brickify.optimizer import BRICK_PALETTES
 from makeyourbrick.pipeline import convert_mesh_to_ldr
 from makeyourbrick.mesh.repair import REPAIR_MODES
 from makeyourbrick.mesh.orient import UP_AXIS_OPTIONS
@@ -54,6 +55,12 @@ def parse_args() -> argparse.Namespace:
         choices=("greedy", "layered"),
         default="greedy",
         help="Brick optimizer to use when --optimize is enabled.",
+    )
+    parser.add_argument(
+        "--brick-palette",
+        choices=BRICK_PALETTES,
+        default="full",
+        help="Brick candidate palette used when --optimize is enabled.",
     )
     parser.add_argument(
         "--sculpture-mode",
@@ -141,6 +148,7 @@ def main() -> None:
         palette_path=args.palette,
         optimize=args.optimize,
         optimizer=args.optimizer,
+        brick_palette=args.brick_palette,
         sample_colors=args.sample_colors,
         report_path=args.report,
         repair_mode=args.repair_mode,

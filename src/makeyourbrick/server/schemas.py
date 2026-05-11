@@ -47,6 +47,7 @@ class JobRequest(BaseModel):
     sample_colors: bool = True
     optimize: bool = True
     optimizer: Literal["greedy", "layered"] = "greedy"
+    brick_palette: Literal["full", "studio"] = "full"
     fill: bool = True
     voxelizer: Literal["surface", "ray", "slice"] = "surface"
     ray_fill: Literal["wide", "balanced"] = "wide"

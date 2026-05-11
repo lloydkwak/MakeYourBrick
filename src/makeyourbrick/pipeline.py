@@ -5,7 +5,7 @@ from pathlib import Path
 from makeyourbrick.ai.sam3d_runner import Sam3DRunner
 from makeyourbrick.brickify.colors import load_ldraw_palette
 from makeyourbrick.config import PipelineConfig
-from makeyourbrick.brickify.optimizer import brickify_1x1, greedy_brickify, layered_brickify
+from makeyourbrick.brickify.optimizer import brick_specs_for_palette, brickify_1x1, greedy_brickify, layered_brickify
 from makeyourbrick.brickify.report import build_brick_report, build_stability_report, write_brick_report
 from makeyourbrick.io.ldr_writer import write_ldr
 from makeyourbrick.mesh.inspect import inspect_mesh_to_file
@@ -51,6 +51,7 @@ def run_from_image(
     infill_density: float = 0.35,
     infill_pattern: str = "lattice",
     optimizer: str = "greedy",
+    brick_palette: str = "full",
     steps_by_layer: bool = False,
 ) -> Path:
     """Run the full pipeline from a single image to an LDR file."""
@@ -95,6 +96,7 @@ def run_from_image(
         infill_density=infill_density,
         infill_pattern=infill_pattern,
         optimizer=optimizer,
+        brick_palette=brick_palette,
         steps_by_layer=steps_by_layer,
     )
 
@@ -133,6 +135,7 @@ def convert_mesh_to_ldr(
     infill_density: float = 0.35,
     infill_pattern: str = "lattice",
     optimizer: str = "greedy",
+    brick_palette: str = "full",
     steps_by_layer: bool = False,
 ) -> Path:
     """Convert an existing mesh file to a 1x1-brick LDraw file."""
@@ -184,11 +187,12 @@ def convert_mesh_to_ldr(
     input_bricks = brickify_1x1(occupancy, color_ids)
     if optimizer not in {"greedy", "layered"}:
         raise ValueError(f"Unsupported optimizer: {optimizer}")
+    brick_specs = brick_specs_for_palette(brick_palette)
     if optimize:
         bricks = (
-            layered_brickify(occupancy, color_ids)
+            layered_brickify(occupancy, color_ids, brick_specs=brick_specs)
             if optimizer == "layered"
-            else greedy_brickify(occupancy, color_ids)
+            else greedy_brickify(occupancy, color_ids, brick_specs=brick_specs)
         )
     else:
         bricks = input_bricks
@@ -200,6 +204,7 @@ def convert_mesh_to_ldr(
                 bricks,
                 optimized=optimize,
                 optimizer=optimizer if optimize else "none",
+                brick_palette=brick_palette if optimize else "none",
                 sculpture={
                     "mode": sculpture_mode,
                     "wall_thickness": int(wall_thickness),

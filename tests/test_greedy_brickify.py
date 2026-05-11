@@ -3,6 +3,8 @@ from __future__ import annotations
 import numpy as np
 
 from makeyourbrick.brickify.optimizer import (
+    STUDIO_SCULPTURE_BRICKS,
+    brick_specs_for_palette,
     brickify_1x1,
     bricks_to_occupancy,
     can_place_brick,
@@ -49,6 +51,20 @@ def test_greedy_brickify_uses_longer_studio_style_bricks() -> None:
     assert optimized[0].width == 2
     assert optimized[0].depth == 8
     np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)
+
+
+def test_studio_brick_palette_excludes_2x10_and_preserves_occupancy() -> None:
+    occupancy, color_ids = make_solid_box((2, 1, 10), color_id=16)
+
+    optimized = greedy_brickify(occupancy, color_ids, brick_specs=STUDIO_SCULPTURE_BRICKS)
+
+    assert "3006.dat" not in {brick.part_id for brick in optimized}
+    np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)
+
+
+def test_brick_specs_for_palette_validates_names() -> None:
+    assert brick_specs_for_palette("studio") == STUDIO_SCULPTURE_BRICKS
+    assert brick_specs_for_palette("full")
 
 
 def test_greedy_brickify_uses_rotation_when_it_makes_larger_brick_fit() -> None:

@@ -64,6 +64,7 @@ python scripts/mesh_to_ldr.py \
   --ray-fill wide \
   --optimize \
   --optimizer layered \
+  --brick-palette studio \
   --sculpture-mode density \
   --wall-thickness 1 \
   --base-thickness 2 \
@@ -104,7 +105,7 @@ Voxelization:
 
 - `--voxelizer surface`: use Trimesh surface voxelization and fill; best for watertight meshes
 - `--voxelizer ray`: cast vertical rays through each stud column; better for Studio-like sculpture imports from open OBJ/STL assets
-- `--voxelizer slice`: slice the mesh layer by layer, project section contours to X/Z, and fill each layer; closest to Studio's sculpture import model
+- `--voxelizer slice`: slice the mesh layer by layer, project section contours to X/Z, and fill each layer; closest to Studio's sculpture import model. The slice path unions same-layer contours to avoid false holes from open OBJ contour fragments.
 - `--ray-fill wide|balanced`: choose how odd ray-hit columns are filled; `wide` preserves the original broad fill behavior, while `balanced` drops one outlier hit to reduce overfilled columns
 - `--target-width-studs` / `--target-depth-studs`: optional Studio-style base footprint scaling before voxelization
 
@@ -157,6 +158,7 @@ Sculpture options:
 - `--infill-pattern lattice|ribs`: choose uniform lattice infill or staggered Studio-like internal support ribs
 - `--voxel-smoothing none|light|contour|studio`: optional cleanup for isolated protrusions, layer contours, and Studio-like layer consistency
 - `--optimizer greedy|layered`: largest-first greedy optimizer or support/seam-aware optimizer
+- `--brick-palette full|studio`: choose the full experimental brick set or the Studio-reference sculpture brick set; `studio` currently excludes `3006.dat` 2x10 because the inspected queen Studio reference did not use it
 - `--steps-by-layer`: insert `0 STEP` markers between vertical layers in the LDR file
 
 ## Placement and Quality Fixtures
@@ -286,6 +288,7 @@ In `sam3d` mode, `POST /api/jobs` requires a `mask_id`. The UI flow should uploa
 Backend job requests also accept:
 
 - `optimizer`: `greedy` or `layered`
+- `brick_palette`: `full` or `studio`
 - `sculpture_mode`: `solid`, `shell`, or `density`
 - `wall_thickness`
 - `base_thickness`

@@ -151,7 +151,7 @@ Acceptance criteria:
 ## Deferred Work
 
 - True Studio connectivity checks.
-- Broader brick palette and plate support.
+- Broader brick palette and plate support after a real Studio reference uses those parts.
 - Cost-aware or inventory-aware brick selection.
 
 ## Phase 6: LDraw Placement Calibration
@@ -318,6 +318,13 @@ Tasks:
 - [x] Add density sculpture mode with shell/base plus deterministic lattice infill.
 - [x] Add ribbed internal support infill with staggered X/Z support lines and vertical posts.
 - [x] Add Studio-like layer smoothing preset for filled layer holes, vertical layer gaps, and isolated protrusion cleanup.
+- [x] Change layer-slice contour filling to union same-layer contours by default, reducing false holes from fragmented open OBJ slices.
+
+Acceptance criteria:
+
+- [ ] Queen output has fewer visible holes and fewer isolated protrusions.
+- [ ] Studio comparison IoU improves over the Phase 10 baseline.
+- [ ] Layer-level extra/missing spikes are reduced in the lower and middle layers.
 
 Latest Studio smoothing diagnostic:
 
@@ -325,11 +332,49 @@ Latest Studio smoothing diagnostic:
 - Compared with unsmoothed solid (`0.309746`, missing `611`, extra `13143`), the Studio smoothing preset slightly reduces missing surface cells while preserving the layer-filled sculpture behavior.
 - Interpretation: this is the better visual candidate when the priority is clean, layer-filled Studio-like surfaces. Density/rib modes are useful for reducing interior mass, but they can expose holes and support patterns on the visible model.
 
+Latest contour union diagnostic:
+
+- The slice voxelizer now uses union filling for same-layer contours by default.
+- This intentionally favors continuous sculpture layers over preserving every mesh hole, because fragmented open OBJ contour loops can otherwise create false cutouts in the generated LEGO model.
+
+## Phase 12: Studio Reference Brick Palette
+
+Status: completed.
+
+Purpose:
+
+Match MakeYourBrick's candidate brick set to the actual parts observed in the user's Studio queen import before adding new part families. This keeps the comparison focused on voxel/profile quality instead of optimizer palette drift.
+
+Reference finding:
+
+- The inspected `queen.io` archive's primary `model.ldr` uses regular brick parts only.
+- Plate parts such as `3020.dat`, `3021.dat`, `3022.dat`, and `3023.dat` were not present in the primary Studio output.
+- Studio's queen output also did not use `3006.dat` 2x10, while MakeYourBrick's full palette did use it heavily.
+
+Tasks:
+
+- [x] Add a separate `studio` brick palette.
+- [x] Keep the existing `full` palette for experimental conversions.
+- [x] Expose `--brick-palette full|studio` in mesh and image CLIs.
+- [x] Expose `brick_palette` in backend job requests.
+- [x] Record the selected palette in optimizer reports.
+- [x] Generate a queen candidate with `--brick-palette studio`.
+- [x] Compare the new candidate against `queen.io`.
+- [x] Decide whether plate support is needed only after a reference Studio output actually contains plate parts.
+
 Acceptance criteria:
 
-- [ ] Queen output has fewer visible holes and fewer isolated protrusions.
-- [ ] Studio comparison IoU improves over the Phase 10 baseline.
-- [ ] Layer-level extra/missing spikes are reduced in the lower and middle layers.
+- [x] Studio-palette output contains no `3006.dat`.
+- [x] The optimizer report records `"brick_palette": "studio"`.
+- [x] Part distribution is closer to the Studio reference before further voxel/profile tuning.
+
+Latest Studio palette diagnostic:
+
+- Candidate: `outputs/ldr/queen_slice_union_studio_palette_solid_60.ldr`.
+- `3006.dat` count changed from 554 in the full-palette candidate to 0 in the Studio-palette candidate.
+- Studio reference `model.ldr` contains no plate parts in the inspected queen import, so plate support is deferred until a reference output actually uses plate families.
+- Comparison against `queen.io`: IoU `0.308805`, missing `572`, extra `13330`.
+- Interpretation: the palette is now less misleading, but the visible shape problem is still dominated by voxel layer profile and density/fill selection, not part availability.
 
 Latest light smoothing diagnostic:
 

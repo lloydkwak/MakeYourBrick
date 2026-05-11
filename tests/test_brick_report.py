@@ -25,6 +25,7 @@ def test_build_brick_report_summarizes_reduction_and_counts() -> None:
 
     assert report["optimized"] is True
     assert report["optimizer"] == "greedy"
+    assert report["brick_palette"] == "full"
     assert report["occupancy_shape"] == [4, 1, 2]
     assert report["occupied_voxel_count"] == 8
     assert report["input_brick_count"] == 8
@@ -110,9 +111,11 @@ def test_build_brick_report_can_include_sculpture_and_stability_sections() -> No
         bricks,
         optimized=False,
         optimizer="none",
+        brick_palette="none",
         sculpture={"mode": "solid"},
         stability={"layer_count": 1},
     )
 
+    assert report["brick_palette"] == "none"
     assert report["sculpture"] == {"mode": "solid"}
     assert report["stability"] == {"layer_count": 1}
