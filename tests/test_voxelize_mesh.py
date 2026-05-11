@@ -10,9 +10,11 @@ trimesh = pytest.importorskip("trimesh")
 from makeyourbrick.brickify.colors import load_ldraw_palette
 from makeyourbrick.voxel.voxelize import (
     _pair_ray_hit_intervals,
+    _points_inside_contours,
     compute_pitch,
     load_voxel_artifact,
     save_voxel_artifact,
+    voxelize_mesh_with_layer_slices,
     voxelize_mesh_with_vertical_rays,
     voxelize_mesh,
 )
@@ -80,6 +82,26 @@ def test_vertical_ray_voxelizer_fills_box_columns() -> None:
     assert origin.shape == (3,)
 
 
+def test_points_inside_contours_uses_even_odd_holes() -> None:
+    outer = np.asarray([[0, 0], [4, 0], [4, 4], [0, 4], [0, 0]], dtype=np.float64)
+    inner = np.asarray([[1, 1], [1, 3], [3, 3], [3, 1], [1, 1]], dtype=np.float64)
+    points = np.asarray([[0.5, 0.5], [2.0, 2.0], [4.5, 2.0]], dtype=np.float64)
+
+    inside = _points_inside_contours(points, [outer, inner], tolerance=1e-8)
+
+    np.testing.assert_array_equal(inside, np.asarray([True, False, False]))
+
+
+def test_layer_slice_voxelizer_fills_box_layers() -> None:
+    mesh = trimesh.creation.box(extents=(1, 1, 1))
+
+    occupancy, origin, _points = voxelize_mesh_with_layer_slices(mesh, pitch=0.25)
+
+    assert occupancy.shape == (4, 4, 4)
+    assert occupancy.all()
+    assert origin.shape == (3,)
+
+
 def test_pair_ray_hit_intervals_pairs_even_hits() -> None:
     intervals = _pair_ray_hit_intervals([0.0, 1.0, 3.0, 4.0])
 
@@ -106,6 +128,20 @@ def test_voxelize_mesh_supports_ray_voxelizer() -> None:
 
         occupancy, color_ids, _rgb, _origin, _pitch = load_voxel_artifact(output_path)
         assert occupancy.sum() > 0
+        assert set(color_ids[occupancy]) == {4}
+    finally:
+        output_path.unlink(missing_ok=True)
+
+
+def test_voxelize_mesh_supports_slice_voxelizer() -> None:
+    output_path = Path("outputs/voxels/test_slice_box_voxels.npz")
+    mesh = trimesh.creation.box(extents=(1, 1, 1))
+    try:
+        voxelize_mesh(mesh, output_path, pitch=0.25, voxelizer="slice", default_color_id=4)
+
+        occupancy, color_ids, _rgb, _origin, _pitch = load_voxel_artifact(output_path)
+        assert occupancy.shape == (4, 4, 4)
+        assert occupancy.all()
         assert set(color_ids[occupancy]) == {4}
     finally:
         output_path.unlink(missing_ok=True)

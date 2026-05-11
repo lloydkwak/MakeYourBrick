@@ -57,8 +57,10 @@ Convert with Studio-like sculpture options:
 python scripts/mesh_to_ldr.py \
   --mesh data/examples/sample.stl \
   --target-studs 48 \
+  --target-width-studs 38 \
+  --target-depth-studs 37 \
   --up-axis auto \
-  --voxelizer ray \
+  --voxelizer slice \
   --ray-fill wide \
   --optimize \
   --optimizer layered \
@@ -100,7 +102,9 @@ Voxelization:
 
 - `--voxelizer surface`: use Trimesh surface voxelization and fill; best for watertight meshes
 - `--voxelizer ray`: cast vertical rays through each stud column; better for Studio-like sculpture imports from open OBJ/STL assets
+- `--voxelizer slice`: slice the mesh layer by layer, project section contours to X/Z, and fill each layer; closest to Studio's sculpture import model
 - `--ray-fill wide|balanced`: choose how odd ray-hit columns are filled; `wide` preserves the original broad fill behavior, while `balanced` drops one outlier hit to reduce overfilled columns
+- `--target-width-studs` / `--target-depth-studs`: optional Studio-style base footprint scaling before voxelization
 
 ## Mesh Inspection
 

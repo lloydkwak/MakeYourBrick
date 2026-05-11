@@ -23,6 +23,7 @@ def build_brick_report(
     stability: dict | None = None,
     sculpture: dict | None = None,
     mesh_orientation: dict | None = None,
+    footprint_scale: dict | None = None,
 ) -> dict:
     input_count = len(input_bricks)
     output_count = len(output_bricks)
@@ -44,6 +45,8 @@ def build_brick_report(
         report["sculpture"] = sculpture
     if mesh_orientation is not None:
         report["mesh_orientation"] = mesh_orientation
+    if footprint_scale is not None:
+        report["footprint_scale"] = footprint_scale
     if stability is not None:
         report["stability"] = stability
     return report

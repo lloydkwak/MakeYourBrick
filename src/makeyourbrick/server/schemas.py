@@ -42,11 +42,13 @@ class JobRequest(BaseModel):
     image_id: str
     mask_id: str | None = None
     target_studs: int = Field(default=48, ge=8, le=128)
+    target_width_studs: int | None = Field(default=None, ge=1, le=256)
+    target_depth_studs: int | None = Field(default=None, ge=1, le=256)
     sample_colors: bool = True
     optimize: bool = True
     optimizer: Literal["greedy", "layered"] = "greedy"
     fill: bool = True
-    voxelizer: Literal["surface", "ray"] = "surface"
+    voxelizer: Literal["surface", "ray", "slice"] = "surface"
     ray_fill: Literal["wide", "balanced"] = "wide"
     default_color_id: int = Field(default=16, ge=0, le=999)
     repair_mode: Literal["none", "basic", "manifold", "convex-hull"] = "basic"

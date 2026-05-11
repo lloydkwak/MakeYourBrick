@@ -13,7 +13,7 @@ from makeyourbrick.brickify.colors import quantize_voxel_rgb_to_ldraw
 from makeyourbrick.mesh.color_sampling import sample_mesh_rgb
 from makeyourbrick.types import VoxelArtifact
 
-VOXELIZERS = ("surface", "ray")
+VOXELIZERS = ("surface", "ray", "slice")
 RAY_FILL_MODES = ("wide", "balanced")
 
 
@@ -191,6 +191,86 @@ def voxelize_mesh_with_vertical_rays(
     return occupancy, origin, points_for_indices(occupancy, indices, points)
 
 
+def _points_on_polyline_boundary(
+    points: np.ndarray,
+    polyline: np.ndarray,
+    tolerance: float,
+) -> np.ndarray:
+    if len(polyline) < 2:
+        return np.zeros(len(points), dtype=bool)
+    on_boundary = np.zeros(len(points), dtype=bool)
+    for start, end in zip(polyline[:-1], polyline[1:]):
+        segment = end - start
+        length_sq = float(np.dot(segment, segment))
+        if length_sq <= 1e-18:
+            continue
+        relative = points - start
+        projection = np.clip((relative @ segment) / length_sq, 0.0, 1.0)
+        closest = start + projection[:, None] * segment
+        distance = np.linalg.norm(points - closest, axis=1)
+        on_boundary |= distance <= tolerance
+    return on_boundary
+
+
+def _points_inside_polyline(points: np.ndarray, polyline: np.ndarray, tolerance: float) -> np.ndarray:
+    if len(polyline) < 3:
+        return np.zeros(len(points), dtype=bool)
+    if not np.allclose(polyline[0], polyline[-1]):
+        polyline = np.vstack([polyline, polyline[0]])
+    on_boundary = _points_on_polyline_boundary(points, polyline, tolerance)
+    x = points[:, 0]
+    z = points[:, 1]
+    inside = np.zeros(len(points), dtype=bool)
+    x0 = polyline[:-1, 0]
+    z0 = polyline[:-1, 1]
+    x1 = polyline[1:, 0]
+    z1 = polyline[1:, 1]
+    for edge_x0, edge_z0, edge_x1, edge_z1 in zip(x0, z0, x1, z1):
+        crosses = (edge_z0 > z) != (edge_z1 > z)
+        x_intersections = (edge_x1 - edge_x0) * (z - edge_z0) / (edge_z1 - edge_z0 + 1e-18) + edge_x0
+        inside ^= crosses & (x < x_intersections)
+    return inside | on_boundary
+
+
+def _points_inside_contours(points: np.ndarray, contours: list[np.ndarray], tolerance: float) -> np.ndarray:
+    inside = np.zeros(len(points), dtype=bool)
+    for contour in contours:
+        inside ^= _points_inside_polyline(points, contour, tolerance)
+    return inside
+
+
+def voxelize_mesh_with_layer_slices(mesh, pitch: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    bounds = np.asarray(mesh.bounds, dtype=np.float64)
+    extents = np.asarray(mesh.extents, dtype=np.float64)
+    shape = np.maximum(1, np.ceil(extents / pitch).astype(int))
+    origin = bounds[0].astype(np.float32)
+    x_centers = bounds[0, 0] + (np.arange(shape[0], dtype=np.float64) + 0.5) * pitch
+    y_centers = bounds[0, 1] + (np.arange(shape[1], dtype=np.float64) + 0.5) * pitch
+    z_centers = bounds[0, 2] + (np.arange(shape[2], dtype=np.float64) + 0.5) * pitch
+    grid_x, grid_z = np.meshgrid(x_centers, z_centers, indexing="ij")
+    layer_points = np.column_stack([grid_x.ravel(), grid_z.ravel()])
+    occupancy = np.zeros(tuple(int(value) for value in shape), dtype=bool)
+    tolerance = max(float(pitch) * 0.05, 1e-8)
+    for y_index, y_value in enumerate(y_centers):
+        section = mesh.section(
+            plane_origin=[0.0, float(y_value), 0.0],
+            plane_normal=[0.0, 1.0, 0.0],
+        )
+        if section is None:
+            continue
+        contours = [
+            np.asarray(path[:, [0, 2]], dtype=np.float64)
+            for path in section.discrete
+            if len(path) >= 3
+        ]
+        if not contours:
+            continue
+        inside = _points_inside_contours(layer_points, contours, tolerance=tolerance)
+        occupancy[:, y_index, :] = inside.reshape(shape[0], shape[2])
+    indices, points = occupied_indices_to_center_points(occupancy, origin, pitch)
+    return occupancy, origin, points_for_indices(occupancy, indices, points)
+
+
 def voxelize_mesh(
     mesh,
     output_path: Path,
@@ -208,6 +288,8 @@ def voxelize_mesh(
         raise ValueError(f"Unsupported voxelizer: {voxelizer}")
     if voxelizer == "ray":
         occupancy, origin, point_grid = voxelize_mesh_with_vertical_rays(mesh, pitch, ray_fill=ray_fill)
+    elif voxelizer == "slice":
+        occupancy, origin, point_grid = voxelize_mesh_with_layer_slices(mesh, pitch)
     else:
         occupancy, origin, point_grid = voxelize_mesh_with_surface(mesh, pitch, fill=fill)
     rgb = np.zeros((*occupancy.shape, 3), dtype=np.uint8)

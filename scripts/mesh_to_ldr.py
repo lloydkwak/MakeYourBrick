@@ -18,6 +18,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Convert a mesh file to a 1x1-brick LDraw model.")
     parser.add_argument("--mesh", type=Path, required=True, help="Input mesh path: .glb, .obj, .stl, etc.")
     parser.add_argument("--target-studs", type=int, default=24, help="Longest model extent in studs.")
+    parser.add_argument("--target-width-studs", type=int, help="Optional Studio-style target X footprint in studs.")
+    parser.add_argument("--target-depth-studs", type=int, help="Optional Studio-style target Z footprint in studs.")
     parser.add_argument("--min-pitch", type=float, default=0.005, help="Minimum voxel pitch.")
     parser.add_argument("--color", type=int, default=16, help="Default LDraw color id.")
     parser.add_argument(
@@ -117,6 +119,8 @@ def main() -> None:
         voxel_output_path=args.voxels,
         target_longest_studs=args.target_studs,
         min_pitch=args.min_pitch,
+        target_width_studs=args.target_width_studs,
+        target_depth_studs=args.target_depth_studs,
         fill=not args.no_fill,
         voxelizer=args.voxelizer,
         ray_fill=args.ray_fill,

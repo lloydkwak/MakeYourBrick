@@ -313,6 +313,8 @@ Tasks:
 - [x] Improve ray voxelizer column filling near thin silhouettes.
 - [x] Add contour cleanup to remove isolated protrusions per layer.
 - [ ] Re-run queen comparison after each tuning change and track IoU, missing, and extra deltas.
+- [x] Add layer-slice voxelizer that cuts the mesh per LEGO layer and fills projected contours.
+- [x] Add optional Studio-style target footprint scaling before voxelization.
 
 Acceptance criteria:
 
@@ -336,3 +338,11 @@ Latest contour smoothing diagnostic:
 - `voxel_smoothing=contour` IoU: `0.124838`, missing `4957`, extra `7844`.
 - Profile hints still flag compressed width, compressed depth, and overfilled layers.
 - Interpretation: local contour cleanup is not enough for the queen mismatch. The next correction needs profile-aware scale/axis handling or a different silhouette sampling strategy, not only per-layer smoothing.
+
+Latest Studio-like slice and footprint diagnostics:
+
+- `voxelizer=slice` IoU: `0.130286`, missing `4879`, extra `7831`.
+- `voxelizer=slice`, target footprint `38x37` IoU: `0.309746`, missing `611`, extra `13143`.
+- `voxelizer=slice`, target footprint `38x37`, shell wall `1` IoU: `0.167224`, missing `5034`, extra `3676`.
+- `voxelizer=slice`, target footprint `38x37`, shell wall `2` IoU: `0.183744`, missing `4658`, extra `4782`.
+- Interpretation: layer slicing plus explicit footprint scaling is the first major improvement. It fixes most of the missing reference footprint but overfills the interior, so the next Studio-like step is density/fill control rather than another axis fix.

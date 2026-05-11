@@ -185,6 +185,8 @@ def run_pipeline_job(
             voxel_output_path=voxel_path,
             ldr_output_path=ldr_path,
             target_longest_studs=request.target_studs,
+            target_width_studs=request.target_width_studs,
+            target_depth_studs=request.target_depth_studs,
             fill=request.fill,
             voxelizer=request.voxelizer,
             ray_fill=request.ray_fill,

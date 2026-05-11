@@ -11,6 +11,7 @@ from makeyourbrick.io.ldr_writer import write_ldr
 from makeyourbrick.mesh.inspect import inspect_mesh_to_file
 from makeyourbrick.mesh.orient import orient_mesh_to_y_up
 from makeyourbrick.mesh.repair import repair_mesh, write_repair_report
+from makeyourbrick.mesh.scale import fit_mesh_footprint_to_studs
 from makeyourbrick.mesh.solidify import clean_mesh, load_mesh
 from makeyourbrick.types import MeshArtifact
 from makeyourbrick.voxel.sculpture import apply_sculpture_mode
@@ -28,6 +29,8 @@ def run_from_image(
     voxel_output_path: Path | None = None,
     target_longest_studs: int = 24,
     min_pitch: float = 0.005,
+    target_width_studs: int | None = None,
+    target_depth_studs: int | None = None,
     fill: bool = True,
     voxelizer: str = "surface",
     ray_fill: str = "wide",
@@ -69,6 +72,8 @@ def run_from_image(
         voxel_output_path=voxel_output_path,
         target_longest_studs=target_longest_studs,
         min_pitch=min_pitch,
+        target_width_studs=target_width_studs,
+        target_depth_studs=target_depth_studs,
         fill=fill,
         voxelizer=voxelizer,
         ray_fill=ray_fill,
@@ -103,6 +108,8 @@ def convert_mesh_to_ldr(
     voxel_output_path: Path,
     target_longest_studs: int = 24,
     min_pitch: float = 0.005,
+    target_width_studs: int | None = None,
+    target_depth_studs: int | None = None,
     fill: bool = True,
     voxelizer: str = "surface",
     ray_fill: str = "wide",
@@ -130,10 +137,16 @@ def convert_mesh_to_ldr(
         if repair_report_path is not None:
             write_repair_report(repair_report, repair_report_path)
     mesh, orientation_report = orient_mesh_to_y_up(mesh, up_axis=up_axis)
+    pitch = compute_pitch(mesh, target_longest_studs=target_longest_studs, min_pitch=min_pitch)
+    mesh, footprint_scale_report = fit_mesh_footprint_to_studs(
+        mesh,
+        pitch=pitch,
+        target_width_studs=target_width_studs,
+        target_depth_studs=target_depth_studs,
+    )
     cleaned_mesh_path.parent.mkdir(parents=True, exist_ok=True)
     mesh.export(cleaned_mesh_path)
 
-    pitch = compute_pitch(mesh, target_longest_studs=target_longest_studs, min_pitch=min_pitch)
     palette_ids = None
     palette_rgb = None
     if default_rgb is not None or sample_colors:
@@ -186,6 +199,7 @@ def convert_mesh_to_ldr(
                     "voxel_smoothing": voxel_smoothing,
                 },
                 mesh_orientation=orientation_report,
+                footprint_scale=footprint_scale_report,
                 stability=build_stability_report(
                     bricks,
                     occupancy.shape,
