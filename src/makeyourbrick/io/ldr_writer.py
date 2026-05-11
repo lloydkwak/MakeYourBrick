@@ -8,10 +8,16 @@ STUD_LDU = 20
 BRICK_HEIGHT_LDU = 24
 
 
-def brick_to_ldraw_position(brick: Brick) -> tuple[int, int, int]:
-    x = brick.x * STUD_LDU
+def format_ldraw_number(value: float) -> str:
+    if value == int(value):
+        return str(int(value))
+    return f"{value:.6f}".rstrip("0").rstrip(".")
+
+
+def brick_to_ldraw_position(brick: Brick) -> tuple[float, float, float]:
+    x = (brick.x + (brick.width - 1) / 2) * STUD_LDU
     y = -brick.y * BRICK_HEIGHT_LDU
-    z = brick.z * STUD_LDU
+    z = (brick.z + (brick.depth - 1) / 2) * STUD_LDU
     return x, y, z
 
 
@@ -31,7 +37,8 @@ def brick_to_ldraw_matrix(brick: Brick) -> str:
 def brick_to_ldr_line(brick: Brick) -> str:
     x, y, z = brick_to_ldraw_position(brick)
     matrix = brick_to_ldraw_matrix(brick)
-    return f"1 {brick.color_id} {x} {y} {z} {matrix} {brick.part_id}"
+    position = " ".join(format_ldraw_number(value) for value in (x, y, z))
+    return f"1 {brick.color_id} {position} {matrix} {brick.part_id}"
 
 
 def write_ldr(

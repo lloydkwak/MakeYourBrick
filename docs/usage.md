@@ -57,6 +57,8 @@ Convert with Studio-like sculpture options:
 python scripts/mesh_to_ldr.py \
   --mesh data/examples/sample.stl \
   --target-studs 48 \
+  --up-axis auto \
+  --voxelizer ray \
   --optimize \
   --optimizer layered \
   --sculpture-mode shell \
@@ -84,6 +86,18 @@ Supported repair modes:
 - `basic`: Trimesh cleanup, duplicate/degenerate face removal, hole filling, and normal fixing
 - `manifold`: use `manifold3d` when available; falls back to `basic` with a report warning if unavailable or unsuccessful
 - `convex-hull`: replace the model with a watertight convex outer approximation
+
+Mesh orientation:
+
+- `--up-axis auto`: detect a clearly dominant source axis and rotate it to pipeline Y-up
+- `--up-axis z`: use this for known Z-up OBJ/STL sculpture assets
+- `--up-axis y`: keep Y-up assets upright
+- `--up-axis none`: disable orientation changes
+
+Voxelization:
+
+- `--voxelizer surface`: use Trimesh surface voxelization and fill; best for watertight meshes
+- `--voxelizer ray`: cast vertical rays through each stud column; better for Studio-like sculpture imports from open OBJ/STL assets
 
 ## Mesh Inspection
 
@@ -132,6 +146,22 @@ Sculpture options:
 - `--base-thickness`: number of bottom layers to force solid
 - `--optimizer greedy|layered`: largest-first greedy optimizer or support/seam-aware optimizer
 - `--steps-by-layer`: insert `0 STEP` markers between vertical layers in the LDR file
+
+## Placement and Quality Fixtures
+
+Generate an LDraw placement fixture for Stud.io visual inspection:
+
+```bash
+python scripts/make_ldraw_placement_fixture.py --steps-by-layer
+```
+
+Generate repeatable mesh quality samples and reports:
+
+```bash
+python scripts/compare_mesh_samples.py --target-studs 8
+```
+
+The comparison script creates sphere, bust-like, and object-like meshes, converts them with shell sculpture mode and the layered optimizer, and writes a JSON summary under `outputs/quality/mesh_samples`.
 
 ## SAM 3D Adapter
 

@@ -9,6 +9,7 @@ from makeyourbrick.brickify.optimizer import brickify_1x1, greedy_brickify, laye
 from makeyourbrick.brickify.report import build_brick_report, build_stability_report, write_brick_report
 from makeyourbrick.io.ldr_writer import write_ldr
 from makeyourbrick.mesh.inspect import inspect_mesh_to_file
+from makeyourbrick.mesh.orient import orient_mesh_to_y_up
 from makeyourbrick.mesh.repair import repair_mesh, write_repair_report
 from makeyourbrick.mesh.solidify import clean_mesh, load_mesh
 from makeyourbrick.types import MeshArtifact
@@ -28,6 +29,7 @@ def run_from_image(
     target_longest_studs: int = 24,
     min_pitch: float = 0.005,
     fill: bool = True,
+    voxelizer: str = "surface",
     default_color_id: int = 16,
     default_rgb: tuple[int, int, int] | None = None,
     palette_path: Path | None = None,
@@ -37,6 +39,7 @@ def run_from_image(
     raw_mesh_report_path: Path | None = None,
     repair_mode: str = "basic",
     repair_report_path: Path | None = None,
+    up_axis: str = "auto",
     sculpture_mode: str = "solid",
     wall_thickness: int = 1,
     base_thickness: int = 0,
@@ -65,6 +68,7 @@ def run_from_image(
         target_longest_studs=target_longest_studs,
         min_pitch=min_pitch,
         fill=fill,
+        voxelizer=voxelizer,
         default_color_id=default_color_id,
         default_rgb=default_rgb,
         palette_path=palette_path,
@@ -73,6 +77,7 @@ def run_from_image(
         report_path=report_path,
         repair_mode=repair_mode,
         repair_report_path=repair_report_path,
+        up_axis=up_axis,
         sculpture_mode=sculpture_mode,
         wall_thickness=wall_thickness,
         base_thickness=base_thickness,
@@ -95,6 +100,7 @@ def convert_mesh_to_ldr(
     target_longest_studs: int = 24,
     min_pitch: float = 0.005,
     fill: bool = True,
+    voxelizer: str = "surface",
     default_color_id: int = 16,
     default_rgb: tuple[int, int, int] | None = None,
     palette_path: Path | None = None,
@@ -103,6 +109,7 @@ def convert_mesh_to_ldr(
     report_path: Path | None = None,
     repair_mode: str = "basic",
     repair_report_path: Path | None = None,
+    up_axis: str = "auto",
     sculpture_mode: str = "solid",
     wall_thickness: int = 1,
     base_thickness: int = 0,
@@ -116,6 +123,7 @@ def convert_mesh_to_ldr(
         mesh, repair_report = repair_mesh(load_mesh(mesh_path), mode=repair_mode)
         if repair_report_path is not None:
             write_repair_report(repair_report, repair_report_path)
+    mesh, orientation_report = orient_mesh_to_y_up(mesh, up_axis=up_axis)
     cleaned_mesh_path.parent.mkdir(parents=True, exist_ok=True)
     mesh.export(cleaned_mesh_path)
 
@@ -129,6 +137,7 @@ def convert_mesh_to_ldr(
         voxel_output_path,
         pitch=pitch,
         fill=fill,
+        voxelizer=voxelizer,
         default_color_id=default_color_id,
         default_rgb=default_rgb,
         palette_ids=palette_ids,
@@ -167,6 +176,7 @@ def convert_mesh_to_ldr(
                     "wall_thickness": int(wall_thickness),
                     "base_thickness": int(base_thickness),
                 },
+                mesh_orientation=orientation_report,
                 stability=build_stability_report(
                     bricks,
                     occupancy.shape,

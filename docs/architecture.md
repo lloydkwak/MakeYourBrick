@@ -50,6 +50,8 @@ Location:
 
 The mesh module loads `.stl`, `.obj`, `.glb`, mesh `.ply`, and other Trimesh-supported triangle mesh formats. It can merge `trimesh.Scene` geometry into one mesh, inspect compatibility, and repair with explicit modes: `none`, `basic`, `manifold`, and `convex-hull`.
 
+Meshes are oriented to the pipeline's Y-up coordinate system before voxelization. The default `auto` mode maps a clearly dominant longest axis, such as Z-up OBJ sculpture assets, to vertical Y so LDraw output is not laid on its side.
+
 Color sampling currently supports nearest vertex color and nearest face color. Full UV texture sampling is not implemented yet.
 
 ### Voxelization
@@ -67,6 +69,11 @@ Meshes are voxelized with Trimesh. Voxel artifacts are saved as compressed `.npz
 - `origin`
 - `pitch`
 
+Two voxelizers are available:
+
+- `surface`: Trimesh surface voxelization with optional fill, useful for watertight meshes.
+- `ray`: vertical scanline filling that casts rays through each stud column, closer to Studio's layer-by-layer sculpture behavior and more useful for open OBJ/STL sculpture assets.
+
 ### Color Quantization
 
 Location:
@@ -83,13 +90,13 @@ Location:
 - `src/makeyourbrick/brickify/optimizer.py`
 - `src/makeyourbrick/brickify/report.py`
 
-The optimizer uses a deterministic greedy placement strategy:
+The optimizer uses a deterministic greedy placement strategy with a Studio-like basic brick set:
 
 ```text
-2x4 -> 1x4 -> 2x2 -> 1x2 -> 1x1
+2x10 -> 2x8 -> 2x6 -> 2x4 -> 1x8 -> 2x3 -> 1x6 -> 1x4 -> 2x2 -> 1x3 -> 1x2 -> 1x1
 ```
 
-It preserves occupancy and color boundaries. The optional `layered` optimizer scores candidate bricks by area, support ratio, overhang penalty, and vertical seam alignment. Reports include stability metrics such as unsupported brick count, floating brick count, average support ratio, seam alignment score, and layer count.
+It preserves occupancy and color boundaries. The optional `layered` optimizer places bricks layer by layer and scores candidates by area, support ratio, overhang penalty, and vertical seam alignment. Reports include stability metrics such as unsupported brick count, floating brick count, low-support brick count, overhang-risk brick count, connected component count, average support ratio, seam alignment score, and layer count.
 
 ### Sculpture Mode
 
@@ -102,7 +109,7 @@ Sculpture mode post-processes the voxel occupancy before brick placement:
 - `solid`: keep the filled voxel model
 - `shell`: keep surface voxels, optional wall thickness, and solid base layers
 
-This mirrors the useful parts of Studio-style sculpture import while keeping the original voxel artifact available for inspection.
+Shell mode also applies conservative voxel cleanup: single-voxel gap closing, isolated feature removal, and minimal base anchoring when a base thickness is requested. This mirrors the useful parts of Studio-style sculpture import while keeping the original voxel artifact available for inspection.
 
 ### LDraw Output
 
@@ -112,7 +119,19 @@ Location:
 
 The writer emits LDraw line type 1 part references. It supports 0, 90, 180, and 270 degree rotations around the vertical axis.
 
+Brick coordinates are converted to the LDraw part-center origin, so larger bricks cover the same voxel footprint as equivalent 1x1 bricks.
+
 When `steps_by_layer` is enabled, the writer inserts `0 STEP` markers between vertical layers so LDraw viewers can show a layer-by-layer build sequence.
+
+### Quality Fixtures
+
+Location:
+
+- `src/makeyourbrick/quality/mesh_samples.py`
+- `scripts/make_ldraw_placement_fixture.py`
+- `scripts/compare_mesh_samples.py`
+
+Placement fixtures support Stud.io visual checks for the basic brick set. Mesh sample comparison generates sphere, bust-like, and object-like meshes, converts them through the production pipeline, and writes a JSON summary with brick counts and stability metrics.
 
 ## Directory Layout
 

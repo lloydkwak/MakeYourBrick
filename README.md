@@ -32,7 +32,7 @@ python -m compileall src scripts tests/fake_sam3d_command.py
 python -m pytest
 ```
 
-Latest local result: `97 passed`.
+Latest local result: `119 passed`.
 
 ## Installation
 

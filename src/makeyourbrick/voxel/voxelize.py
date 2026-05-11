@@ -13,6 +13,8 @@ from makeyourbrick.brickify.colors import quantize_voxel_rgb_to_ldraw
 from makeyourbrick.mesh.color_sampling import sample_mesh_rgb
 from makeyourbrick.types import VoxelArtifact
 
+VOXELIZERS = ("surface", "ray")
+
 
 def compute_pitch(mesh, target_longest_studs: int, min_pitch: float = 0.005) -> float:
     if target_longest_studs <= 0:
@@ -84,6 +86,87 @@ def occupied_indices_to_points(grid, occupancy: np.ndarray) -> tuple[np.ndarray,
     return indices, points
 
 
+def occupied_indices_to_center_points(
+    occupancy: np.ndarray,
+    origin: np.ndarray,
+    pitch: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    indices = np.argwhere(occupancy)
+    if len(indices) == 0:
+        return indices, np.zeros((0, 3), dtype=np.float32)
+    points = np.asarray(origin, dtype=np.float32) + (indices.astype(np.float32) + 0.5) * float(pitch)
+    return indices, points
+
+
+def voxelize_mesh_with_surface(mesh, pitch: float, fill: bool) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    grid = mesh.voxelized(pitch)
+    if fill:
+        grid = grid.fill()
+    occupancy = grid.matrix.astype(bool)
+    indices, points = occupied_indices_to_points(grid, occupancy)
+    return occupancy, voxel_grid_origin(grid), points_for_indices(occupancy, indices, points)
+
+
+def points_for_indices(occupancy: np.ndarray, indices: np.ndarray, points: np.ndarray) -> np.ndarray:
+    point_grid = np.zeros((*occupancy.shape, 3), dtype=np.float32)
+    if len(indices):
+        point_grid[indices[:, 0], indices[:, 1], indices[:, 2]] = points
+    return point_grid
+
+
+def _dedupe_sorted_hits(values: np.ndarray, tolerance: float) -> list[float]:
+    if len(values) == 0:
+        return []
+    sorted_values = sorted(float(value) for value in values)
+    deduped = [sorted_values[0]]
+    for value in sorted_values[1:]:
+        if abs(value - deduped[-1]) > tolerance:
+            deduped.append(value)
+    return deduped
+
+
+def voxelize_mesh_with_vertical_rays(mesh, pitch: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    bounds = np.asarray(mesh.bounds, dtype=np.float64)
+    extents = np.asarray(mesh.extents, dtype=np.float64)
+    shape = np.maximum(1, np.ceil(extents / pitch).astype(int))
+    origin = bounds[0].astype(np.float32)
+    x_centers = bounds[0, 0] + (np.arange(shape[0], dtype=np.float64) + 0.5) * pitch
+    y_centers = bounds[0, 1] + (np.arange(shape[1], dtype=np.float64) + 0.5) * pitch
+    z_centers = bounds[0, 2] + (np.arange(shape[2], dtype=np.float64) + 0.5) * pitch
+    origins = np.array(
+        [[x, bounds[0, 1] - pitch, z] for x in x_centers for z in z_centers],
+        dtype=np.float64,
+    )
+    directions = np.tile(np.array([[0.0, 1.0, 0.0]], dtype=np.float64), (len(origins), 1))
+    locations, ray_indices, _triangle_indices = mesh.ray.intersects_location(
+        origins,
+        directions,
+        multiple_hits=True,
+    )
+    occupancy = np.zeros(tuple(int(value) for value in shape), dtype=bool)
+    hits_by_ray: dict[int, list[float]] = {}
+    for location, ray_index in zip(locations, ray_indices):
+        hits_by_ray.setdefault(int(ray_index), []).append(float(location[1]))
+    ray_count_z = shape[2]
+    tolerance = max(float(pitch) * 0.1, 1e-8)
+    for ray_index, hit_values in hits_by_ray.items():
+        hits = _dedupe_sorted_hits(np.asarray(hit_values, dtype=np.float64), tolerance=tolerance)
+        if len(hits) < 2:
+            continue
+        if len(hits) % 2 == 1:
+            intervals = [(hits[0], hits[-1])]
+        else:
+            intervals = list(zip(hits[0::2], hits[1::2]))
+        x_index = ray_index // ray_count_z
+        z_index = ray_index % ray_count_z
+        for start, end in intervals:
+            if end < start:
+                start, end = end, start
+            occupancy[x_index, (y_centers >= start) & (y_centers <= end), z_index] = True
+    indices, points = occupied_indices_to_center_points(occupancy, origin, pitch)
+    return occupancy, origin, points_for_indices(occupancy, indices, points)
+
+
 def voxelize_mesh(
     mesh,
     output_path: Path,
@@ -94,15 +177,19 @@ def voxelize_mesh(
     palette_ids: np.ndarray | None = None,
     palette_rgb: np.ndarray | None = None,
     sample_colors: bool = False,
+    voxelizer: str = "surface",
 ) -> VoxelArtifact:
-    grid = mesh.voxelized(pitch)
-    if fill:
-        grid = grid.fill()
-    occupancy = grid.matrix.astype(bool)
+    if voxelizer not in VOXELIZERS:
+        raise ValueError(f"Unsupported voxelizer: {voxelizer}")
+    if voxelizer == "ray":
+        occupancy, origin, point_grid = voxelize_mesh_with_vertical_rays(mesh, pitch)
+    else:
+        occupancy, origin, point_grid = voxelize_mesh_with_surface(mesh, pitch, fill=fill)
     rgb = np.zeros((*occupancy.shape, 3), dtype=np.uint8)
     rgb_value = default_rgb or (160, 165, 169)
     if sample_colors:
-        indices, points = occupied_indices_to_points(grid, occupancy)
+        indices = np.argwhere(occupancy)
+        points = point_grid[occupancy]
         rgb_values = sample_mesh_rgb(mesh, points, default_rgb=rgb_value)
         if len(indices):
             rgb[indices[:, 0], indices[:, 1], indices[:, 2]] = rgb_values
@@ -120,5 +207,4 @@ def voxelize_mesh(
         )
     else:
         color_ids = np.full(occupancy.shape, int(default_color_id), dtype=np.int32)
-    origin = voxel_grid_origin(grid)
     return save_voxel_artifact(output_path, occupancy, color_ids, rgb, origin, pitch)

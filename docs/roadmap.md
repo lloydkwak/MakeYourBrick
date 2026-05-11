@@ -19,6 +19,11 @@
 - SAM 3D Objects GLB export wrapper
 - Backend `sam3d` mode mask validation and config endpoint
 - Studio-like sculpture options: shell mode, base thickness, layer steps, layered optimizer, and stability metrics
+- LDraw center-origin placement calibration for the supported basic brick set
+- Procedural mesh quality samples and comparison reports
+- Auto Y-up mesh orientation for Z-up OBJ/STL sculpture assets
+- Expanded Studio-style brick candidate set through 2x10 and 1x8 bricks
+- Studio-like vertical ray voxelizer for open OBJ/STL sculpture assets
 
 ## Next Work
 
@@ -42,16 +47,16 @@ Replace placeholder mask generation with a real SAM/SAM 2 segmentation predictor
 
 Current color sampling supports nearest vertex and nearest face color. Add material and UV texture sampling for GLB assets.
 
-### 4. LDraw Part Origin Calibration
+### 4. LDraw Visual Calibration
 
-The current LDraw writer uses a simple grid-to-LDU mapping. Visually verify optimized bricks in Stud.io or LDraw tools and add part-specific origin offsets if needed.
+The writer now uses center-origin placement for the supported basic brick set. Visually verify the generated placement fixture in Stud.io or LDraw tools and add part-specific exceptions if a broader part palette introduces non-standard origins.
 
 ### 5. Structural Stability
 
-Layered optimization now reports basic support and seam metrics. Further work can add:
+Layered optimization now reports support, seam, connected component, and overhang-risk metrics. Further work can add:
 
-- overhang limits
-- staggered placement preference
+- hard overhang limits
+- global layer optimization instead of local scored placement
 - stability score inspired by StableLego and related LEGO optimization work
 
 ### 6. Palette Expansion
@@ -63,5 +68,7 @@ The bundled LDraw palette is a starter subset. Replace it with a broader, valida
 - Real SAM inference has not been run inside this repository.
 - Real SAM output may need a mesh extraction path if the current upstream wrapper cannot access GLB or mesh output in the installed version.
 - Watertight repair is explicit but may still approximate difficult AI-generated meshes.
+- Non-watertight meshes can still produce holes unless repaired externally or approximated with `convex-hull`.
 - Physical buildability is only approximate.
-- LDraw optimized part placement should be visually checked in Stud.io.
+- Studio's internal sculpture algorithm is proprietary; MakeYourBrick approximates it from documented options and observed `.io` output.
+- LDraw optimized part placement should still be visually checked in Stud.io with the generated fixture.

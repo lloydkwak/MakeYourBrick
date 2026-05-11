@@ -132,7 +132,7 @@ def test_mesh_to_ldr_cli_can_write_optimized_output() -> None:
         brick_lines = [line for line in ldr_path.read_text(encoding="utf-8").splitlines() if line.startswith("1 ")]
         assert brick_lines
         assert len(brick_lines) < 729
-        assert any(line.endswith("3001.dat") for line in brick_lines)
+        assert any(line.endswith(("3001.dat", "3006.dat", "3007.dat", "2456.dat")) for line in brick_lines)
     finally:
         input_mesh.unlink(missing_ok=True)
         cleaned_mesh.unlink(missing_ok=True)

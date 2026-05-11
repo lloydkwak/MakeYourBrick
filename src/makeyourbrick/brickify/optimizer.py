@@ -6,9 +6,16 @@ from makeyourbrick.types import Brick, BrickSpec
 
 
 DEFAULT_BRICKS = (
+    BrickSpec("3006.dat", 2, 10),
+    BrickSpec("3007.dat", 2, 8),
+    BrickSpec("2456.dat", 2, 6),
     BrickSpec("3001.dat", 2, 4),
+    BrickSpec("3008.dat", 1, 8),
+    BrickSpec("3002.dat", 2, 3),
+    BrickSpec("3009.dat", 1, 6),
     BrickSpec("3010.dat", 1, 4),
     BrickSpec("3003.dat", 2, 2),
+    BrickSpec("3622.dat", 1, 3),
     BrickSpec("3004.dat", 1, 2),
     BrickSpec("3005.dat", 1, 1),
 )
@@ -31,6 +38,17 @@ def iter_occupied_voxels(occupancy: np.ndarray):
             for x in range(width):
                 if occupancy[x, y, z]:
                     yield x, y, z
+
+
+def iter_layer_voxels(occupancy: np.ndarray, y: int):
+    """Yield occupied voxel coordinates for one layer, then depth, then width."""
+    if occupancy.ndim != 3:
+        raise ValueError("Occupancy must be a 3D array.")
+    width, _height, depth = occupancy.shape
+    for z in range(depth):
+        for x in range(width):
+            if occupancy[x, y, z]:
+                yield x, y, z
 
 
 def brickify_1x1(occupancy: np.ndarray, color_ids: np.ndarray, part_id: str = "3005.dat") -> list[Brick]:
@@ -204,9 +222,17 @@ def layered_candidate_score(
 ) -> float:
     area = width * depth
     support_ratio = support_ratio_for_area(used, x, y, z, width, depth)
+    unsupported_cells = area * (1.0 - support_ratio)
     seam_overlap = seam_overlap_ratio(placed_bricks, y, x, z, width, depth)
-    overhang_penalty = 1.0 - support_ratio
-    return (area * 10.0) + (support_ratio * 4.0) - (overhang_penalty * 8.0) - (seam_overlap * 2.0)
+    overhang_penalty = unsupported_cells * 12.0 if y > 0 else 0.0
+    weak_support_penalty = 18.0 if 0 < support_ratio < 0.5 else 0.0
+    return (
+        (area * 6.0)
+        + (support_ratio * 30.0)
+        - overhang_penalty
+        - weak_support_penalty
+        - (seam_overlap * 6.0)
+    )
 
 
 def layered_brickify(
@@ -219,64 +245,66 @@ def layered_brickify(
     used = np.zeros_like(occupancy, dtype=bool)
     bricks: list[Brick] = []
 
-    for x, y, z in iter_occupied_voxels(occupancy):
-        if used[x, y, z]:
-            continue
-        color_id = int(color_ids[x, y, z])
-        candidates: list[tuple[float, Brick]] = []
-        for spec in brick_specs:
-            for width, depth, rotation_degrees in candidate_orientations(spec, allow_rotations):
-                if can_place_brick(
-                    occupancy,
-                    used,
-                    color_ids,
-                    x,
-                    y,
-                    z,
-                    width,
-                    depth,
-                    spec.height,
-                    color_id,
-                ):
-                    score = layered_candidate_score(
-                        placed_bricks=bricks,
-                        used=used,
-                        x=x,
-                        y=y,
-                        z=z,
-                        width=width,
-                        depth=depth,
-                    )
-                    candidates.append(
-                        (
-                            score,
-                            Brick(
-                                part_id=spec.part_id,
-                                color_id=color_id,
-                                x=int(x),
-                                y=int(y),
-                                z=int(z),
-                                width=int(width),
-                                depth=int(depth),
-                                height=int(spec.height),
-                                rotation_degrees=rotation_degrees,
-                            ),
+    for y in range(occupancy.shape[1]):
+        for x, _y, z in iter_layer_voxels(occupancy, y):
+            if used[x, y, z]:
+                continue
+            color_id = int(color_ids[x, y, z])
+            candidates: list[tuple[float, int, Brick]] = []
+            for spec_index, spec in enumerate(brick_specs):
+                for width, depth, rotation_degrees in candidate_orientations(spec, allow_rotations):
+                    if can_place_brick(
+                        occupancy,
+                        used,
+                        color_ids,
+                        x,
+                        y,
+                        z,
+                        width,
+                        depth,
+                        spec.height,
+                        color_id,
+                    ):
+                        score = layered_candidate_score(
+                            placed_bricks=bricks,
+                            used=used,
+                            x=x,
+                            y=y,
+                            z=z,
+                            width=width,
+                            depth=depth,
                         )
-                    )
-        if candidates:
-            _score, brick = max(candidates, key=lambda item: item[0])
-        else:
-            brick = Brick(
-                part_id="3005.dat",
-                color_id=color_id,
-                x=int(x),
-                y=int(y),
-                z=int(z),
-                width=1,
-                depth=1,
-            )
-        bricks.append(brick)
-        mark_used(used, brick)
+                        candidates.append(
+                            (
+                                score,
+                                -spec_index,
+                                Brick(
+                                    part_id=spec.part_id,
+                                    color_id=color_id,
+                                    x=int(x),
+                                    y=int(y),
+                                    z=int(z),
+                                    width=int(width),
+                                    depth=int(depth),
+                                    height=int(spec.height),
+                                    rotation_degrees=rotation_degrees,
+                                ),
+                            )
+                        )
+            if candidates:
+                _score, _spec_order, brick = max(candidates, key=lambda item: (item[0], item[1]))
+            else:
+                brick = Brick(
+                    part_id="3005.dat",
+                    color_id=color_id,
+                    x=int(x),
+                    y=int(y),
+                    z=int(z),
+                    width=1,
+                    depth=1,
+                )
+            bricks.append(brick)
+            mark_used(used, brick)
     return bricks
 
 

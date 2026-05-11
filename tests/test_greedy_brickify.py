@@ -8,9 +8,11 @@ from makeyourbrick.brickify.optimizer import (
     can_place_brick,
     greedy_brickify,
     layered_brickify,
+    layered_candidate_score,
     seam_overlap_ratio,
     support_ratio_for_area,
 )
+from makeyourbrick.types import Brick
 from makeyourbrick.voxel.synthetic import make_solid_box
 
 
@@ -34,6 +36,18 @@ def test_greedy_brickify_reduces_uniform_box_to_one_2x4_brick() -> None:
     assert optimized[0].width == 2
     assert optimized[0].depth == 4
     assert optimized[0].rotation_degrees == 0
+    np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)
+
+
+def test_greedy_brickify_uses_longer_studio_style_bricks() -> None:
+    occupancy, color_ids = make_solid_box((2, 1, 8), color_id=16)
+
+    optimized = greedy_brickify(occupancy, color_ids)
+
+    assert len(optimized) == 1
+    assert optimized[0].part_id == "3007.dat"
+    assert optimized[0].width == 2
+    assert optimized[0].depth == 8
     np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)
 
 
@@ -99,3 +113,55 @@ def test_layered_brickify_preserves_occupancy_and_color_boundaries() -> None:
 
     assert {brick.color_id for brick in optimized} == {14, 16}
     np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)
+
+
+def test_layered_candidate_score_prefers_supported_smaller_brick_over_overhang() -> None:
+    used = np.zeros((4, 2, 2), dtype=bool)
+    used[0:2, 0, 0:2] = True
+
+    supported_score = layered_candidate_score(
+        placed_bricks=[],
+        used=used,
+        x=0,
+        y=1,
+        z=0,
+        width=2,
+        depth=2,
+    )
+    overhang_score = layered_candidate_score(
+        placed_bricks=[],
+        used=used,
+        x=0,
+        y=1,
+        z=0,
+        width=4,
+        depth=2,
+    )
+
+    assert supported_score > overhang_score
+
+
+def test_layered_candidate_score_penalizes_vertical_seam_alignment() -> None:
+    used = np.ones((2, 2, 2), dtype=bool)
+    lower_bricks = [Brick("3003.dat", 16, 0, 0, 0, width=2, depth=2)]
+
+    aligned_score = layered_candidate_score(
+        placed_bricks=lower_bricks,
+        used=used,
+        x=0,
+        y=1,
+        z=0,
+        width=2,
+        depth=2,
+    )
+    no_lower_seam_score = layered_candidate_score(
+        placed_bricks=[],
+        used=used,
+        x=0,
+        y=1,
+        z=0,
+        width=2,
+        depth=2,
+    )
+
+    assert aligned_score < no_lower_seam_score

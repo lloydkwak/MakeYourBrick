@@ -12,6 +12,7 @@ from makeyourbrick.voxel.voxelize import (
     compute_pitch,
     load_voxel_artifact,
     save_voxel_artifact,
+    voxelize_mesh_with_vertical_rays,
     voxelize_mesh,
 )
 
@@ -63,6 +64,30 @@ def test_voxelize_mesh_writes_occupancy_and_default_color_ids() -> None:
         assert np.all(color_ids[occupancy] == 4)
         assert rgb.shape == (*occupancy.shape, 3)
         assert pitch == pytest.approx(0.5)
+    finally:
+        output_path.unlink(missing_ok=True)
+
+
+def test_vertical_ray_voxelizer_fills_box_columns() -> None:
+    mesh = trimesh.creation.box(extents=(1, 1, 1))
+
+    occupancy, origin, _points = voxelize_mesh_with_vertical_rays(mesh, pitch=0.25)
+
+    assert occupancy.ndim == 3
+    assert occupancy.sum() > 0
+    assert occupancy[:, 1:-1, :].any()
+    assert origin.shape == (3,)
+
+
+def test_voxelize_mesh_supports_ray_voxelizer() -> None:
+    output_path = Path("outputs/voxels/test_ray_box_voxels.npz")
+    mesh = trimesh.creation.box(extents=(1, 1, 1))
+    try:
+        voxelize_mesh(mesh, output_path, pitch=0.25, voxelizer="ray", default_color_id=4)
+
+        occupancy, color_ids, _rgb, _origin, _pitch = load_voxel_artifact(output_path)
+        assert occupancy.sum() > 0
+        assert set(color_ids[occupancy]) == {4}
     finally:
         output_path.unlink(missing_ok=True)
 

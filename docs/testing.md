@@ -15,12 +15,16 @@ The current suite covers:
 - layered brick optimization
 - sculpture shell occupancy mode
 - LDraw layer step output
+- LDraw placement fixture generation
 - stability report metrics
+- connected component and overhang-risk metrics
 - LDraw coordinate and rotation output
 - color palette loading and CIELAB quantization
 - mesh loading and cleanup
 - mesh inspection reports and CLI
 - mesh repair modes and reports
+- mesh orientation inference and Y-up conversion
+- surface and ray voxelization
 - mesh color sampling
 - voxel artifact save/load
 - mesh-to-LDraw CLI
@@ -32,6 +36,7 @@ The current suite covers:
 - backend `sam3d` mode mask validation
 - placeholder segmentation mask generation
 - optimizer report generation
+- procedural mesh quality sample comparison
 
 ## Test Design
 
@@ -51,6 +56,18 @@ Mesh optimized output:
 
 ```bash
 python scripts/mesh_to_ldr.py --mesh data/examples/sample.stl --target-studs 8 --optimize --output outputs/ldr/mesh_optimized.ldr
+```
+
+Placement fixture for Stud.io:
+
+```bash
+python scripts/make_ldraw_placement_fixture.py --steps-by-layer
+```
+
+Mesh quality sample comparison:
+
+```bash
+python scripts/compare_mesh_samples.py --target-studs 8
 ```
 
 Fake image pipeline:

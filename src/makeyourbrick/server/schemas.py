@@ -46,8 +46,10 @@ class JobRequest(BaseModel):
     optimize: bool = True
     optimizer: Literal["greedy", "layered"] = "greedy"
     fill: bool = True
+    voxelizer: Literal["surface", "ray"] = "surface"
     default_color_id: int = Field(default=16, ge=0, le=999)
     repair_mode: Literal["none", "basic", "manifold", "convex-hull"] = "basic"
+    up_axis: Literal["auto", "none", "x", "y", "z"] = "auto"
     sculpture_mode: Literal["solid", "shell"] = "solid"
     wall_thickness: int = Field(default=1, ge=1, le=16)
     base_thickness: int = Field(default=0, ge=0, le=64)

@@ -151,6 +151,103 @@ Acceptance criteria:
 ## Deferred Work
 
 - True Studio connectivity checks.
-- Part-specific LDraw origin offset calibration.
 - Broader brick palette and plate support.
 - Cost-aware or inventory-aware brick selection.
+
+## Phase 6: LDraw Placement Calibration
+
+Status: completed.
+
+Purpose:
+
+Match Stud.io/LDraw placement expectations for the basic brick set before deeper optimizer work.
+
+Tasks:
+
+- [x] Calibrate part placement around the LDraw part center origin.
+- [x] Keep 1x1 placement unchanged.
+- [x] Offset larger brick origins by half their footprint.
+- [x] Preserve right-angle rotation matrices.
+- [x] Add a placement fixture generator for Stud.io visual inspection.
+- [x] Add tests for 2x4, 1x4, 2x2, 1x2, and 1x1 placement.
+
+Acceptance criteria:
+
+- [x] Large bricks cover the same voxel footprint as equivalent 1x1 bricks.
+- [x] The fixture can be generated with `scripts/make_ldraw_placement_fixture.py`.
+- [x] The fixture includes all currently supported basic brick parts and a rotated 2x4 case.
+
+## Phase 7: Mesh Sample Quality Comparison
+
+Status: completed.
+
+Purpose:
+
+Create repeatable mesh fixtures so sculpture quality can be compared across shape classes before and after optimizer changes.
+
+Tasks:
+
+- [x] Add procedural mesh samples for a sphere, bust-like shape, and object-like shape.
+- [x] Convert samples through the same mesh-to-LDR pipeline used by real SAM outputs.
+- [x] Write per-sample LDR files and optimizer reports.
+- [x] Write one JSON summary with brick counts, reduction ratio, and stability metrics.
+- [x] Add tests for sample mesh creation and one end-to-end sample comparison.
+
+Acceptance criteria:
+
+- [x] Sample comparison can be generated with `scripts/compare_mesh_samples.py`.
+- [x] Summary reports include artifact paths and stability metrics.
+- [x] The comparison uses shell sculpture mode, layered optimizer, and layer-step output by default.
+
+## Phase 8: OBJ Orientation and Studio Part Set Alignment
+
+Status: completed.
+
+Purpose:
+
+Fix Z-up OBJ imports that appeared sideways in LDraw viewers and make optimizer output closer to Studio sculpture imports.
+
+Tasks:
+
+- [x] Add mesh orientation support before voxelization.
+- [x] Add `up_axis`: `auto`, `none`, `x`, `y`, or `z`.
+- [x] Rotate clearly dominant Z-up meshes into the pipeline Y-up coordinate system by default.
+- [x] Record mesh orientation details in the optimizer report JSON.
+- [x] Expand the default brick candidate set with Studio-style long bricks:
+  - `3006.dat` 2x10
+  - `3007.dat` 2x8
+  - `2456.dat` 2x6
+  - `3008.dat` 1x8
+  - `3009.dat` 1x6
+  - `3002.dat` 2x3
+  - `3622.dat` 1x3
+- [x] Add tests for orientation inference and longer brick selection.
+
+Acceptance criteria:
+
+- [x] Z-up OBJ assets no longer lie sideways after conversion.
+- [x] Queen OBJ converts to a 60-layer upright LDR when using `--target-studs 60 --up-axis auto`.
+- [x] The optimizer can use the same long brick families seen in the Studio import output.
+
+## Phase 9: Studio-Like Ray Voxelizer
+
+Status: completed.
+
+Purpose:
+
+Reduce holes and broken silhouettes on open OBJ/STL sculpture assets where surface voxelization cannot build reliable filled volumes.
+
+Tasks:
+
+- [x] Add `surface` and `ray` voxelizer options.
+- [x] Keep `surface` as the compatibility path for existing tests and watertight meshes.
+- [x] Add vertical scanline voxelization that casts one ray through each stud column.
+- [x] Fill paired ray-intersection intervals along the vertical axis.
+- [x] Handle odd ray hit counts by filling between first and last hit for sculpture-style open meshes.
+- [x] Add CLI/API pass-through for `--voxelizer surface|ray`.
+- [x] Add tests for ray voxelization.
+
+Acceptance criteria:
+
+- [x] `queen.obj` can be converted with `--up-axis auto --voxelizer ray --target-studs 60`.
+- [x] The generated model is upright, layer-stepped, and one connected component.

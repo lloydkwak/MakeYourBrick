@@ -233,3 +233,11 @@ data/examples/**
 third_party/**
 !third_party/**/
 !third_party/**/.gitkeep
+
+# Local Studio imports and reference assets
+*.obj
+*.odj
+*.io
+/studio/
+/Studio/
+/Studio 2.0/

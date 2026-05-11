@@ -8,6 +8,7 @@ from makeyourbrick.io.ldr_writer import (
     brick_to_ldr_line,
     brick_to_ldraw_matrix,
     brick_to_ldraw_position,
+    format_ldraw_number,
     write_ldr,
 )
 from makeyourbrick.types import Brick
@@ -17,6 +18,21 @@ def test_brick_to_ldraw_position_uses_ldraw_units() -> None:
     brick = Brick("3005.dat", color_id=16, x=2, y=3, z=4, width=1, depth=1)
 
     assert brick_to_ldraw_position(brick) == (40, -72, 80)
+
+
+def test_brick_to_ldraw_position_uses_part_center_origin() -> None:
+    assert brick_to_ldraw_position(Brick("3003.dat", 16, 0, 0, 0, 2, 2)) == (10, 0, 10)
+    assert brick_to_ldraw_position(Brick("3001.dat", 16, 0, 0, 0, 2, 4)) == (10, 0, 30)
+    assert brick_to_ldraw_position(Brick("3001.dat", 16, 0, 0, 0, 4, 2, rotation_degrees=90)) == (
+        30,
+        0,
+        10,
+    )
+
+
+def test_format_ldraw_number_keeps_integer_output_compact() -> None:
+    assert format_ldraw_number(10.0) == "10"
+    assert format_ldraw_number(0.5) == "0.5"
 
 
 def test_brick_to_ldr_line_writes_type_1_part_reference() -> None:

@@ -22,6 +22,7 @@ def build_brick_report(
     optimizer: str = "greedy",
     stability: dict | None = None,
     sculpture: dict | None = None,
+    mesh_orientation: dict | None = None,
 ) -> dict:
     input_count = len(input_bricks)
     output_count = len(output_bricks)
@@ -41,9 +42,45 @@ def build_brick_report(
     }
     if sculpture is not None:
         report["sculpture"] = sculpture
+    if mesh_orientation is not None:
+        report["mesh_orientation"] = mesh_orientation
     if stability is not None:
         report["stability"] = stability
     return report
+
+
+def connected_component_sizes(occupancy: np.ndarray) -> list[int]:
+    if occupancy.ndim != 3:
+        raise ValueError("Occupancy must be a 3D array.")
+    visited = np.zeros_like(occupancy, dtype=bool)
+    sizes: list[int] = []
+    width, height, depth = occupancy.shape
+    for start in np.argwhere(occupancy):
+        x, y, z = (int(value) for value in start)
+        if visited[x, y, z]:
+            continue
+        stack = [(x, y, z)]
+        visited[x, y, z] = True
+        size = 0
+        while stack:
+            cx, cy, cz = stack.pop()
+            size += 1
+            for dx, dy, dz in (
+                (-1, 0, 0),
+                (1, 0, 0),
+                (0, -1, 0),
+                (0, 1, 0),
+                (0, 0, -1),
+                (0, 0, 1),
+            ):
+                nx, ny, nz = cx + dx, cy + dy, cz + dz
+                if not (0 <= nx < width and 0 <= ny < height and 0 <= nz < depth):
+                    continue
+                if occupancy[nx, ny, nz] and not visited[nx, ny, nz]:
+                    visited[nx, ny, nz] = True
+                    stack.append((nx, ny, nz))
+        sizes.append(size)
+    return sorted(sizes, reverse=True)
 
 
 def build_stability_report(
@@ -53,13 +90,20 @@ def build_stability_report(
     sculpture_mode: str = "solid",
     wall_thickness: int = 1,
     base_thickness: int = 0,
+    low_support_threshold: float = 0.5,
+    overhang_risk_threshold: float = 0.75,
 ) -> dict:
     if not bricks:
         return {
             "unsupported_brick_count": 0,
             "floating_brick_count": 0,
+            "low_support_brick_count": 0,
+            "overhang_risk_brick_count": 0,
             "average_support_ratio": 1.0,
             "vertical_seam_alignment_score": 0.0,
+            "connected_component_count": 0,
+            "largest_connected_component_voxel_count": 0,
+            "disconnected_voxel_count": 0,
             "layer_count": 0,
             "sculpture_mode": sculpture_mode,
             "wall_thickness": int(wall_thickness),
@@ -77,11 +121,26 @@ def build_stability_report(
     ]
     unsupported = sum(1 for brick, ratio in zip(bricks, support_ratios) if brick.y > 0 and ratio < 1.0)
     floating = sum(1 for brick, ratio in zip(bricks, support_ratios) if brick.y > 0 and ratio == 0.0)
+    low_support = sum(
+        1 for brick, ratio in zip(bricks, support_ratios) if brick.y > 0 and 0.0 < ratio < low_support_threshold
+    )
+    overhang_risk = sum(
+        1
+        for brick, ratio in zip(bricks, support_ratios)
+        if brick.y > 0 and 0.0 < ratio < overhang_risk_threshold
+    )
+    component_sizes = connected_component_sizes(brick_occupancy)
+    largest_component = component_sizes[0] if component_sizes else 0
     return {
         "unsupported_brick_count": int(unsupported),
         "floating_brick_count": int(floating),
+        "low_support_brick_count": int(low_support),
+        "overhang_risk_brick_count": int(overhang_risk),
         "average_support_ratio": round(float(np.mean(support_ratios)), 4),
         "vertical_seam_alignment_score": round(float(np.mean(seam_scores)) if seam_scores else 0.0, 4),
+        "connected_component_count": int(len(component_sizes)),
+        "largest_connected_component_voxel_count": int(largest_component),
+        "disconnected_voxel_count": int(max(0, brick_occupancy.sum() - largest_component)),
         "layer_count": int(len({brick.y for brick in bricks})),
         "sculpture_mode": sculpture_mode,
         "wall_thickness": int(wall_thickness),

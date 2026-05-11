@@ -9,6 +9,8 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from makeyourbrick.pipeline import convert_mesh_to_ldr
 from makeyourbrick.mesh.repair import REPAIR_MODES
+from makeyourbrick.mesh.orient import UP_AXIS_OPTIONS
+from makeyourbrick.voxel.voxelize import VOXELIZERS
 from makeyourbrick.voxel.sculpture import SCULPTURE_MODES
 
 
@@ -32,6 +34,12 @@ def parse_args() -> argparse.Namespace:
         help="LDraw palette JSON path used with --rgb.",
     )
     parser.add_argument("--no-fill", action="store_true", help="Skip voxel fill.")
+    parser.add_argument(
+        "--voxelizer",
+        choices=VOXELIZERS,
+        default="surface",
+        help="Voxelization method. Use ray for layer-by-layer sculpture-style filling.",
+    )
     parser.add_argument("--optimize", action="store_true", help="Merge voxels into larger bricks.")
     parser.add_argument(
         "--optimizer",
@@ -59,6 +67,12 @@ def parse_args() -> argparse.Namespace:
         choices=REPAIR_MODES,
         default="basic",
         help="Mesh repair mode before voxelization.",
+    )
+    parser.add_argument(
+        "--up-axis",
+        choices=UP_AXIS_OPTIONS,
+        default="auto",
+        help="Source mesh up axis. Auto maps a clearly dominant longest axis to LDraw vertical.",
     )
     parser.add_argument("--repair-report", type=Path, help="Optional mesh repair report JSON path.")
     parser.add_argument(
@@ -92,6 +106,7 @@ def main() -> None:
         target_longest_studs=args.target_studs,
         min_pitch=args.min_pitch,
         fill=not args.no_fill,
+        voxelizer=args.voxelizer,
         default_color_id=args.color,
         default_rgb=tuple(args.rgb) if args.rgb else None,
         palette_path=args.palette,
@@ -101,6 +116,7 @@ def main() -> None:
         report_path=args.report,
         repair_mode=args.repair_mode,
         repair_report_path=args.repair_report,
+        up_axis=args.up_axis,
         sculpture_mode=args.sculpture_mode,
         wall_thickness=args.wall_thickness,
         base_thickness=args.base_thickness,

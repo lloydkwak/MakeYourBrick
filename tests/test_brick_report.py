@@ -3,8 +3,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
+
 from makeyourbrick.brickify.optimizer import brickify_1x1, greedy_brickify
-from makeyourbrick.brickify.report import build_brick_report, build_stability_report, write_brick_report
+from makeyourbrick.brickify.report import (
+    build_brick_report,
+    build_stability_report,
+    connected_component_sizes,
+    write_brick_report,
+)
 from makeyourbrick.types import Brick
 from makeyourbrick.voxel.synthetic import make_solid_box
 
@@ -55,8 +62,42 @@ def test_build_stability_report_counts_support_and_layers() -> None:
 
     assert report["unsupported_brick_count"] == 1
     assert report["floating_brick_count"] == 1
+    assert report["low_support_brick_count"] == 0
+    assert report["overhang_risk_brick_count"] == 0
+    assert report["connected_component_count"] == 2
+    assert report["disconnected_voxel_count"] == 1
     assert report["layer_count"] == 2
     assert report["sculpture_mode"] == "shell"
+
+
+def test_build_stability_report_flags_low_support_and_overhang_risk() -> None:
+    bricks = [
+        Brick("3001.dat", 16, 0, 0, 0, 4, 2, rotation_degrees=90),
+        Brick("3001.dat", 16, 0, 1, 0, 4, 2, rotation_degrees=90),
+    ]
+
+    report = build_stability_report(bricks, (4, 2, 2))
+
+    assert report["low_support_brick_count"] == 0
+    assert report["overhang_risk_brick_count"] == 0
+
+    risky = [
+        Brick("3003.dat", 16, 0, 0, 0, 2, 2),
+        Brick("3001.dat", 16, 0, 1, 0, 4, 2, rotation_degrees=90),
+    ]
+
+    risky_report = build_stability_report(risky, (4, 2, 2))
+
+    assert risky_report["low_support_brick_count"] == 0
+    assert risky_report["overhang_risk_brick_count"] == 1
+
+
+def test_connected_component_sizes_counts_disconnected_voxel_islands() -> None:
+    occupancy = np.zeros((4, 1, 1), dtype=bool)
+    occupancy[0, 0, 0] = True
+    occupancy[3, 0, 0] = True
+
+    assert connected_component_sizes(occupancy) == [1, 1]
 
 
 def test_build_brick_report_can_include_sculpture_and_stability_sections() -> None:
