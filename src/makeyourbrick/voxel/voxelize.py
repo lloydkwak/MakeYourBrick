@@ -14,6 +14,7 @@ from makeyourbrick.mesh.color_sampling import sample_mesh_rgb
 from makeyourbrick.types import VoxelArtifact
 
 VOXELIZERS = ("surface", "ray")
+RAY_FILL_MODES = ("wide", "balanced")
 
 
 def compute_pitch(mesh, target_longest_studs: int, min_pitch: float = 0.005) -> float:
@@ -125,7 +126,35 @@ def _dedupe_sorted_hits(values: np.ndarray, tolerance: float) -> list[float]:
     return deduped
 
 
-def voxelize_mesh_with_vertical_rays(mesh, pitch: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def _pair_ray_hit_intervals(hits: list[float], mode: str = "wide") -> list[tuple[float, float]]:
+    if mode not in RAY_FILL_MODES:
+        raise ValueError(f"Unsupported ray fill mode: {mode}")
+    if len(hits) < 2:
+        return []
+    if len(hits) % 2 == 0:
+        return list(zip(hits[0::2], hits[1::2]))
+    if mode == "wide":
+        return [(hits[0], hits[-1])]
+
+    best_intervals: list[tuple[float, float]] = []
+    best_length: float | None = None
+    for drop_index in range(len(hits)):
+        candidate_hits = hits[:drop_index] + hits[drop_index + 1 :]
+        intervals = list(zip(candidate_hits[0::2], candidate_hits[1::2]))
+        interval_length = sum(abs(end - start) for start, end in intervals)
+        if best_length is None or interval_length < best_length:
+            best_length = interval_length
+            best_intervals = intervals
+    return best_intervals
+
+
+def voxelize_mesh_with_vertical_rays(
+    mesh,
+    pitch: float,
+    ray_fill: str = "wide",
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    if ray_fill not in RAY_FILL_MODES:
+        raise ValueError(f"Unsupported ray fill mode: {ray_fill}")
     bounds = np.asarray(mesh.bounds, dtype=np.float64)
     extents = np.asarray(mesh.extents, dtype=np.float64)
     shape = np.maximum(1, np.ceil(extents / pitch).astype(int))
@@ -151,12 +180,7 @@ def voxelize_mesh_with_vertical_rays(mesh, pitch: float) -> tuple[np.ndarray, np
     tolerance = max(float(pitch) * 0.1, 1e-8)
     for ray_index, hit_values in hits_by_ray.items():
         hits = _dedupe_sorted_hits(np.asarray(hit_values, dtype=np.float64), tolerance=tolerance)
-        if len(hits) < 2:
-            continue
-        if len(hits) % 2 == 1:
-            intervals = [(hits[0], hits[-1])]
-        else:
-            intervals = list(zip(hits[0::2], hits[1::2]))
+        intervals = _pair_ray_hit_intervals(hits, mode=ray_fill)
         x_index = ray_index // ray_count_z
         z_index = ray_index % ray_count_z
         for start, end in intervals:
@@ -178,11 +202,12 @@ def voxelize_mesh(
     palette_rgb: np.ndarray | None = None,
     sample_colors: bool = False,
     voxelizer: str = "surface",
+    ray_fill: str = "wide",
 ) -> VoxelArtifact:
     if voxelizer not in VOXELIZERS:
         raise ValueError(f"Unsupported voxelizer: {voxelizer}")
     if voxelizer == "ray":
-        occupancy, origin, point_grid = voxelize_mesh_with_vertical_rays(mesh, pitch)
+        occupancy, origin, point_grid = voxelize_mesh_with_vertical_rays(mesh, pitch, ray_fill=ray_fill)
     else:
         occupancy, origin, point_grid = voxelize_mesh_with_surface(mesh, pitch, fill=fill)
     rgb = np.zeros((*occupancy.shape, 3), dtype=np.uint8)

@@ -59,6 +59,7 @@ python scripts/mesh_to_ldr.py \
   --target-studs 48 \
   --up-axis auto \
   --voxelizer ray \
+  --ray-fill wide \
   --optimize \
   --optimizer layered \
   --sculpture-mode shell \
@@ -99,6 +100,7 @@ Voxelization:
 
 - `--voxelizer surface`: use Trimesh surface voxelization and fill; best for watertight meshes
 - `--voxelizer ray`: cast vertical rays through each stud column; better for Studio-like sculpture imports from open OBJ/STL assets
+- `--ray-fill wide|balanced`: choose how odd ray-hit columns are filled; `wide` preserves the original broad fill behavior, while `balanced` drops one outlier hit to reduce overfilled columns
 
 ## Mesh Inspection
 
@@ -280,6 +282,7 @@ Backend job requests also accept:
 - `wall_thickness`
 - `base_thickness`
 - `voxel_smoothing`: `none` or `light`
+- `ray_fill`: `wide` or `balanced`
 - `steps_by_layer`
 
 Start a browser workflow by opening:

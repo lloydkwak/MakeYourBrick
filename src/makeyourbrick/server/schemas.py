@@ -47,6 +47,7 @@ class JobRequest(BaseModel):
     optimizer: Literal["greedy", "layered"] = "greedy"
     fill: bool = True
     voxelizer: Literal["surface", "ray"] = "surface"
+    ray_fill: Literal["wide", "balanced"] = "wide"
     default_color_id: int = Field(default=16, ge=0, le=999)
     repair_mode: Literal["none", "basic", "manifold", "convex-hull"] = "basic"
     up_axis: Literal["auto", "none", "x", "y", "z"] = "auto"

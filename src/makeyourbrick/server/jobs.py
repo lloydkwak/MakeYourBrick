@@ -187,6 +187,7 @@ def run_pipeline_job(
             target_longest_studs=request.target_studs,
             fill=request.fill,
             voxelizer=request.voxelizer,
+            ray_fill=request.ray_fill,
             default_color_id=request.default_color_id,
             sample_colors=request.sample_colors,
             optimize=request.optimize,

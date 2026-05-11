@@ -9,6 +9,7 @@ trimesh = pytest.importorskip("trimesh")
 
 from makeyourbrick.brickify.colors import load_ldraw_palette
 from makeyourbrick.voxel.voxelize import (
+    _pair_ray_hit_intervals,
     compute_pitch,
     load_voxel_artifact,
     save_voxel_artifact,
@@ -77,6 +78,24 @@ def test_vertical_ray_voxelizer_fills_box_columns() -> None:
     assert occupancy.sum() > 0
     assert occupancy[:, 1:-1, :].any()
     assert origin.shape == (3,)
+
+
+def test_pair_ray_hit_intervals_pairs_even_hits() -> None:
+    intervals = _pair_ray_hit_intervals([0.0, 1.0, 3.0, 4.0])
+
+    assert intervals == [(0.0, 1.0), (3.0, 4.0)]
+
+
+def test_pair_ray_hit_intervals_uses_wide_fill_for_odd_hits_by_default() -> None:
+    intervals = _pair_ray_hit_intervals([0.0, 1.0, 10.0])
+
+    assert intervals == [(0.0, 10.0)]
+
+
+def test_pair_ray_hit_intervals_can_drop_outlier_for_balanced_odd_hits() -> None:
+    intervals = _pair_ray_hit_intervals([0.0, 1.0, 10.0], mode="balanced")
+
+    assert intervals == [(0.0, 1.0)]
 
 
 def test_voxelize_mesh_supports_ray_voxelizer() -> None:

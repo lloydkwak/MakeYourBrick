@@ -10,7 +10,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from makeyourbrick.pipeline import convert_mesh_to_ldr
 from makeyourbrick.mesh.repair import REPAIR_MODES
 from makeyourbrick.mesh.orient import UP_AXIS_OPTIONS
-from makeyourbrick.voxel.voxelize import VOXELIZERS
+from makeyourbrick.voxel.voxelize import RAY_FILL_MODES, VOXELIZERS
 from makeyourbrick.voxel.sculpture import SCULPTURE_MODES, VOXEL_SMOOTHING_PRESETS
 
 
@@ -39,6 +39,12 @@ def parse_args() -> argparse.Namespace:
         choices=VOXELIZERS,
         default="surface",
         help="Voxelization method. Use ray for layer-by-layer sculpture-style filling.",
+    )
+    parser.add_argument(
+        "--ray-fill",
+        choices=RAY_FILL_MODES,
+        default="wide",
+        help="Odd ray-hit fill strategy used by --voxelizer ray.",
     )
     parser.add_argument("--optimize", action="store_true", help="Merge voxels into larger bricks.")
     parser.add_argument(
@@ -113,6 +119,7 @@ def main() -> None:
         min_pitch=args.min_pitch,
         fill=not args.no_fill,
         voxelizer=args.voxelizer,
+        ray_fill=args.ray_fill,
         default_color_id=args.color,
         default_rgb=tuple(args.rgb) if args.rgb else None,
         palette_path=args.palette,
