@@ -7,6 +7,7 @@ from makeyourbrick.sculpture import (
     LayeredBrickModel,
     SculptureSettings,
     VoxelModel,
+    assign_brick_colors_by_majority,
     build_contour_shell_targets,
     catalog_for_palette,
     layered_model_matches_target,
@@ -148,3 +149,28 @@ def test_place_layered_bricks_uses_catalog_part_set() -> None:
     model = place_layered_bricks(target, catalog)
 
     assert set(brick.part_id for brick in model.bricks()) <= set(catalog.part_ids)
+
+
+def test_assign_brick_colors_by_majority_uses_voxel_region_colors() -> None:
+    brick = Brick("3003.dat", 16, 0, 0, 0, 2, 2)
+    colors = np.array([[[4, 4]], [[4, 14]]], dtype=np.int32)
+
+    colored = assign_brick_colors_by_majority([brick], colors)
+
+    assert colored[0].color_id == 4
+
+
+def test_majority_color_strategy_can_span_voxel_color_boundaries() -> None:
+    occupancy = np.ones((2, 1, 2), dtype=bool)
+    colors = np.array([[[4, 4]], [[4, 14]]], dtype=np.int32)
+    target = VoxelModel(occupancy, colors, pitch=1.0, origin=(0.0, 0.0, 0.0))
+
+    model = place_layered_bricks(
+        target,
+        catalog_for_palette("compact"),
+        color_strategy="majority",
+    )
+
+    assert len(model.bricks()) == 1
+    assert model.bricks()[0].color_id == 4
+    assert layered_model_matches_target(model, target)

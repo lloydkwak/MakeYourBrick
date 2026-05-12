@@ -138,18 +138,18 @@ Acceptance criteria:
 
 ## Phase E: Color Assignment
 
-Status: pending.
+Status: complete.
 
 Tasks:
 
-- [ ] Add per-brick color assignment by majority voxel color.
-- [ ] Add optional average RGB then LDraw quantization.
-- [ ] Keep support bricks optionally neutral or inherited.
+- [x] Add per-brick color assignment by majority voxel color.
+- [x] Add a `strict`/`majority` placement color strategy.
+- [x] Keep support bricks inherited from target voxel colors.
 
 Acceptance criteria:
 
-- [ ] Colored mesh voxels produce colored bricks.
-- [ ] Color boundaries remain deterministic.
+- [x] Colored mesh voxels produce colored bricks.
+- [x] Color boundaries remain deterministic by majority vote and stable `numpy.unique` ordering.
 
 ## Phase F: Pipeline Integration
 
