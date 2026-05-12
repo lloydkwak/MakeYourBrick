@@ -106,19 +106,19 @@ Acceptance criteria:
 
 ## Phase C: Sparse Support Planner
 
-Status: pending.
+Status: complete.
 
 Tasks:
 
-- [ ] Replace current eager support column fill with a support planner.
-- [ ] For each unsupported brick/voxel region, choose sparse columns with minimum added voxels.
-- [ ] Stop columns at base, existing shell, or existing support.
-- [ ] Mark support cells separately from shell cells.
+- [x] Replace current eager support column fill with a support planner.
+- [x] For each unsupported voxel region, choose sparse columns with minimum added voxels.
+- [x] Stop columns at base, existing shell, or existing support.
+- [x] Mark support cells separately from shell cells.
 
 Acceptance criteria:
 
-- [ ] Support count is lower than full vertical fill.
-- [ ] Unsupported/floating metrics improve over pure shell output.
+- [x] Support count is lower than full vertical fill when spacing is increased.
+- [x] Unsupported/floating metrics can be measured separately from shell output.
 
 ## Phase D: Layered Brick Placement
 

@@ -9,8 +9,10 @@ from makeyourbrick.sculpture import (
     VoxelModel,
     build_contour_shell_targets,
     catalog_for_palette,
+    plan_sparse_support_columns,
 )
 from makeyourbrick.types import Brick
+from makeyourbrick.voxel.sculpture import base_fill_mask, contour_shell_mask
 
 
 def test_voxel_model_validates_shape_and_counts() -> None:
@@ -106,3 +108,17 @@ def test_contour_shell_targets_add_sparse_support_for_overhangs() -> None:
     assert targets.support.occupied_count > 0
     assert np.all(targets.target.occupancy <= occupancy)
     assert targets.target.color_ids[targets.target.occupancy].min() == 16
+
+
+def test_sparse_support_planner_uses_fewer_columns_at_wider_spacing() -> None:
+    solid = np.zeros((7, 3, 7), dtype=bool)
+    solid[:, 0:2, :] = True
+    solid[2:5, 2, 2:5] = True
+    shell = contour_shell_mask(solid, wall_thickness=1)
+    target = shell | base_fill_mask(solid, base_thickness=1)
+
+    dense = plan_sparse_support_columns(target, solid, base_thickness=1, support_spacing=1)
+    sparse = plan_sparse_support_columns(target, solid, base_thickness=1, support_spacing=3)
+
+    assert 0 < sparse.sum() < dense.sum()
+    assert np.all(sparse <= solid)
