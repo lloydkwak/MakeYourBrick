@@ -9,7 +9,10 @@ from makeyourbrick.sculpture import (
     VoxelModel,
     build_contour_shell_targets,
     catalog_for_palette,
+    layered_model_matches_target,
+    layered_model_occupancy,
     plan_sparse_support_columns,
+    place_layered_bricks,
 )
 from makeyourbrick.types import Brick
 from makeyourbrick.voxel.sculpture import base_fill_mask, contour_shell_mask
@@ -122,3 +125,26 @@ def test_sparse_support_planner_uses_fewer_columns_at_wider_spacing() -> None:
 
     assert 0 < sparse.sum() < dense.sum()
     assert np.all(sparse <= solid)
+
+
+def test_place_layered_bricks_matches_target_occupancy() -> None:
+    occupancy = np.ones((4, 2, 4), dtype=bool)
+    colors = np.full(occupancy.shape, 16, dtype=np.int32)
+    target = VoxelModel(occupancy, colors, pitch=1.0, origin=(0.0, 0.0, 0.0))
+
+    model = place_layered_bricks(target, catalog_for_palette("compact"))
+
+    assert model.layer_count == 2
+    assert layered_model_matches_target(model, target)
+    assert np.array_equal(layered_model_occupancy(model, target.shape), occupancy)
+
+
+def test_place_layered_bricks_uses_catalog_part_set() -> None:
+    occupancy = np.ones((4, 1, 4), dtype=bool)
+    colors = np.full(occupancy.shape, 16, dtype=np.int32)
+    target = VoxelModel(occupancy, colors, pitch=1.0, origin=(0.0, 0.0, 0.0))
+    catalog = catalog_for_palette("compact")
+
+    model = place_layered_bricks(target, catalog)
+
+    assert set(brick.part_id for brick in model.bricks()) <= set(catalog.part_ids)

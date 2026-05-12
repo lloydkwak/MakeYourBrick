@@ -13,6 +13,11 @@ from makeyourbrick.sculpture.model import (
     SculptureSettings,
     VoxelModel,
 )
+from makeyourbrick.sculpture.placement import (
+    layered_model_matches_target,
+    layered_model_occupancy,
+    place_layered_bricks,
+)
 
 __all__ = [
     "BrickCatalog",
@@ -24,5 +29,8 @@ __all__ = [
     "VoxelModel",
     "build_contour_shell_targets",
     "catalog_for_palette",
+    "layered_model_matches_target",
+    "layered_model_occupancy",
+    "place_layered_bricks",
     "plan_sparse_support_columns",
 ]

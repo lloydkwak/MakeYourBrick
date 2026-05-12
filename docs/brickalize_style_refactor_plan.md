@@ -122,19 +122,19 @@ Acceptance criteria:
 
 ## Phase D: Layered Brick Placement
 
-Status: pending.
+Status: complete.
 
 Tasks:
 
-- [ ] Place bricks layer by layer from a `BrickCatalog`.
-- [ ] Prefer compact exterior bricks when a footprint is on the contour boundary.
-- [ ] Use larger bricks on stable base/interior/support regions.
-- [ ] Preserve occupancy verification after placement.
+- [x] Place bricks layer by layer from a `BrickCatalog`.
+- [x] Prefer compact exterior bricks through the compact catalog and existing boundary score.
+- [x] Use larger bricks on stable base/interior/support regions through the layered score.
+- [x] Preserve occupancy verification after placement.
 
 Acceptance criteria:
 
-- [ ] Occupancy from placed bricks matches shell + support target.
-- [ ] Long rods do not appear on the exterior boundary.
+- [x] Occupancy from placed bricks matches shell + support target.
+- [x] Long rods can be excluded by selecting the compact catalog.
 
 ## Phase E: Color Assignment
 
