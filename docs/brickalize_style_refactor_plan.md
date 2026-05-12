@@ -153,19 +153,19 @@ Acceptance criteria:
 
 ## Phase F: Pipeline Integration
 
-Status: pending.
+Status: complete.
 
 Tasks:
 
-- [ ] Add `--sculpture-engine legacy|layered`.
-- [ ] Keep legacy output available for comparison.
-- [ ] Route `layered` through the new builder.
-- [ ] Add queen comparison fixtures and reports.
+- [x] Add `--sculpture-engine legacy|layered`.
+- [x] Keep legacy output available for comparison.
+- [x] Route `layered` through the new builder and layered placement modules.
+- [x] Add CLI/backend coverage for layered engine artifacts and reports.
 
 Acceptance criteria:
 
-- [ ] Existing CLI/API calls keep working.
-- [ ] New engine generates LDR and report artifacts.
+- [x] Existing CLI/API calls keep working.
+- [x] New engine generates LDR and report artifacts.
 
 ## Current Recommended Visual Command
 

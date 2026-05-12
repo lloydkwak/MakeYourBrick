@@ -202,11 +202,14 @@ def run_pipeline_job(
             repair_report_path=repair_report_path,
             up_axis=request.up_axis,
             sculpture_mode=request.sculpture_mode,
+            sculpture_engine=request.sculpture_engine,
             wall_thickness=request.wall_thickness,
             base_thickness=request.base_thickness,
+            support_spacing=request.support_spacing,
             voxel_smoothing=request.voxel_smoothing,
             infill_density=request.infill_density,
             infill_pattern=request.infill_pattern,
+            color_strategy=request.color_strategy,
             steps_by_layer=request.steps_by_layer,
         )
         report = json.loads(report_path.read_text(encoding="utf-8"))

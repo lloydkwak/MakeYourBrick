@@ -13,11 +13,25 @@ from makeyourbrick.mesh.orient import orient_mesh_to_y_up
 from makeyourbrick.mesh.repair import repair_mesh, write_repair_report
 from makeyourbrick.mesh.scale import fit_mesh_footprint_to_studs
 from makeyourbrick.mesh.solidify import clean_mesh, load_mesh
+from makeyourbrick.sculpture import (
+    SculptureSettings,
+    VoxelModel,
+    build_contour_shell_targets,
+    catalog_for_palette,
+    place_layered_bricks,
+)
 from makeyourbrick.types import MeshArtifact
-from makeyourbrick.voxel.sculpture import apply_sculpture_mode
+from makeyourbrick.voxel.sculpture import (
+    apply_sculpture_mode,
+    apply_voxel_smoothing,
+    preprocess_solid_occupancy,
+    repair_sculpture_colors,
+)
 from makeyourbrick.voxel.voxelize import compute_pitch, load_voxel_artifact, voxelize_mesh
 
 HEIGHT_UNITS = ("brick", "plate")
+SCULPTURE_ENGINES = ("legacy", "layered")
+COLOR_STRATEGIES = ("strict", "majority")
 
 
 def scale_mesh_y(mesh, scale_y: float):
@@ -53,14 +67,17 @@ def run_from_image(
     repair_report_path: Path | None = None,
     up_axis: str = "auto",
     sculpture_mode: str = "solid",
+    sculpture_engine: str = "legacy",
     wall_thickness: int = 1,
     base_thickness: int = 0,
+    support_spacing: int = 3,
     voxel_smoothing: str = "none",
     infill_density: float = 0.35,
     infill_pattern: str = "lattice",
     optimizer: str = "greedy",
     brick_palette: str = "full",
     height_unit: str = "brick",
+    color_strategy: str = "strict",
     steps_by_layer: bool = False,
 ) -> Path:
     """Run the full pipeline from a single image to an LDR file."""
@@ -99,14 +116,17 @@ def run_from_image(
         repair_report_path=repair_report_path,
         up_axis=up_axis,
         sculpture_mode=sculpture_mode,
+        sculpture_engine=sculpture_engine,
         wall_thickness=wall_thickness,
         base_thickness=base_thickness,
+        support_spacing=support_spacing,
         voxel_smoothing=voxel_smoothing,
         infill_density=infill_density,
         infill_pattern=infill_pattern,
         optimizer=optimizer,
         brick_palette=brick_palette,
         height_unit=height_unit,
+        color_strategy=color_strategy,
         steps_by_layer=steps_by_layer,
     )
 
@@ -139,19 +159,26 @@ def convert_mesh_to_ldr(
     repair_report_path: Path | None = None,
     up_axis: str = "auto",
     sculpture_mode: str = "solid",
+    sculpture_engine: str = "legacy",
     wall_thickness: int = 1,
     base_thickness: int = 0,
+    support_spacing: int = 3,
     voxel_smoothing: str = "none",
     infill_density: float = 0.35,
     infill_pattern: str = "lattice",
     optimizer: str = "greedy",
     brick_palette: str = "full",
     height_unit: str = "brick",
+    color_strategy: str = "strict",
     steps_by_layer: bool = False,
 ) -> Path:
     """Convert an existing mesh file to a 1x1-brick LDraw file."""
     if height_unit not in HEIGHT_UNITS:
         raise ValueError(f"Unsupported height unit: {height_unit}")
+    if sculpture_engine not in SCULPTURE_ENGINES:
+        raise ValueError(f"Unsupported sculpture engine: {sculpture_engine}")
+    if color_strategy not in COLOR_STRATEGIES:
+        raise ValueError(f"Unsupported color strategy: {color_strategy}")
     if height_unit == "plate" and (not optimize or brick_palette != "plates"):
         raise ValueError("Plate height output requires --optimize --brick-palette plates.")
     if repair_mode == "basic" and repair_report_path is None:
@@ -191,28 +218,64 @@ def convert_mesh_to_ldr(
         sample_colors=sample_colors,
     )
     occupancy, color_ids, _rgb, _origin, _pitch = load_voxel_artifact(voxel_output_path)
-    occupancy, color_ids = apply_sculpture_mode(
-        occupancy,
-        color_ids,
-        mode=sculpture_mode,
-        wall_thickness=wall_thickness,
-        base_thickness=base_thickness,
-        voxel_smoothing=voxel_smoothing,
-        infill_density=infill_density,
-        infill_pattern=infill_pattern,
-    )
+    target_model = None
+    if sculpture_engine == "layered":
+        if sculpture_mode != "contour-shell":
+            raise ValueError("The layered sculpture engine currently requires sculpture_mode='contour-shell'.")
+        solid_occupancy = apply_voxel_smoothing(preprocess_solid_occupancy(occupancy), voxel_smoothing)
+        solid_color_ids = repair_sculpture_colors(occupancy, solid_occupancy, color_ids)
+        solid_model = VoxelModel(
+            solid_occupancy,
+            solid_color_ids,
+            pitch=float(_pitch),
+            origin=tuple(float(value) for value in _origin),
+            height_unit=height_unit,
+        )
+        targets = build_contour_shell_targets(
+            solid_model,
+            SculptureSettings(
+                wall_thickness=wall_thickness,
+                base_thickness=base_thickness,
+                support_spacing=support_spacing,
+                brick_palette=brick_palette,
+                height_unit=height_unit,
+            ),
+        )
+        target_model = targets.target
+        occupancy, color_ids = target_model.occupancy, target_model.color_ids
+    else:
+        occupancy, color_ids = apply_sculpture_mode(
+            occupancy,
+            color_ids,
+            mode=sculpture_mode,
+            wall_thickness=wall_thickness,
+            base_thickness=base_thickness,
+            voxel_smoothing=voxel_smoothing,
+            infill_density=infill_density,
+            infill_pattern=infill_pattern,
+        )
     input_bricks = brickify_1x1(occupancy, color_ids)
     if optimizer not in {"greedy", "layered"}:
         raise ValueError(f"Unsupported optimizer: {optimizer}")
     brick_specs = brick_specs_for_palette(brick_palette)
     if optimize:
-        bricks = (
-            layered_brickify(occupancy, color_ids, brick_specs=brick_specs)
-            if optimizer == "layered"
-            else greedy_brickify(occupancy, color_ids, brick_specs=brick_specs)
-        )
+        if sculpture_engine == "layered":
+            if target_model is None:
+                raise RuntimeError("Layered sculpture target was not built.")
+            bricks = place_layered_bricks(
+                target_model,
+                catalog_for_palette(brick_palette),
+                color_strategy=color_strategy,
+            ).bricks()
+        else:
+            bricks = (
+                layered_brickify(occupancy, color_ids, brick_specs=brick_specs)
+                if optimizer == "layered"
+                else greedy_brickify(occupancy, color_ids, brick_specs=brick_specs)
+            )
     else:
         bricks = input_bricks
+    optimizer_name = "layered-sculpture" if optimize and sculpture_engine == "layered" else optimizer
     if report_path is not None:
         write_brick_report(
             build_brick_report(
@@ -220,16 +283,19 @@ def convert_mesh_to_ldr(
                 input_bricks,
                 bricks,
                 optimized=optimize,
-                optimizer=optimizer if optimize else "none",
+                optimizer=optimizer_name if optimize else "none",
                 brick_palette=brick_palette if optimize else "none",
                 sculpture={
                     "mode": sculpture_mode,
+                    "engine": sculpture_engine,
                     "wall_thickness": int(wall_thickness),
                     "base_thickness": int(base_thickness),
+                    "support_spacing": int(support_spacing),
                     "voxel_smoothing": voxel_smoothing,
                     "infill_density": float(infill_density),
                     "infill_pattern": infill_pattern,
                     "height_unit": height_unit,
+                    "color_strategy": color_strategy,
                 },
                 mesh_orientation=orientation_report,
                 footprint_scale=footprint_scale_report,

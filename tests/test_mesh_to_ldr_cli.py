@@ -352,6 +352,67 @@ def test_mesh_to_ldr_cli_supports_sculpture_shell_layered_steps() -> None:
         report_path.unlink(missing_ok=True)
 
 
+def test_mesh_to_ldr_cli_supports_layered_sculpture_engine() -> None:
+    input_mesh = Path("outputs/meshes/test_cli_layered_engine_box.stl")
+    cleaned_mesh = Path("outputs/meshes/test_cli_layered_engine_cleaned.glb")
+    voxel_path = Path("outputs/voxels/test_cli_layered_engine_voxels.npz")
+    ldr_path = Path("outputs/ldr/test_cli_layered_engine.ldr")
+    report_path = Path("outputs/reports/test_cli_layered_engine_report.json")
+    try:
+        input_mesh.parent.mkdir(parents=True, exist_ok=True)
+        trimesh.creation.box(extents=(1, 1, 1)).export(input_mesh)
+
+        subprocess.run(
+            [
+                sys.executable,
+                "scripts/mesh_to_ldr.py",
+                "--mesh",
+                str(input_mesh),
+                "--target-studs",
+                "6",
+                "--optimize",
+                "--sculpture-engine",
+                "layered",
+                "--sculpture-mode",
+                "contour-shell",
+                "--brick-palette",
+                "compact",
+                "--base-thickness",
+                "1",
+                "--support-spacing",
+                "2",
+                "--color-strategy",
+                "majority",
+                "--cleaned-mesh",
+                str(cleaned_mesh),
+                "--voxels",
+                str(voxel_path),
+                "--output",
+                str(ldr_path),
+                "--report",
+                str(report_path),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        brick_lines = [line for line in ldr_path.read_text(encoding="utf-8").splitlines() if line.startswith("1 ")]
+        assert brick_lines
+        assert report["optimizer"] == "layered-sculpture"
+        assert report["sculpture"]["engine"] == "layered"
+        assert report["sculpture"]["mode"] == "contour-shell"
+        assert report["sculpture"]["support_spacing"] == 2
+        assert report["sculpture"]["color_strategy"] == "majority"
+    finally:
+        input_mesh.unlink(missing_ok=True)
+        cleaned_mesh.unlink(missing_ok=True)
+        voxel_path.unlink(missing_ok=True)
+        ldr_path.unlink(missing_ok=True)
+        report_path.unlink(missing_ok=True)
+
+
 def test_mesh_to_ldr_cli_can_sample_mesh_colors_and_write_report() -> None:
     input_mesh = Path("outputs/meshes/test_cli_sampled_color.ply")
     cleaned_mesh = Path("outputs/meshes/test_cli_sampled_color_cleaned.glb")

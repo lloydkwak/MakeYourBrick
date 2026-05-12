@@ -99,6 +99,39 @@ def test_job_stub_rejects_missing_image() -> None:
     assert response.status_code == 404
 
 
+def test_job_stub_can_use_layered_sculpture_engine() -> None:
+    client = make_client()
+    upload = client.post(
+        "/api/images",
+        files={"file": ("sample.png", make_png_bytes(), "image/png")},
+    ).json()
+
+    response = client.post(
+        "/api/jobs",
+        json={
+            "image_id": upload["image_id"],
+            "target_studs": 8,
+            "sample_colors": True,
+            "optimize": True,
+            "brick_palette": "compact",
+            "sculpture_engine": "layered",
+            "sculpture_mode": "contour-shell",
+            "wall_thickness": 1,
+            "base_thickness": 1,
+            "support_spacing": 2,
+            "color_strategy": "majority",
+        },
+    )
+
+    assert response.status_code == 200
+    job = response.json()
+    report = client.get(f"/api/jobs/{job['job_id']}/files/report").json()
+    assert report["optimizer"] == "layered-sculpture"
+    assert report["sculpture"]["engine"] == "layered"
+    assert report["sculpture"]["support_spacing"] == 2
+    assert report["sculpture"]["color_strategy"] == "majority"
+
+
 def test_job_can_use_command_runner_config() -> None:
     record_path = Path("outputs/reports/test_server_command_runner_record.json")
     client = make_client(
