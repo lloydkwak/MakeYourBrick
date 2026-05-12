@@ -3,12 +3,14 @@ from __future__ import annotations
 import numpy as np
 
 from makeyourbrick.brickify.optimizer import (
+    COMPACT_SCULPTURE_BRICKS,
     STUDIO_SCULPTURE_BRICKS,
     brick_specs_for_palette,
     brickify_1x1,
     bricks_to_occupancy,
     can_place_brick,
     greedy_brickify,
+    horizontal_boundary_ratio,
     layered_brickify,
     layered_candidate_score,
     seam_overlap_ratio,
@@ -62,8 +64,18 @@ def test_studio_brick_palette_excludes_2x10_and_preserves_occupancy() -> None:
     np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)
 
 
+def test_compact_brick_palette_limits_long_visual_spans() -> None:
+    occupancy, color_ids = make_solid_box((2, 1, 8), color_id=16)
+
+    optimized = greedy_brickify(occupancy, color_ids, brick_specs=COMPACT_SCULPTURE_BRICKS)
+
+    assert max(max(brick.width, brick.depth) for brick in optimized) <= 4
+    np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)
+
+
 def test_brick_specs_for_palette_validates_names() -> None:
     assert brick_specs_for_palette("studio") == STUDIO_SCULPTURE_BRICKS
+    assert brick_specs_for_palette("compact") == COMPACT_SCULPTURE_BRICKS
     assert brick_specs_for_palette("full")
 
 
@@ -113,6 +125,13 @@ def test_support_ratio_for_area_detects_partial_support() -> None:
 
     assert support_ratio_for_area(used, 0, 1, 0, 2, 2) == 0.5
     assert support_ratio_for_area(used, 0, 0, 0, 2, 2) == 1.0
+
+
+def test_horizontal_boundary_ratio_detects_outer_footprint_cells() -> None:
+    occupancy, _color_ids = make_solid_box((5, 1, 5), color_id=16)
+
+    assert horizontal_boundary_ratio(occupancy, 1, 0, 1, 3, 3) < 1.0
+    assert horizontal_boundary_ratio(occupancy, 0, 0, 0, 5, 1) == 1.0
 
 
 def test_seam_overlap_ratio_detects_aligned_edges() -> None:
@@ -181,3 +200,31 @@ def test_layered_candidate_score_penalizes_vertical_seam_alignment() -> None:
     )
 
     assert aligned_score < no_lower_seam_score
+
+
+def test_layered_candidate_score_penalizes_long_boundary_bricks() -> None:
+    occupancy, _color_ids = make_solid_box((8, 1, 4), color_id=16)
+    used = np.ones_like(occupancy, dtype=bool)
+
+    short_boundary = layered_candidate_score(
+        placed_bricks=[],
+        used=used,
+        occupancy=occupancy,
+        x=0,
+        y=0,
+        z=0,
+        width=4,
+        depth=1,
+    )
+    long_boundary = layered_candidate_score(
+        placed_bricks=[],
+        used=used,
+        occupancy=occupancy,
+        x=0,
+        y=0,
+        z=0,
+        width=8,
+        depth=1,
+    )
+
+    assert short_boundary > long_boundary

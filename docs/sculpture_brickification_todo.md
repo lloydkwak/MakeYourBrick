@@ -299,7 +299,7 @@ Latest queen diagnostic:
 
 ## Phase 11: Studio-Guided Voxel Tuning
 
-Status: in progress.
+Status: completed.
 
 Purpose:
 
@@ -388,6 +388,42 @@ Latest Studio palette diagnostic:
 - Studio reference `model.ldr` contains no plate parts in the inspected queen import, so plate support is deferred until a reference output actually uses plate families.
 - Comparison against `queen.io`: IoU `0.308805`, missing `572`, extra `13330`.
 - Interpretation: the palette is now less misleading, but the visible shape problem is still dominated by voxel layer profile and density/fill selection, not part availability.
+
+## Phase 13: Exterior Rod Reduction
+
+Status: in progress.
+
+Purpose:
+
+Reduce the long horizontal rods visible in Stud.io when the layered optimizer uses 1x8 and 2x8 bricks on jagged sculpture boundaries.
+
+Tasks:
+
+- [x] Add boundary-aware scoring to penalize long bricks placed on layer footprint boundaries.
+- [x] Add a `compact` brick palette that limits candidate spans to 4 studs:
+  - `3010.dat` 1x4
+  - `3001.dat` 2x4
+  - `3622.dat` 1x3
+  - `3002.dat` 2x3
+  - `3004.dat` 1x2
+  - `3003.dat` 2x2
+  - `3005.dat` 1x1
+- [x] Generate a queen candidate with `--brick-palette compact`.
+- [x] Compare long-brick counts and visual stability against the Studio-palette candidate.
+
+Acceptance criteria:
+
+- [x] No generated brick has a footprint longer than 4 studs in compact mode.
+- [x] The queen visual candidate no longer includes 1x8, 2x8, 1x6, or 2x6 parts.
+- [x] Occupancy preservation tests still pass.
+
+Latest compact palette diagnostic:
+
+- Candidate: `outputs/ldr/queen_slice_profile_compact_60.ldr`.
+- Comparison against `queen.io`: IoU `0.309010`, missing `558`, extra `13362`.
+- Long parts removed from candidate output: `3007.dat`, `3008.dat`, `3009.dat`, and `2456.dat` are all 0.
+- Part distribution now uses only 4-stud-or-shorter bricks: `3001.dat`, `3010.dat`, `3622.dat`, `3004.dat`, `3002.dat`, `3003.dat`, and `3005.dat`.
+- Average support ratio improved to `0.8733`; brick count increased to `4080`, which is expected because compact mode prioritizes visual contour stability over part count reduction.
 
 Latest light smoothing diagnostic:
 

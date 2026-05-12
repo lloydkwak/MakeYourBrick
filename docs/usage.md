@@ -158,7 +158,7 @@ Sculpture options:
 - `--infill-pattern lattice|ribs`: choose uniform lattice infill or staggered Studio-like internal support ribs
 - `--voxel-smoothing none|light|contour|studio|profile`: optional cleanup for isolated protrusions, layer contours, Studio-like layer consistency, or stricter profile cleanup that removes small layer islands and trims unsupported spikes
 - `--optimizer greedy|layered`: largest-first greedy optimizer or support/seam-aware optimizer
-- `--brick-palette full|studio`: choose the full experimental brick set or the Studio-reference sculpture brick set; `studio` currently excludes `3006.dat` 2x10 because the inspected queen Studio reference did not use it
+- `--brick-palette full|studio|compact`: choose the full experimental set, the Studio-reference sculpture set, or a compact visual-debug set that limits brick spans to 4 studs to reduce long exterior rods
 - `--steps-by-layer`: insert `0 STEP` markers between vertical layers in the LDR file
 
 ## Placement and Quality Fixtures
@@ -288,7 +288,7 @@ In `sam3d` mode, `POST /api/jobs` requires a `mask_id`. The UI flow should uploa
 Backend job requests also accept:
 
 - `optimizer`: `greedy` or `layered`
-- `brick_palette`: `full` or `studio`
+- `brick_palette`: `full`, `studio`, or `compact`
 - `sculpture_mode`: `solid`, `shell`, or `density`
 - `wall_thickness`
 - `base_thickness`

@@ -34,7 +34,17 @@ STUDIO_SCULPTURE_BRICKS = (
     BrickSpec("3005.dat", 1, 1),
 )
 
-BRICK_PALETTES = ("full", "studio")
+COMPACT_SCULPTURE_BRICKS = (
+    BrickSpec("3010.dat", 1, 4),
+    BrickSpec("3001.dat", 2, 4),
+    BrickSpec("3622.dat", 1, 3),
+    BrickSpec("3002.dat", 2, 3),
+    BrickSpec("3004.dat", 1, 2),
+    BrickSpec("3003.dat", 2, 2),
+    BrickSpec("3005.dat", 1, 1),
+)
+
+BRICK_PALETTES = ("full", "studio", "compact")
 
 
 def brick_specs_for_palette(palette: str) -> tuple[BrickSpec, ...]:
@@ -42,6 +52,8 @@ def brick_specs_for_palette(palette: str) -> tuple[BrickSpec, ...]:
         return DEFAULT_BRICKS
     if palette == "studio":
         return STUDIO_SCULPTURE_BRICKS
+    if palette == "compact":
+        return COMPACT_SCULPTURE_BRICKS
     raise ValueError(f"Unsupported brick palette: {palette}")
 
 
@@ -149,6 +161,32 @@ def support_ratio_for_area(
     return float(support.sum() / area) if area else 0.0
 
 
+def horizontal_boundary_ratio(
+    occupancy: np.ndarray,
+    x: int,
+    y: int,
+    z: int,
+    width: int,
+    depth: int,
+) -> float:
+    if occupancy.ndim != 3:
+        raise ValueError("Occupancy must be a 3D array.")
+    area = width * depth
+    if area <= 0:
+        return 0.0
+    boundary_cells = 0
+    max_x, _max_y, max_z = occupancy.shape
+    for cx in range(x, x + width):
+        for cz in range(z, z + depth):
+            for dx, dz in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                nx = cx + dx
+                nz = cz + dz
+                if not (0 <= nx < max_x and 0 <= nz < max_z) or not occupancy[nx, y, nz]:
+                    boundary_cells += 1
+                    break
+    return float(boundary_cells / area)
+
+
 def seam_overlap_ratio(bricks: list[Brick], y: int, x: int, z: int, width: int, depth: int) -> float:
     lower_layer = [brick for brick in bricks if brick.y == y - 1]
     if y <= 0 or not lower_layer:
@@ -238,6 +276,7 @@ def layered_candidate_score(
     *,
     placed_bricks: list[Brick],
     used: np.ndarray,
+    occupancy: np.ndarray | None = None,
     x: int,
     y: int,
     z: int,
@@ -250,12 +289,16 @@ def layered_candidate_score(
     seam_overlap = seam_overlap_ratio(placed_bricks, y, x, z, width, depth)
     overhang_penalty = unsupported_cells * 12.0 if y > 0 else 0.0
     weak_support_penalty = 18.0 if 0 < support_ratio < 0.5 else 0.0
+    boundary_ratio = horizontal_boundary_ratio(occupancy, x, y, z, width, depth) if occupancy is not None else 0.0
+    long_axis = max(width, depth)
+    boundary_length_penalty = max(0, long_axis - 4) * boundary_ratio * 20.0
     return (
         (area * 6.0)
         + (support_ratio * 30.0)
         - overhang_penalty
         - weak_support_penalty
         - (seam_overlap * 6.0)
+        - boundary_length_penalty
     )
 
 
@@ -292,6 +335,7 @@ def layered_brickify(
                         score = layered_candidate_score(
                             placed_bricks=bricks,
                             used=used,
+                            occupancy=occupancy,
                             x=x,
                             y=y,
                             z=z,
