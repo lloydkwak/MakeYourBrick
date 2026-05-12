@@ -427,7 +427,7 @@ Latest compact palette diagnostic:
 
 ## Phase 14: Polished Surface Cleanup and Plate Readiness
 
-Status: in progress.
+Status: completed.
 
 Purpose:
 
@@ -470,6 +470,48 @@ Latest plate-height diagnostic:
 - Output brick/plate count: `12091`.
 - Studio comparison after plate footprint support: IoU `0.297795`, missing `300`, extra `14987`.
 - Interpretation: plate mode proves the correct height model and part output path, but it greatly increases part count and overfill. It is best treated as an optional visual/detail mode, not the default Studio-like sculpture path yet.
+
+## Phase 15: Layer Contour Shell Mode
+
+Status: in progress.
+
+Purpose:
+
+Move closer to Studio Sculpture's documented wall-thickness workflow by keeping each horizontal slice as a clean contour wall instead of filling the whole volume.
+
+Reference behavior from Studio Help Center:
+
+- Studio imports OBJ/STL as a sculpture.
+- Base Size controls horizontal scale.
+- Wall Thickness controls wall width in studs, with Studio allowed to build thicker when needed.
+- Base Thickness controls how many bottom layers are completely filled.
+- The model is built layer by layer in the viewport.
+
+Tasks:
+
+- [x] Add `contour-shell` sculpture mode.
+- [x] Compute each layer's 2D boundary from the filled slice profile.
+- [x] Dilate the boundary inward by `wall_thickness`.
+- [x] Fill only the requested `base_thickness` layers.
+- [x] Add minimal vertical support columns under unsupported contour wall cells.
+- [x] Generate a queen candidate with `--sculpture-mode contour-shell --wall-thickness 2 --base-thickness 2`.
+- [x] Compare part count and visual roughness against solid compact and plate outputs.
+
+Acceptance criteria:
+
+- [x] Output is hollow except for contour walls, base layers, and sparse support columns.
+- [x] Part count drops substantially from plate output.
+- [x] The result has a clear stability/support report.
+
+Latest contour-shell diagnostics:
+
+- Wall 2 candidate: `outputs/ldr/queen_slice_contour_shell_supported_compact_60.ldr`.
+- Wall 2 sparse candidate: `outputs/ldr/queen_slice_contour_shell_sparse_compact_60.ldr`.
+- Wall 1 sparse candidate: `outputs/ldr/queen_slice_contour_shell_wall1_compact_60.ldr`.
+- Wall 2 supported occupancy: `18606`, output bricks `4346`, connected components `1`, average support ratio `0.8785`.
+- Wall 2 sparse occupancy: `13008`, output bricks `5388`, connected components `1`, average support ratio `0.8399`.
+- Wall 1 sparse occupancy: `11662`, output bricks `5027`, connected components `14`, average support ratio `0.8311`.
+- Interpretation: `wall_thickness=2` with sparse support is the best balance so far when the priority is surface-only construction without completely filling the interior. `wall_thickness=1` is lighter but breaks into disconnected islands on the queen sample.
 
 Latest light smoothing diagnostic:
 

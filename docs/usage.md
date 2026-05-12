@@ -151,7 +151,7 @@ Supported command placeholders:
 
 Sculpture options:
 
-- `--sculpture-mode solid|shell|density`: keep a fully solid model, hollow the interior, or keep shell/base plus deterministic lattice infill
+- `--sculpture-mode solid|shell|contour-shell|density`: keep a fully solid model, keep a 3D surface shell, keep per-layer contour walls, or keep shell/base plus deterministic lattice infill
 - `--wall-thickness`: number of voxel/stud layers to keep from the surface in shell mode
 - `--base-thickness`: number of bottom layers to force solid
 - `--infill-density`: target interior lattice density for `density` sculpture mode

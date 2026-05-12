@@ -5,14 +5,18 @@ import pytest
 
 from makeyourbrick.voxel.sculpture import (
     anchor_shell_to_base,
+    add_vertical_support_columns,
     apply_sculpture_mode,
     apply_voxel_smoothing,
+    contour_shell_mask,
+    dilate_layer_within,
     fill_2d_holes,
     fill_horizontal_layer_holes,
     fill_vertical_layer_gaps,
     lattice_infill_mask,
     lattice_spacing_for_density,
     layer_neighbor_count_8,
+    layer_surface_mask,
     remove_small_layer_components,
     rib_infill_mask,
     smooth_2d_contour,
@@ -70,6 +74,99 @@ def test_shell_mode_fills_requested_base_layers() -> None:
     assert shell[:, 0, :].all()
     assert shell[:, 1, :].all()
     assert not shell[2, 2, 2]
+
+
+def test_layer_surface_mask_detects_2d_contour() -> None:
+    layer = np.ones((5, 5), dtype=bool)
+
+    surface = layer_surface_mask(layer)
+
+    assert surface.sum() == 16
+    assert not surface[2, 2]
+
+
+def test_contour_shell_mask_keeps_layer_walls_not_interior() -> None:
+    occupancy = np.ones((5, 3, 5), dtype=bool)
+
+    shell = contour_shell_mask(occupancy, wall_thickness=1)
+
+    assert shell[:, 0, :].sum() == 16
+    assert not shell[2, 1, 2]
+    assert shell[0, 1, 0]
+
+
+def test_contour_shell_mode_keeps_base_layers_solid() -> None:
+    occupancy = np.ones((5, 4, 5), dtype=bool)
+    color_ids = np.full(occupancy.shape, 16, dtype=np.int32)
+
+    shell, shell_colors = apply_sculpture_mode(
+        occupancy,
+        color_ids,
+        mode="contour-shell",
+        wall_thickness=1,
+        base_thickness=1,
+    )
+
+    assert shell[:, 0, :].all()
+    assert not shell[2, 2, 2]
+    assert shell_colors[shell].min() == 16
+
+
+def test_add_vertical_support_columns_fills_only_needed_columns() -> None:
+    occupancy = np.ones((4, 4, 4), dtype=bool)
+    shell = np.zeros_like(occupancy)
+    shell[2, 3, 2] = True
+    shell[0, 0, 0] = True
+
+    supported = add_vertical_support_columns(shell, occupancy, base_thickness=1)
+
+    assert supported[2, 0:4, 2].all()
+    assert supported[0, 0, 0]
+    assert not supported[1, 1, 1]
+
+
+def test_add_vertical_support_columns_can_use_sparse_spacing() -> None:
+    occupancy = np.ones((5, 4, 5), dtype=bool)
+    shell = np.zeros_like(occupancy)
+    shell[1, 3, 1] = True
+    shell[2, 3, 1] = True
+
+    supported = add_vertical_support_columns(shell, occupancy, support_spacing=3)
+
+    assert supported.sum() < add_vertical_support_columns(shell, occupancy, support_spacing=1).sum()
+
+
+def test_contour_shell_mode_adds_minimal_vertical_support_columns() -> None:
+    occupancy = np.zeros((4, 4, 4), dtype=bool)
+    occupancy[:, 0, :] = True
+    occupancy[1, 1, 1] = True
+    occupancy[2, 1, 1] = True
+    occupancy[2, 2, 1] = True
+    occupancy[2, 3, 1] = True
+    color_ids = np.full(occupancy.shape, 16, dtype=np.int32)
+
+    shell, _colors = apply_sculpture_mode(
+        occupancy,
+        color_ids,
+        mode="contour-shell",
+        wall_thickness=1,
+        base_thickness=1,
+    )
+
+    assert shell[:, 0, :].all()
+    assert shell[2, 1:4, 1].all()
+
+
+def test_dilate_layer_within_respects_layer_limit() -> None:
+    seed = np.zeros((5, 5), dtype=bool)
+    seed[0, 2] = True
+    limit = np.zeros((5, 5), dtype=bool)
+    limit[0:3, 2] = True
+
+    dilated = dilate_layer_within(seed, limit, iterations=4)
+
+    assert dilated[2, 2]
+    assert not dilated[3, 2]
 
 
 def test_density_mode_keeps_shell_base_and_lattice_infill() -> None:

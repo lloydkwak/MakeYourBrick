@@ -4,8 +4,8 @@ from typing import Literal
 
 import numpy as np
 
-SCULPTURE_MODES = ("solid", "shell", "density")
-SculptureMode = Literal["solid", "shell", "density"]
+SCULPTURE_MODES = ("solid", "shell", "contour-shell", "density")
+SculptureMode = Literal["solid", "shell", "contour-shell", "density"]
 VOXEL_SMOOTHING_PRESETS = ("none", "light", "contour", "studio", "profile", "polished")
 VoxelSmoothing = Literal["none", "light", "contour", "studio", "profile", "polished"]
 INFILL_PATTERNS = ("lattice", "ribs")
@@ -175,6 +175,74 @@ def layer_neighbor_count_8(layer: np.ndarray) -> np.ndarray:
                 1 + dz : 1 + dz + layer.shape[1],
             ]
     return counts
+
+
+def layer_surface_mask(layer: np.ndarray) -> np.ndarray:
+    if layer.ndim != 2:
+        raise ValueError("Layer must be a 2D array.")
+    layer = layer.astype(bool)
+    padded = np.pad(layer, 1, mode="constant", constant_values=False)
+    interior = layer.copy()
+    for dx, dz in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        interior &= padded[
+            1 + dx : 1 + dx + layer.shape[0],
+            1 + dz : 1 + dz + layer.shape[1],
+        ]
+    return layer & ~interior
+
+
+def dilate_layer_within(layer_seed: np.ndarray, layer_limit: np.ndarray, iterations: int) -> np.ndarray:
+    if layer_seed.ndim != 2 or layer_limit.ndim != 2:
+        raise ValueError("Layer masks must be 2D arrays.")
+    if layer_seed.shape != layer_limit.shape:
+        raise ValueError("Layer masks must have the same shape.")
+    result = layer_seed.astype(bool) & layer_limit.astype(bool)
+    limit = layer_limit.astype(bool)
+    for _ in range(max(0, iterations)):
+        padded = np.pad(result, 1, mode="constant", constant_values=False)
+        expanded = result.copy()
+        expanded |= padded[:-2, 1:-1]
+        expanded |= padded[2:, 1:-1]
+        expanded |= padded[1:-1, :-2]
+        expanded |= padded[1:-1, 2:]
+        result = expanded & limit
+    return result
+
+
+def contour_shell_mask(occupancy: np.ndarray, wall_thickness: int) -> np.ndarray:
+    if occupancy.ndim != 3:
+        raise ValueError("Occupancy must be a 3D array.")
+    shell = np.zeros_like(occupancy, dtype=bool)
+    for y in range(occupancy.shape[1]):
+        layer = occupancy[:, y, :].astype(bool)
+        if not layer.any():
+            continue
+        boundary = layer_surface_mask(layer)
+        shell[:, y, :] = dilate_layer_within(boundary, layer, wall_thickness - 1)
+    return shell
+
+
+def add_vertical_support_columns(
+    mask: np.ndarray,
+    occupancy: np.ndarray,
+    base_thickness: int = 0,
+    support_spacing: int = 1,
+) -> np.ndarray:
+    if mask.ndim != 3 or occupancy.ndim != 3:
+        raise ValueError("Masks must be 3D arrays.")
+    if mask.shape != occupancy.shape:
+        raise ValueError("Masks must have the same shape.")
+    supported = mask.astype(bool).copy()
+    limit = occupancy.astype(bool)
+    start_y = max(1, int(base_thickness))
+    spacing = max(1, int(support_spacing))
+    for y in range(start_y, supported.shape[1]):
+        unsupported = supported[:, y, :] & ~supported[:, y - 1, :]
+        for x, z in np.argwhere(unsupported):
+            if spacing > 1 and ((int(x) + int(z) + y) % spacing) != 0:
+                continue
+            supported[int(x), :y, int(z)] |= limit[int(x), :y, int(z)]
+    return supported & limit
 
 
 def layer_components(layer: np.ndarray) -> list[list[tuple[int, int]]]:
@@ -593,10 +661,15 @@ def apply_sculpture_mode(
         return solid_occupancy, repair_sculpture_colors(occupancy, solid_occupancy, color_ids)
 
     shell_occupancy = solid_occupancy
-    shell = dilate_within_occupancy(surface_mask(shell_occupancy), shell_occupancy, wall_thickness - 1)
+    if mode == "contour-shell":
+        shell = contour_shell_mask(shell_occupancy, wall_thickness)
+    else:
+        shell = dilate_within_occupancy(surface_mask(shell_occupancy), shell_occupancy, wall_thickness - 1)
     retained = shell | base_fill_mask(shell_occupancy, base_thickness)
     if mode == "density":
         interior = shell_occupancy & ~retained
         retained |= infill_mask(interior, infill_density, infill_pattern)
     retained = anchor_shell_to_base(retained, shell_occupancy, base_thickness)
+    if mode == "contour-shell":
+        retained = add_vertical_support_columns(retained, shell_occupancy, base_thickness, support_spacing=3)
     return retained, repair_sculpture_colors(occupancy, retained, color_ids)

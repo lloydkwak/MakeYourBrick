@@ -55,7 +55,7 @@ class JobRequest(BaseModel):
     default_color_id: int = Field(default=16, ge=0, le=999)
     repair_mode: Literal["none", "basic", "manifold", "convex-hull"] = "basic"
     up_axis: Literal["auto", "none", "x", "y", "z"] = "auto"
-    sculpture_mode: Literal["solid", "shell", "density"] = "solid"
+    sculpture_mode: Literal["solid", "shell", "contour-shell", "density"] = "solid"
     wall_thickness: int = Field(default=1, ge=1, le=16)
     base_thickness: int = Field(default=0, ge=0, le=64)
     voxel_smoothing: Literal["none", "light", "contour", "studio", "profile", "polished"] = "none"
