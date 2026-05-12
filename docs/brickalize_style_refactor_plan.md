@@ -89,20 +89,20 @@ Acceptance criteria:
 
 ## Phase B: Shell and Base Target Builder
 
-Status: pending.
+Status: complete.
 
 Tasks:
 
-- [ ] Move contour shell extraction into `sculpture.builder`.
-- [ ] Produce named target arrays: `solid`, `shell`, `base`, `support`.
-- [ ] Preserve color ids for retained voxels.
-- [ ] Add fixture tests for hollow shell, base fill, and layer boundary behavior.
+- [x] Wrap contour shell extraction in `sculpture.builder`.
+- [x] Produce named target arrays: `solid`, `shell`, `base`, `support`.
+- [x] Preserve color ids for retained voxels.
+- [x] Add fixture tests for hollow shell, base fill, and layer boundary behavior.
 
 Acceptance criteria:
 
-- [ ] Surface-only target does not fill the entire interior.
-- [ ] Base thickness fully fills requested bottom layers.
-- [ ] Output target remains within original solid occupancy.
+- [x] Surface-only target does not fill the entire interior.
+- [x] Base thickness fully fills requested bottom layers.
+- [x] Output target remains within original solid occupancy.
 
 ## Phase C: Sparse Support Planner
 

@@ -60,6 +60,7 @@ class SculptureSettings:
     height_unit: HeightUnit = "brick"
     color_mode: ColorMode = "mesh"
     steps_by_layer: bool = True
+    support_spacing: int = 3
 
     def __post_init__(self) -> None:
         if self.base_size_studs is not None and self.base_size_studs <= 0:
@@ -72,6 +73,8 @@ class SculptureSettings:
             raise ValueError("wall_thickness must be at least 1.")
         if self.base_thickness < 0:
             raise ValueError("base_thickness must be non-negative.")
+        if self.support_spacing < 1:
+            raise ValueError("support_spacing must be at least 1.")
         if self.height_unit not in {"brick", "plate"}:
             raise ValueError(f"Unsupported height unit: {self.height_unit}")
         if self.color_mode not in {"constant", "mesh", "layer"}:
@@ -103,4 +106,3 @@ class LayeredBrickModel:
     @property
     def brick_count(self) -> int:
         return sum(len(bricks) for bricks in self.bricks_by_layer.values())
-
