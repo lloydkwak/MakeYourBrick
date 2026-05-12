@@ -10,6 +10,14 @@ from typing import Callable, Iterable
 
 STUD_LDU = 20
 BRICK_HEIGHT_LDU = 24
+PLATE_FOOTPRINTS = {
+    "3020.dat": (2, 4),
+    "3710.dat": (1, 4),
+    "3021.dat": (2, 3),
+    "3022.dat": (2, 2),
+    "3023.dat": (1, 2),
+    "3024.dat": (1, 1),
+}
 
 
 @dataclass(frozen=True)
@@ -59,6 +67,11 @@ def load_studio_brick_footprints(studio_dir: Path) -> dict[str, StudioPartFootpr
                 depth=length,
                 height=height,
             )
+    for part_id, (width, depth) in PLATE_FOOTPRINTS.items():
+        footprints.setdefault(
+            normalized_part_id(part_id),
+            StudioPartFootprint(part_id=part_id, width=width, depth=depth, height=1),
+        )
     return footprints
 
 

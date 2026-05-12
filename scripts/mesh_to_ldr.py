@@ -8,7 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from makeyourbrick.brickify.optimizer import BRICK_PALETTES
-from makeyourbrick.pipeline import convert_mesh_to_ldr
+from makeyourbrick.pipeline import HEIGHT_UNITS, convert_mesh_to_ldr
 from makeyourbrick.mesh.repair import REPAIR_MODES
 from makeyourbrick.mesh.orient import UP_AXIS_OPTIONS
 from makeyourbrick.voxel.voxelize import RAY_FILL_MODES, VOXELIZERS
@@ -61,6 +61,12 @@ def parse_args() -> argparse.Namespace:
         choices=BRICK_PALETTES,
         default="full",
         help="Brick candidate palette used when --optimize is enabled.",
+    )
+    parser.add_argument(
+        "--height-unit",
+        choices=HEIGHT_UNITS,
+        default="brick",
+        help="Vertical output unit. Use plate with --brick-palette plates for one-third brick-height layers.",
     )
     parser.add_argument(
         "--sculpture-mode",
@@ -149,6 +155,7 @@ def main() -> None:
         optimize=args.optimize,
         optimizer=args.optimizer,
         brick_palette=args.brick_palette,
+        height_unit=args.height_unit,
         sample_colors=args.sample_colors,
         report_path=args.report,
         repair_mode=args.repair_mode,

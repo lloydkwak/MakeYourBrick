@@ -6,6 +6,7 @@ from makeyourbrick.types import Brick
 
 STUD_LDU = 20
 BRICK_HEIGHT_LDU = 24
+PLATE_HEIGHT_LDU = 8
 
 
 def format_ldraw_number(value: float) -> str:
@@ -14,9 +15,9 @@ def format_ldraw_number(value: float) -> str:
     return f"{value:.6f}".rstrip("0").rstrip(".")
 
 
-def brick_to_ldraw_position(brick: Brick) -> tuple[float, float, float]:
+def brick_to_ldraw_position(brick: Brick, height_unit_ldu: int = BRICK_HEIGHT_LDU) -> tuple[float, float, float]:
     x = (brick.x + (brick.width - 1) / 2) * STUD_LDU
-    y = -brick.y * BRICK_HEIGHT_LDU
+    y = -brick.y * height_unit_ldu
     z = (brick.z + (brick.depth - 1) / 2) * STUD_LDU
     return x, y, z
 
@@ -34,8 +35,8 @@ def brick_to_ldraw_matrix(brick: Brick) -> str:
     raise ValueError(f"Unsupported brick rotation: {brick.rotation_degrees}")
 
 
-def brick_to_ldr_line(brick: Brick) -> str:
-    x, y, z = brick_to_ldraw_position(brick)
+def brick_to_ldr_line(brick: Brick, height_unit_ldu: int = BRICK_HEIGHT_LDU) -> str:
+    x, y, z = brick_to_ldraw_position(brick, height_unit_ldu=height_unit_ldu)
     matrix = brick_to_ldraw_matrix(brick)
     position = " ".join(format_ldraw_number(value) for value in (x, y, z))
     return f"1 {brick.color_id} {position} {matrix} {brick.part_id}"
@@ -46,6 +47,7 @@ def write_ldr(
     output_path: Path,
     title: str = "MakeYourBrick output",
     step_by_layer: bool = False,
+    height_unit_ldu: int = BRICK_HEIGHT_LDU,
 ) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     lines = [
@@ -57,7 +59,7 @@ def write_ldr(
     for brick in bricks:
         if step_by_layer and previous_layer is not None and brick.y != previous_layer:
             lines.append("0 STEP")
-        lines.append(brick_to_ldr_line(brick))
+        lines.append(brick_to_ldr_line(brick, height_unit_ldu=height_unit_ldu))
         previous_layer = brick.y
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return output_path

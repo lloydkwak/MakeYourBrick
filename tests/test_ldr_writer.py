@@ -9,6 +9,7 @@ from makeyourbrick.io.ldr_writer import (
     brick_to_ldraw_matrix,
     brick_to_ldraw_position,
     format_ldraw_number,
+    PLATE_HEIGHT_LDU,
     write_ldr,
 )
 from makeyourbrick.types import Brick
@@ -28,6 +29,12 @@ def test_brick_to_ldraw_position_uses_part_center_origin() -> None:
         0,
         10,
     )
+
+
+def test_brick_to_ldraw_position_can_use_plate_height_units() -> None:
+    brick = Brick("3024.dat", color_id=16, x=2, y=3, z=4, width=1, depth=1)
+
+    assert brick_to_ldraw_position(brick, height_unit_ldu=PLATE_HEIGHT_LDU) == (40, -24, 80)
 
 
 def test_format_ldraw_number_keeps_integer_output_compact() -> None:

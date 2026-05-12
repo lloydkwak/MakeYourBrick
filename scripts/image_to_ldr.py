@@ -11,7 +11,7 @@ from makeyourbrick.ai.sam3d_runner import Sam3DRunner
 from makeyourbrick.brickify.optimizer import BRICK_PALETTES
 from makeyourbrick.mesh.orient import UP_AXIS_OPTIONS
 from makeyourbrick.mesh.repair import REPAIR_MODES
-from makeyourbrick.pipeline import run_from_image
+from makeyourbrick.pipeline import HEIGHT_UNITS, run_from_image
 from makeyourbrick.voxel.sculpture import INFILL_PATTERNS, SCULPTURE_MODES, VOXEL_SMOOTHING_PRESETS
 from makeyourbrick.voxel.voxelize import RAY_FILL_MODES, VOXELIZERS
 
@@ -76,6 +76,12 @@ def parse_args() -> argparse.Namespace:
         choices=BRICK_PALETTES,
         default="full",
         help="Brick candidate palette used when --optimize is enabled.",
+    )
+    parser.add_argument(
+        "--height-unit",
+        choices=HEIGHT_UNITS,
+        default="brick",
+        help="Vertical output unit. Use plate with --brick-palette plates for one-third brick-height layers.",
     )
     parser.add_argument(
         "--sculpture-mode",
@@ -153,6 +159,7 @@ def main() -> None:
         optimize=args.optimize,
         optimizer=args.optimizer,
         brick_palette=args.brick_palette,
+        height_unit=args.height_unit,
         sample_colors=args.sample_colors,
         report_path=args.report,
         repair_mode=args.repair_mode,

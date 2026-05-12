@@ -7,7 +7,7 @@ from makeyourbrick.brickify.colors import load_ldraw_palette
 from makeyourbrick.config import PipelineConfig
 from makeyourbrick.brickify.optimizer import brick_specs_for_palette, brickify_1x1, greedy_brickify, layered_brickify
 from makeyourbrick.brickify.report import build_brick_report, build_stability_report, write_brick_report
-from makeyourbrick.io.ldr_writer import write_ldr
+from makeyourbrick.io.ldr_writer import BRICK_HEIGHT_LDU, PLATE_HEIGHT_LDU, write_ldr
 from makeyourbrick.mesh.inspect import inspect_mesh_to_file
 from makeyourbrick.mesh.orient import orient_mesh_to_y_up
 from makeyourbrick.mesh.repair import repair_mesh, write_repair_report
@@ -16,6 +16,14 @@ from makeyourbrick.mesh.solidify import clean_mesh, load_mesh
 from makeyourbrick.types import MeshArtifact
 from makeyourbrick.voxel.sculpture import apply_sculpture_mode
 from makeyourbrick.voxel.voxelize import compute_pitch, load_voxel_artifact, voxelize_mesh
+
+HEIGHT_UNITS = ("brick", "plate")
+
+
+def scale_mesh_y(mesh, scale_y: float):
+    scaled = mesh.copy()
+    scaled.apply_scale([1.0, float(scale_y), 1.0])
+    return scaled
 
 
 def run_from_image(
@@ -52,6 +60,7 @@ def run_from_image(
     infill_pattern: str = "lattice",
     optimizer: str = "greedy",
     brick_palette: str = "full",
+    height_unit: str = "brick",
     steps_by_layer: bool = False,
 ) -> Path:
     """Run the full pipeline from a single image to an LDR file."""
@@ -97,6 +106,7 @@ def run_from_image(
         infill_pattern=infill_pattern,
         optimizer=optimizer,
         brick_palette=brick_palette,
+        height_unit=height_unit,
         steps_by_layer=steps_by_layer,
     )
 
@@ -136,9 +146,14 @@ def convert_mesh_to_ldr(
     infill_pattern: str = "lattice",
     optimizer: str = "greedy",
     brick_palette: str = "full",
+    height_unit: str = "brick",
     steps_by_layer: bool = False,
 ) -> Path:
     """Convert an existing mesh file to a 1x1-brick LDraw file."""
+    if height_unit not in HEIGHT_UNITS:
+        raise ValueError(f"Unsupported height unit: {height_unit}")
+    if height_unit == "plate" and (not optimize or brick_palette != "plates"):
+        raise ValueError("Plate height output requires --optimize --brick-palette plates.")
     if repair_mode == "basic" and repair_report_path is None:
         mesh = clean_mesh(load_mesh(mesh_path))
     else:
@@ -153,6 +168,8 @@ def convert_mesh_to_ldr(
         target_width_studs=target_width_studs,
         target_depth_studs=target_depth_studs,
     )
+    if height_unit == "plate":
+        mesh = scale_mesh_y(mesh, BRICK_HEIGHT_LDU / PLATE_HEIGHT_LDU)
     cleaned_mesh_path.parent.mkdir(parents=True, exist_ok=True)
     mesh.export(cleaned_mesh_path)
 
@@ -212,6 +229,7 @@ def convert_mesh_to_ldr(
                     "voxel_smoothing": voxel_smoothing,
                     "infill_density": float(infill_density),
                     "infill_pattern": infill_pattern,
+                    "height_unit": height_unit,
                 },
                 mesh_orientation=orientation_report,
                 footprint_scale=footprint_scale_report,
@@ -230,4 +248,5 @@ def convert_mesh_to_ldr(
         ldr_output_path,
         title=f"Mesh conversion: {mesh_path.name}",
         step_by_layer=steps_by_layer,
+        height_unit_ldu=PLATE_HEIGHT_LDU if height_unit == "plate" else BRICK_HEIGHT_LDU,
     )

@@ -156,9 +156,10 @@ Sculpture options:
 - `--base-thickness`: number of bottom layers to force solid
 - `--infill-density`: target interior lattice density for `density` sculpture mode
 - `--infill-pattern lattice|ribs`: choose uniform lattice infill or staggered Studio-like internal support ribs
-- `--voxel-smoothing none|light|contour|studio|profile`: optional cleanup for isolated protrusions, layer contours, Studio-like layer consistency, or stricter profile cleanup that removes small layer islands and trims unsupported spikes
+- `--voxel-smoothing none|light|contour|studio|profile|polished`: optional cleanup for isolated protrusions, layer contours, Studio-like layer consistency, stricter profile cleanup, or polished contour cleanup that further reduces jagged surface noise
 - `--optimizer greedy|layered`: largest-first greedy optimizer or support/seam-aware optimizer
-- `--brick-palette full|studio|compact`: choose the full experimental set, the Studio-reference sculpture set, or a compact visual-debug set that limits brick spans to 4 studs to reduce long exterior rods
+- `--brick-palette full|studio|compact|plates`: choose the full experimental set, the Studio-reference sculpture set, a compact visual-debug set, or a plate-only set
+- `--height-unit brick|plate`: choose full-brick vertical layers or plate-height vertical layers. `plate` requires `--optimize --brick-palette plates` because a plate is one third of a brick height.
 - `--steps-by-layer`: insert `0 STEP` markers between vertical layers in the LDR file
 
 ## Placement and Quality Fixtures
@@ -288,13 +289,14 @@ In `sam3d` mode, `POST /api/jobs` requires a `mask_id`. The UI flow should uploa
 Backend job requests also accept:
 
 - `optimizer`: `greedy` or `layered`
-- `brick_palette`: `full`, `studio`, or `compact`
+- `brick_palette`: `full`, `studio`, `compact`, or `plates`
+- `height_unit`: `brick` or `plate`
 - `sculpture_mode`: `solid`, `shell`, or `density`
 - `wall_thickness`
 - `base_thickness`
 - `infill_density`
 - `infill_pattern`: `lattice` or `ribs`
-- `voxel_smoothing`: `none`, `light`, `contour`, `studio`, or `profile`
+- `voxel_smoothing`: `none`, `light`, `contour`, `studio`, `profile`, or `polished`
 - `ray_fill`: `wide` or `balanced`
 - `steps_by_layer`
 

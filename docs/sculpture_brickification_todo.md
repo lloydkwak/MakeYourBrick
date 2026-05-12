@@ -391,7 +391,7 @@ Latest Studio palette diagnostic:
 
 ## Phase 13: Exterior Rod Reduction
 
-Status: in progress.
+Status: completed.
 
 Purpose:
 
@@ -424,6 +424,52 @@ Latest compact palette diagnostic:
 - Long parts removed from candidate output: `3007.dat`, `3008.dat`, `3009.dat`, and `2456.dat` are all 0.
 - Part distribution now uses only 4-stud-or-shorter bricks: `3001.dat`, `3010.dat`, `3622.dat`, `3004.dat`, `3002.dat`, `3003.dat`, and `3005.dat`.
 - Average support ratio improved to `0.8733`; brick count increased to `4080`, which is expected because compact mode prioritizes visual contour stability over part count reduction.
+
+## Phase 14: Polished Surface Cleanup and Plate Readiness
+
+Status: in progress.
+
+Purpose:
+
+Reduce remaining jagged surface noise after compact brick placement, and clarify the technical path for real plate support.
+
+Reference finding:
+
+- The inspected Studio queen `model.ldr` still contains no plate parts.
+- Real plate support requires a vertical resolution change because a LEGO plate is one third of a brick height. The current voxel grid treats one Y layer as one full brick height, so replacing bricks with plates would create incorrect physical height unless the Y grid becomes plate-height based.
+
+Tasks:
+
+- [x] Add `polished` voxel smoothing preset.
+- [x] Add 8-neighbor 2D layer contour smoothing.
+- [x] Remove small layer noise after polished smoothing.
+- [x] Keep backend and CLI validation in sync.
+- [x] Add plate-height LDraw output mode.
+- [x] Add plate-only optimizer palette:
+  - `3020.dat` 2x4 plate
+  - `3710.dat` 1x4 plate
+  - `3021.dat` 2x3 plate
+  - `3022.dat` 2x2 plate
+  - `3023.dat` 1x2 plate
+  - `3024.dat` 1x1 plate
+- [x] Generate a queen candidate with `--voxel-smoothing polished --brick-palette compact`.
+- [x] Generate a queen candidate with `--height-unit plate --brick-palette plates`.
+- [x] Compare polished compact and plate-height outputs against the previous compact candidate.
+
+Acceptance criteria:
+
+- [x] Polished compact output is available for visual inspection.
+- [x] Test suite passes with the new smoothing preset.
+- [x] Plate-height mode uses plate part IDs and 8 LDU vertical spacing.
+
+Latest plate-height diagnostic:
+
+- Candidate: `outputs/ldr/queen_slice_polished_plates_60.ldr`.
+- Plate parts used: `3020.dat`, `3710.dat`, `3021.dat`, `3022.dat`, `3023.dat`, and `3024.dat`.
+- Occupancy shape changed from 60 brick-height layers to 180 plate-height layers.
+- Output brick/plate count: `12091`.
+- Studio comparison after plate footprint support: IoU `0.297795`, missing `300`, extra `14987`.
+- Interpretation: plate mode proves the correct height model and part output path, but it greatly increases part count and overfill. It is best treated as an optional visual/detail mode, not the default Studio-like sculpture path yet.
 
 Latest light smoothing diagnostic:
 

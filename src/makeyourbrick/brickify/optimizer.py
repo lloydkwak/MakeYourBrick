@@ -44,7 +44,16 @@ COMPACT_SCULPTURE_BRICKS = (
     BrickSpec("3005.dat", 1, 1),
 )
 
-BRICK_PALETTES = ("full", "studio", "compact")
+PLATE_SCULPTURE_BRICKS = (
+    BrickSpec("3020.dat", 2, 4),
+    BrickSpec("3710.dat", 1, 4),
+    BrickSpec("3021.dat", 2, 3),
+    BrickSpec("3022.dat", 2, 2),
+    BrickSpec("3023.dat", 1, 2),
+    BrickSpec("3024.dat", 1, 1),
+)
+
+BRICK_PALETTES = ("full", "studio", "compact", "plates")
 
 
 def brick_specs_for_palette(palette: str) -> tuple[BrickSpec, ...]:
@@ -54,6 +63,8 @@ def brick_specs_for_palette(palette: str) -> tuple[BrickSpec, ...]:
         return STUDIO_SCULPTURE_BRICKS
     if palette == "compact":
         return COMPACT_SCULPTURE_BRICKS
+    if palette == "plates":
+        return PLATE_SCULPTURE_BRICKS
     raise ValueError(f"Unsupported brick palette: {palette}")
 
 

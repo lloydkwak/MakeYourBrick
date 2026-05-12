@@ -47,7 +47,8 @@ class JobRequest(BaseModel):
     sample_colors: bool = True
     optimize: bool = True
     optimizer: Literal["greedy", "layered"] = "greedy"
-    brick_palette: Literal["full", "studio", "compact"] = "full"
+    brick_palette: Literal["full", "studio", "compact", "plates"] = "full"
+    height_unit: Literal["brick", "plate"] = "brick"
     fill: bool = True
     voxelizer: Literal["surface", "ray", "slice"] = "surface"
     ray_fill: Literal["wide", "balanced"] = "wide"
@@ -57,7 +58,7 @@ class JobRequest(BaseModel):
     sculpture_mode: Literal["solid", "shell", "density"] = "solid"
     wall_thickness: int = Field(default=1, ge=1, le=16)
     base_thickness: int = Field(default=0, ge=0, le=64)
-    voxel_smoothing: Literal["none", "light", "contour", "studio", "profile"] = "none"
+    voxel_smoothing: Literal["none", "light", "contour", "studio", "profile", "polished"] = "none"
     infill_density: float = Field(default=0.35, ge=0.0, le=1.0)
     infill_pattern: Literal["lattice", "ribs"] = "lattice"
     steps_by_layer: bool = False

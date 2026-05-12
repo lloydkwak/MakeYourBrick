@@ -58,6 +58,16 @@ def test_footprint_cells_uses_studio_part_dimensions_and_rotation() -> None:
     assert {cell[2] for cell in cells} == {0, 1}
 
 
+def test_footprint_cells_can_use_plate_dimensions() -> None:
+    footprints = {"3020.dat": StudioPartFootprint("3020.dat", width=2, depth=4)}
+    parts = parse_ldr_parts("1 16 10 -8 30 1 0 0 0 1 0 0 0 1 3020.dat\n")
+
+    cells = footprint_cells(parts, footprints)
+
+    assert len(cells) == 8
+    assert {cell[1] for cell in cells} == {0}
+
+
 def test_compare_ldr_footprints_reports_iou() -> None:
     footprints = {"3005.dat": StudioPartFootprint("3005.dat", width=1, depth=1)}
     reference = parse_ldr_parts("1 16 0 0 0 1 0 0 0 1 0 0 0 1 3005.dat\n")

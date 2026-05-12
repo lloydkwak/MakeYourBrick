@@ -244,6 +244,58 @@ def test_mesh_to_ldr_cli_can_use_studio_brick_palette() -> None:
         report_path.unlink(missing_ok=True)
 
 
+def test_mesh_to_ldr_cli_can_use_plate_height_unit_and_palette() -> None:
+    input_mesh = Path("outputs/meshes/test_cli_plate_box.stl")
+    cleaned_mesh = Path("outputs/meshes/test_cli_plate_cleaned.glb")
+    voxel_path = Path("outputs/voxels/test_cli_plate_voxels.npz")
+    ldr_path = Path("outputs/ldr/test_cli_plate_mesh.ldr")
+    report_path = Path("outputs/reports/test_cli_plate_report.json")
+    try:
+        input_mesh.parent.mkdir(parents=True, exist_ok=True)
+        trimesh.creation.box(extents=(1, 1, 1)).export(input_mesh)
+
+        subprocess.run(
+            [
+                sys.executable,
+                "scripts/mesh_to_ldr.py",
+                "--mesh",
+                str(input_mesh),
+                "--target-studs",
+                "4",
+                "--optimize",
+                "--brick-palette",
+                "plates",
+                "--height-unit",
+                "plate",
+                "--cleaned-mesh",
+                str(cleaned_mesh),
+                "--voxels",
+                str(voxel_path),
+                "--output",
+                str(ldr_path),
+                "--report",
+                str(report_path),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        part_ids = {line.split()[-1] for line in ldr_path.read_text(encoding="utf-8").splitlines() if line.startswith("1 ")}
+        y_values = [int(line.split()[3]) for line in ldr_path.read_text(encoding="utf-8").splitlines() if line.startswith("1 ")]
+        assert report["brick_palette"] == "plates"
+        assert report["sculpture"]["height_unit"] == "plate"
+        assert part_ids <= {"3710.dat", "3020.dat", "3021.dat", "3022.dat", "3023.dat", "3024.dat"}
+        assert any(abs(y) % 8 == 0 for y in y_values)
+    finally:
+        input_mesh.unlink(missing_ok=True)
+        cleaned_mesh.unlink(missing_ok=True)
+        voxel_path.unlink(missing_ok=True)
+        ldr_path.unlink(missing_ok=True)
+        report_path.unlink(missing_ok=True)
+
+
 def test_mesh_to_ldr_cli_supports_sculpture_shell_layered_steps() -> None:
     input_mesh = Path("outputs/meshes/test_cli_sculpture_box.stl")
     cleaned_mesh = Path("outputs/meshes/test_cli_sculpture_cleaned.glb")

@@ -12,9 +12,12 @@ from makeyourbrick.voxel.sculpture import (
     fill_vertical_layer_gaps,
     lattice_infill_mask,
     lattice_spacing_for_density,
+    layer_neighbor_count_8,
     remove_small_layer_components,
     rib_infill_mask,
     smooth_2d_contour,
+    smooth_2d_polished_contour,
+    smooth_polished_layers,
     smooth_profile_layers,
     smooth_studio_layers,
     trim_layer_to_neighbor_profile,
@@ -241,6 +244,28 @@ def test_smooth_2d_contour_fills_corners_and_removes_spurs() -> None:
     assert not smoothed[4, 2]
 
 
+def test_eight_neighbor_count_includes_diagonals() -> None:
+    layer = np.zeros((3, 3), dtype=bool)
+    layer[0, 0] = True
+    layer[0, 1] = True
+
+    counts = layer_neighbor_count_8(layer)
+
+    assert counts[1, 1] == 2
+
+
+def test_smooth_2d_polished_contour_removes_noise_and_fills_cavities() -> None:
+    layer = np.zeros((7, 7), dtype=bool)
+    layer[1:6, 1:6] = True
+    layer[3, 3] = False
+    layer[6, 6] = True
+
+    smoothed = smooth_2d_polished_contour(layer)
+
+    assert smoothed[3, 3]
+    assert not smoothed[6, 6]
+
+
 def test_contour_voxel_smoothing_applies_layer_cleanup() -> None:
     occupancy = np.zeros((5, 1, 5), dtype=bool)
     occupancy[1:4, 0, 1:4] = True
@@ -330,6 +355,30 @@ def test_profile_voxel_smoothing_preset_is_available() -> None:
     occupancy[4, 1, 4] = True
 
     smoothed = apply_voxel_smoothing(occupancy, "profile")
+
+    assert smoothed[2, 1, 2]
+    assert not smoothed[4, 1, 4]
+
+
+def test_polished_voxel_smoothing_reduces_jagged_layer_noise() -> None:
+    occupancy = np.zeros((7, 3, 7), dtype=bool)
+    occupancy[1:6, :, 1:6] = True
+    occupancy[3, 1, 3] = False
+    occupancy[6, 1, 6] = True
+
+    smoothed = smooth_polished_layers(occupancy)
+
+    assert smoothed[3, 1, 3]
+    assert smoothed[4, 1, 4]
+    assert not smoothed[6, 1, 6]
+
+
+def test_polished_voxel_smoothing_preset_is_available() -> None:
+    occupancy = np.zeros((5, 3, 5), dtype=bool)
+    occupancy[1:4, :, 1:4] = True
+    occupancy[4, 1, 4] = True
+
+    smoothed = apply_voxel_smoothing(occupancy, "polished")
 
     assert smoothed[2, 1, 2]
     assert not smoothed[4, 1, 4]

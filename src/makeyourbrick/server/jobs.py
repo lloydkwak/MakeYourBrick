@@ -195,6 +195,7 @@ def run_pipeline_job(
             optimize=request.optimize,
             optimizer=request.optimizer,
             brick_palette=request.brick_palette,
+            height_unit=request.height_unit,
             report_path=report_path,
             raw_mesh_report_path=mesh_inspect_path,
             repair_mode=request.repair_mode,

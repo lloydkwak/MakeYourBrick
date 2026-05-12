@@ -4,6 +4,7 @@ import numpy as np
 
 from makeyourbrick.brickify.optimizer import (
     COMPACT_SCULPTURE_BRICKS,
+    PLATE_SCULPTURE_BRICKS,
     STUDIO_SCULPTURE_BRICKS,
     brick_specs_for_palette,
     brickify_1x1,
@@ -73,9 +74,20 @@ def test_compact_brick_palette_limits_long_visual_spans() -> None:
     np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)
 
 
+def test_plate_brick_palette_uses_plate_parts() -> None:
+    occupancy, color_ids = make_solid_box((2, 1, 4), color_id=16)
+
+    optimized = greedy_brickify(occupancy, color_ids, brick_specs=PLATE_SCULPTURE_BRICKS)
+
+    assert optimized[0].part_id == "3020.dat"
+    assert all(brick.height == 1 for brick in optimized)
+    np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)
+
+
 def test_brick_specs_for_palette_validates_names() -> None:
     assert brick_specs_for_palette("studio") == STUDIO_SCULPTURE_BRICKS
     assert brick_specs_for_palette("compact") == COMPACT_SCULPTURE_BRICKS
+    assert brick_specs_for_palette("plates") == PLATE_SCULPTURE_BRICKS
     assert brick_specs_for_palette("full")
 
 
