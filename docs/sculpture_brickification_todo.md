@@ -319,6 +319,10 @@ Tasks:
 - [x] Add ribbed internal support infill with staggered X/Z support lines and vertical posts.
 - [x] Add Studio-like layer smoothing preset for filled layer holes, vertical layer gaps, and isolated protrusion cleanup.
 - [x] Change layer-slice contour filling to union same-layer contours by default, reducing false holes from fragmented open OBJ slices.
+- [x] Add `profile` smoothing preset for stricter layer cleanup:
+  - remove small disconnected 2D islands per layer
+  - fill layer holes before optimization
+  - trim middle-layer spikes that do not agree with adjacent layer profiles
 
 Acceptance criteria:
 
@@ -336,6 +340,15 @@ Latest contour union diagnostic:
 
 - The slice voxelizer now uses union filling for same-layer contours by default.
 - This intentionally favors continuous sculpture layers over preserving every mesh hole, because fragmented open OBJ contour loops can otherwise create false cutouts in the generated LEGO model.
+
+Latest profile smoothing diagnostic:
+
+- `voxel_smoothing=profile` is intended for visual sculpture cleanup when an open OBJ creates small floating layer islands or sharp one-layer spikes.
+- It is stricter than `studio`, so it should be used for Studio-like sculpture imports before adding more brick-level optimizer complexity.
+- Queen candidate: `outputs/ldr/queen_slice_profile_studio_palette_solid_60.ldr`.
+- Comparison against `queen.io`: IoU `0.308884`, missing `580`, extra `13299`.
+- Compared with the previous Studio-palette candidate (`0.308805`, missing `572`, extra `13330`), profile smoothing slightly reduces overfill and improves stability metrics, but does not solve the main shape mismatch by itself.
+- Stability improved from average support ratio `0.7981` to `0.8203`; floating brick count dropped from `501` to `430`, and overhang risk count dropped from `81` to `65`.
 
 ## Phase 12: Studio Reference Brick Palette
 

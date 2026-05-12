@@ -12,9 +12,12 @@ from makeyourbrick.voxel.sculpture import (
     fill_vertical_layer_gaps,
     lattice_infill_mask,
     lattice_spacing_for_density,
+    remove_small_layer_components,
     rib_infill_mask,
     smooth_2d_contour,
+    smooth_profile_layers,
     smooth_studio_layers,
+    trim_layer_to_neighbor_profile,
     preprocess_shell_occupancy,
     preprocess_solid_occupancy,
     surface_mask,
@@ -282,6 +285,54 @@ def test_studio_voxel_smoothing_preset_is_available() -> None:
     smoothed = apply_voxel_smoothing(occupancy, "studio")
 
     assert smoothed[1, 1, 1]
+
+
+def test_remove_small_layer_components_drops_isolated_islands() -> None:
+    layer = np.zeros((8, 8), dtype=bool)
+    layer[1:5, 1:5] = True
+    layer[7, 7] = True
+
+    cleaned = remove_small_layer_components(layer)
+
+    assert cleaned[2, 2]
+    assert not cleaned[7, 7]
+
+
+def test_trim_layer_to_neighbor_profile_limits_outside_spikes() -> None:
+    layer = np.zeros((8, 8), dtype=bool)
+    layer[2:5, 2:5] = True
+    layer[7, 7] = True
+    neighbor_profile = np.zeros((8, 8), dtype=bool)
+    neighbor_profile[2:5, 2:5] = True
+
+    trimmed = trim_layer_to_neighbor_profile(layer, neighbor_profile)
+
+    assert trimmed[3, 3]
+    assert not trimmed[7, 7]
+
+
+def test_profile_voxel_smoothing_removes_layer_islands_and_keeps_body() -> None:
+    occupancy = np.zeros((8, 3, 8), dtype=bool)
+    occupancy[2:6, :, 2:6] = True
+    occupancy[7, 1, 7] = True
+    occupancy[3, 1, 3] = False
+
+    smoothed = smooth_profile_layers(occupancy)
+
+    assert smoothed[3, 1, 3]
+    assert smoothed[4, 1, 4]
+    assert not smoothed[7, 1, 7]
+
+
+def test_profile_voxel_smoothing_preset_is_available() -> None:
+    occupancy = np.zeros((5, 3, 5), dtype=bool)
+    occupancy[1:4, :, 1:4] = True
+    occupancy[4, 1, 4] = True
+
+    smoothed = apply_voxel_smoothing(occupancy, "profile")
+
+    assert smoothed[2, 1, 2]
+    assert not smoothed[4, 1, 4]
 
 
 def test_shell_base_anchoring_adds_minimal_vertical_support() -> None:

@@ -6,8 +6,8 @@ import numpy as np
 
 SCULPTURE_MODES = ("solid", "shell", "density")
 SculptureMode = Literal["solid", "shell", "density"]
-VOXEL_SMOOTHING_PRESETS = ("none", "light", "contour", "studio")
-VoxelSmoothing = Literal["none", "light", "contour", "studio"]
+VOXEL_SMOOTHING_PRESETS = ("none", "light", "contour", "studio", "profile")
+VoxelSmoothing = Literal["none", "light", "contour", "studio", "profile"]
 INFILL_PATTERNS = ("lattice", "ribs")
 InfillPattern = Literal["lattice", "ribs"]
 
@@ -134,6 +134,8 @@ def apply_voxel_smoothing(occupancy: np.ndarray, preset: VoxelSmoothing = "none"
         raise ValueError(f"Unsupported voxel smoothing preset: {preset}")
     if preset == "none":
         return occupancy.astype(bool)
+    if preset == "profile":
+        return smooth_profile_layers(close_single_voxel_gaps(occupancy))
     if preset == "studio":
         return smooth_studio_layers(close_single_voxel_gaps(occupancy))
     smoothed = close_single_voxel_gaps(occupancy)
@@ -155,6 +157,56 @@ def layer_neighbor_count(layer: np.ndarray) -> np.ndarray:
             1 + dz : 1 + dz + layer.shape[1],
         ]
     return counts
+
+
+def layer_components(layer: np.ndarray) -> list[list[tuple[int, int]]]:
+    if layer.ndim != 2:
+        raise ValueError("Layer must be a 2D array.")
+    layer = layer.astype(bool)
+    visited = np.zeros_like(layer, dtype=bool)
+    components: list[list[tuple[int, int]]] = []
+    width, depth = layer.shape
+    for start in np.argwhere(layer):
+        x, z = (int(value) for value in start)
+        if visited[x, z]:
+            continue
+        stack = [(x, z)]
+        visited[x, z] = True
+        component: list[tuple[int, int]] = []
+        while stack:
+            cx, cz = stack.pop()
+            component.append((cx, cz))
+            for dx, dz in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                nx, nz = cx + dx, cz + dz
+                if not (0 <= nx < width and 0 <= nz < depth):
+                    continue
+                if layer[nx, nz] and not visited[nx, nz]:
+                    visited[nx, nz] = True
+                    stack.append((nx, nz))
+        components.append(component)
+    return components
+
+
+def remove_small_layer_components(
+    layer: np.ndarray,
+    *,
+    min_size: int = 4,
+    min_largest_ratio: float = 0.03,
+) -> np.ndarray:
+    if layer.ndim != 2:
+        raise ValueError("Layer must be a 2D array.")
+    layer = layer.astype(bool)
+    components = layer_components(layer)
+    if len(components) <= 1:
+        return layer.copy()
+    largest_size = max(len(component) for component in components)
+    threshold = max(int(min_size), int(np.ceil(largest_size * float(min_largest_ratio))))
+    retained = np.zeros_like(layer, dtype=bool)
+    for component in components:
+        if len(component) >= threshold:
+            for x, z in component:
+                retained[x, z] = True
+    return retained
 
 
 def fill_2d_holes(layer: np.ndarray) -> np.ndarray:
@@ -229,6 +281,58 @@ def smooth_studio_layers(occupancy: np.ndarray, iterations: int = 2) -> np.ndarr
             counts = layer_neighbor_count(layer)
             layer[(~layer) & (counts >= 3)] = True
             smoothed[:, y, :] = layer
+        smoothed = fill_vertical_layer_gaps(smoothed)
+        smoothed = remove_light_layer_spurs(smoothed)
+    return smoothed
+
+
+def trim_layer_to_neighbor_profile(
+    layer: np.ndarray,
+    neighbor_profile: np.ndarray,
+    *,
+    max_extra_neighbor_distance: int = 1,
+) -> np.ndarray:
+    if layer.ndim != 2 or neighbor_profile.ndim != 2:
+        raise ValueError("Layer masks must be 2D arrays.")
+    if layer.shape != neighbor_profile.shape:
+        raise ValueError("Layer masks must have the same shape.")
+    layer = layer.astype(bool)
+    profile = neighbor_profile.astype(bool)
+    if not layer.any() or not profile.any():
+        return layer.copy()
+    expanded = profile.copy()
+    for _ in range(max(0, max_extra_neighbor_distance)):
+        padded = np.pad(expanded, 1, mode="constant", constant_values=False)
+        expanded |= padded[:-2, 1:-1]
+        expanded |= padded[2:, 1:-1]
+        expanded |= padded[1:-1, :-2]
+        expanded |= padded[1:-1, 2:]
+    return layer & expanded
+
+
+def smooth_profile_layers(occupancy: np.ndarray, iterations: int = 2) -> np.ndarray:
+    if occupancy.ndim != 3:
+        raise ValueError("Occupancy must be a 3D array.")
+    smoothed = smooth_studio_layers(occupancy, iterations=1)
+    for _ in range(max(1, iterations)):
+        smoothed = fill_vertical_layer_gaps(smoothed)
+        for y in range(smoothed.shape[1]):
+            layer = fill_2d_holes(smoothed[:, y, :])
+            layer = smooth_2d_contour(layer)
+            layer = remove_small_layer_components(layer)
+            smoothed[:, y, :] = layer
+        if smoothed.shape[1] >= 3:
+            previous_layers = smoothed[:, :-2, :]
+            current_layers = smoothed[:, 1:-1, :]
+            next_layers = smoothed[:, 2:, :]
+            for y in range(1, smoothed.shape[1] - 1):
+                neighbor_profile = previous_layers[:, y - 1, :] | next_layers[:, y - 1, :]
+                current_layers[:, y - 1, :] = trim_layer_to_neighbor_profile(
+                    current_layers[:, y - 1, :],
+                    neighbor_profile,
+                    max_extra_neighbor_distance=1,
+                )
+            smoothed[:, 1:-1, :] = current_layers
         smoothed = fill_vertical_layer_gaps(smoothed)
         smoothed = remove_light_layer_spurs(smoothed)
     return smoothed

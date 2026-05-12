@@ -156,7 +156,7 @@ Sculpture options:
 - `--base-thickness`: number of bottom layers to force solid
 - `--infill-density`: target interior lattice density for `density` sculpture mode
 - `--infill-pattern lattice|ribs`: choose uniform lattice infill or staggered Studio-like internal support ribs
-- `--voxel-smoothing none|light|contour|studio`: optional cleanup for isolated protrusions, layer contours, and Studio-like layer consistency
+- `--voxel-smoothing none|light|contour|studio|profile`: optional cleanup for isolated protrusions, layer contours, Studio-like layer consistency, or stricter profile cleanup that removes small layer islands and trims unsupported spikes
 - `--optimizer greedy|layered`: largest-first greedy optimizer or support/seam-aware optimizer
 - `--brick-palette full|studio`: choose the full experimental brick set or the Studio-reference sculpture brick set; `studio` currently excludes `3006.dat` 2x10 because the inspected queen Studio reference did not use it
 - `--steps-by-layer`: insert `0 STEP` markers between vertical layers in the LDR file
@@ -294,7 +294,7 @@ Backend job requests also accept:
 - `base_thickness`
 - `infill_density`
 - `infill_pattern`: `lattice` or `ribs`
-- `voxel_smoothing`: `none`, `light`, `contour`, or `studio`
+- `voxel_smoothing`: `none`, `light`, `contour`, `studio`, or `profile`
 - `ray_fill`: `wide` or `balanced`
 - `steps_by_layer`
 
