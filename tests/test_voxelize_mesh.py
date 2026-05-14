@@ -11,6 +11,7 @@ from makeyourbrick.brickify.colors import load_ldraw_palette
 from makeyourbrick.voxel.voxelize import (
     _pair_ray_hit_intervals,
     _points_inside_contours,
+    compute_footprint_pitch,
     compute_pitch,
     load_voxel_artifact,
     save_voxel_artifact,
@@ -30,6 +31,12 @@ def test_compute_pitch_respects_min_pitch() -> None:
     mesh = trimesh.creation.box(extents=(1, 1, 1))
 
     assert compute_pitch(mesh, target_longest_studs=1000, min_pitch=0.01) == 0.01
+
+
+def test_compute_footprint_pitch_uses_xz_base_size_not_height() -> None:
+    mesh = trimesh.creation.box(extents=(2, 10, 4))
+
+    assert compute_footprint_pitch(mesh, base_size_studs=8) == 0.5
 
 
 def test_save_and_load_voxel_artifact_round_trip() -> None:

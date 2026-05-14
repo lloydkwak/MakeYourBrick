@@ -30,8 +30,8 @@ def make_repo(path: Path) -> None:
 def test_sam3d_adapter_exports_candidate_triangle_mesh() -> None:
     repo = Path("outputs/test_sam_adapter_repo")
     image = Path("outputs/test_sam_adapter_image.png")
-    candidate = Path("outputs/test_sam_adapter/raw_candidate.glb")
-    output = Path("outputs/meshes/test_sam_adapter_output.glb")
+    candidate = Path("outputs/test_sam_adapter/raw_candidate.obj")
+    output = Path("outputs/meshes/test_sam_adapter_output.obj")
     report_path = Path("outputs/reports/test_sam_adapter_report.json")
     try:
         make_repo(repo)
@@ -73,7 +73,7 @@ def test_sam3d_adapter_exports_candidate_triangle_mesh() -> None:
 
 def test_sam3d_adapter_runs_command_template_that_writes_output() -> None:
     image = Path("outputs/test_sam_adapter_command_image.png")
-    output = Path("outputs/meshes/test_sam_adapter_command_output.glb")
+    output = Path("outputs/meshes/test_sam_adapter_command_output.obj")
     report_path = Path("outputs/reports/test_sam_adapter_command_report.json")
     try:
         make_image(image)
@@ -112,7 +112,7 @@ def test_sam3d_adapter_runs_command_template_that_writes_output() -> None:
 def test_sam3d_adapter_forwards_mask_to_command_and_report() -> None:
     image = Path("outputs/test_sam_adapter_mask_image.png")
     mask = Path("outputs/test_sam_adapter_mask.png")
-    output = Path("outputs/meshes/test_sam_adapter_mask_output.glb")
+    output = Path("outputs/meshes/test_sam_adapter_mask_output.obj")
     report_path = Path("outputs/reports/test_sam_adapter_mask_report.json")
     record_path = Path("outputs/reports/test_sam_adapter_mask_record.json")
     try:
@@ -161,7 +161,7 @@ def test_sam3d_adapter_forwards_mask_to_command_and_report() -> None:
 
 def test_sam3d_adapter_rejects_missing_mask_before_command() -> None:
     image = Path("outputs/test_sam_adapter_missing_mask_image.png")
-    output = Path("outputs/meshes/test_sam_adapter_missing_mask_output.glb")
+    output = Path("outputs/meshes/test_sam_adapter_missing_mask_output.obj")
     report_path = Path("outputs/reports/test_sam_adapter_missing_mask_report.json")
     try:
         make_image(image)
@@ -203,7 +203,7 @@ def test_sam3d_adapter_rejects_point_cloud_candidate() -> None:
     repo = Path("outputs/test_sam_adapter_repo")
     image = Path("outputs/test_sam_adapter_point_image.png")
     candidate = Path("outputs/test_sam_adapter/point_cloud.ply")
-    output = Path("outputs/meshes/test_sam_adapter_point_output.glb")
+    output = Path("outputs/meshes/test_sam_adapter_point_output.obj")
     report_path = Path("outputs/reports/test_sam_adapter_point_report.json")
     try:
         make_repo(repo)
@@ -244,7 +244,7 @@ def test_sam3d_adapter_rejects_point_cloud_candidate() -> None:
 
 def test_sam3d_adapter_classifies_gaussian_splat_ply() -> None:
     candidate = Path("outputs/test_sam_adapter/gaussian_splat.ply")
-    output = Path("outputs/meshes/test_sam_adapter_gaussian_output.glb")
+    output = Path("outputs/meshes/test_sam_adapter_gaussian_output.obj")
     report_path = Path("outputs/reports/test_sam_adapter_gaussian_report.json")
     image = Path("outputs/test_sam_adapter_gaussian_image.png")
     repo = Path("outputs/test_sam_adapter_repo")
@@ -325,6 +325,6 @@ def test_sam3d_adapter_classifies_mesh_ply_with_faces() -> None:
 
         assert artifact["artifact_type"] == "mesh_ply"
         assert artifact["mesh_compatible"] is True
-        assert artifact["next_action"] == "adapt_to_glb"
+        assert artifact["next_action"] == "adapt_to_mesh"
     finally:
         candidate.unlink(missing_ok=True)

@@ -9,13 +9,13 @@ It does not assume a stable upstream Python API. Instead, it accepts either:
 
 The adapter classifies and inspects the candidate, verifies that it is a voxelization-ready triangle mesh, and exports a normalized mesh file for MakeYourBrick.
 
-SAM 3D Objects official quickstart exports a Gaussian splat PLY through `output["gs"].save_ply("splat.ply")`. The upstream pipeline also exposes mesh/GLB post-processing paths. MakeYourBrick should prefer direct GLB or triangle mesh export and preserve Gaussian splat PLY only for debugging and visualization.
+SAM 3D Objects official quickstart exports a Gaussian splat PLY through `output["gs"].save_ply("splat.ply")`. The upstream pipeline also exposes triangle mesh post-processing paths. MakeYourBrick now prefers direct OBJ triangle mesh export and preserves Gaussian splat PLY only for debugging and visualization.
 
 ## Artifact Policy
 
 ```text
 raw_splat.ply       Optional preserved SAM Gaussian splat output
-raw_model.glb       Required triangle mesh input for MakeYourBrick
+raw_model.obj       Required triangle mesh input for MakeYourBrick
 mesh_inspect.json   Geometry compatibility report
 repair_report.json  Mesh repair report
 output.ldr          Final LDraw model
@@ -23,14 +23,14 @@ output.ldr          Final LDraw model
 
 PLY files are classified before conversion:
 
-- `mesh_ply`: has face elements and can be adapted to GLB
+- `mesh_ply`: has face elements and can be adapted to OBJ
 - `gaussian_splat_ply`: has Gaussian properties such as opacity, scale, rotation, or feature fields; mesh extraction is required
 - `point_cloud_ply`: has vertices without faces or Gaussian properties; mesh reconstruction is required
 
 Preferred real SAM export order:
 
-1. `output["glb"].export(raw_model.glb)`
-2. convert `output["mesh"][0]` to GLB through Trimesh
+1. convert `output["mesh"][0]` to OBJ through Trimesh
+2. export `output["glb"]` only when that is the only exportable mesh object available
 3. save `output["gs"]` as an optional debug PLY
 4. fail before voxelization if no mesh output is available
 
@@ -41,7 +41,7 @@ python scripts/adapters/sam3d_to_mesh.py \
   --repo third_party/sam-3d-objects \
   --image data/input_images/sample.png \
   --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
-  --output outputs/meshes/raw_model.glb \
+  --output outputs/meshes/raw_model.obj \
   --sam-command "<upstream command that reads {image} and {mask}, then writes {output} or {work_dir}>"
 ```
 
@@ -63,8 +63,8 @@ python scripts/adapters/sam3d_to_mesh.py \
   --repo third_party/sam-3d-objects \
   --image data/input_images/sample.png \
   --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
-  --candidate path/to/sam/output.glb \
-  --output outputs/meshes/raw_model.glb \
+  --candidate path/to/sam/output.obj \
+  --output outputs/meshes/raw_model.obj \
   --report outputs/reports/sam3d_adapter.json
 ```
 
@@ -92,7 +92,7 @@ python scripts/adapters/run_sam3d_objects_export.py \
   --repo third_party/sam-3d-objects \
   --image data/input_images/sample.png \
   --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
-  --output outputs/meshes/raw_model.glb \
+  --output outputs/meshes/raw_model.obj \
   --splat-output outputs/meshes/raw_splat.ply \
   --metadata outputs/reports/sam3d_export.json
 ```
@@ -105,9 +105,11 @@ python scripts/image_to_ldr.py \
   --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
   --sam-repo third_party/sam-3d-objects \
   --sam-command "python scripts/adapters/run_sam3d_objects_export.py --repo {repo} --image {image} --mask {mask} --output {output} --metadata {output_dir}/sam3d_export.json" \
-  --target-studs 48 \
+  --base-size-studs 32 \
   --sample-colors \
   --optimize \
+  --sculpture-engine layered \
+  --sculpture-mode contour-shell \
   --repair-report outputs/reports/repair_report.json \
   --report outputs/reports/image_report.json \
   --output outputs/ldr/image_output.ldr
@@ -117,4 +119,4 @@ The nested command above is intentionally explicit. For real use, prefer storing
 
 ## Current Limitation
 
-The repository includes a SAM 3D Objects wrapper at `scripts/adapters/run_sam3d_objects_export.py`, but it has not yet been validated against a real GPU/SAM checkout. The next required step is to run that wrapper in the upstream environment, confirm that `raw_model.glb` is produced, and inspect the result before voxelization.
+The repository includes a SAM 3D Objects wrapper at `scripts/adapters/run_sam3d_objects_export.py`, but it has not yet been validated against a real GPU/SAM checkout. The next required step is to run that wrapper in the upstream environment, confirm that `raw_model.obj` is produced, and inspect the result before voxelization.

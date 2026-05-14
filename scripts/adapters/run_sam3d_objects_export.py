@@ -14,11 +14,11 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run SAM 3D Objects and export a MakeYourBrick-ready GLB mesh.")
+    parser = argparse.ArgumentParser(description="Run SAM 3D Objects and export a MakeYourBrick-ready OBJ mesh.")
     parser.add_argument("--repo", type=Path, required=True, help="SAM 3D Objects repository path.")
     parser.add_argument("--image", type=Path, required=True, help="Input RGB/RGBA image path.")
     parser.add_argument("--mask", type=Path, required=True, help="Object mask image path.")
-    parser.add_argument("--output", type=Path, required=True, help="Output triangle mesh path, usually .glb.")
+    parser.add_argument("--output", type=Path, required=True, help="Output triangle mesh path, usually .obj.")
     parser.add_argument(
         "--config",
         type=Path,
@@ -125,9 +125,10 @@ def export_sam3d_output(
 ) -> dict[str, Any]:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     splat_path = maybe_save_splat(output, splat_output_path)
+    suffix = output_path.suffix.lower().lstrip(".") or "mesh"
 
     glb = output.get("glb")
-    if glb is not None and hasattr(glb, "export"):
+    if glb is not None and hasattr(glb, "export") and output_path.suffix.lower() == ".glb":
         glb.export(output_path)
         return {
             "status": "completed",
@@ -142,14 +143,24 @@ def export_sam3d_output(
         mesh.export(output_path)
         return {
             "status": "completed",
-            "export_method": "mesh_to_trimesh_glb",
+            "export_method": f"mesh_to_trimesh_{suffix}",
+            "output_path": str(output_path),
+            "splat_output_path": splat_path,
+            "output_keys": sorted(output.keys()),
+        }
+
+    if glb is not None and hasattr(glb, "export"):
+        glb.export(output_path)
+        return {
+            "status": "completed",
+            "export_method": f"output_glb_exported_as_{suffix}",
             "output_path": str(output_path),
             "splat_output_path": splat_path,
             "output_keys": sorted(output.keys()),
         }
 
     raise ValueError(
-        "SAM 3D output did not contain exportable GLB or triangle mesh data. "
+        "SAM 3D output did not contain exportable mesh data. "
         f"Available keys: {sorted(output.keys())}. "
         "If only Gaussian splats are available, mesh extraction is required before MakeYourBrick voxelization."
     )

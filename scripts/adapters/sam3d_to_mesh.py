@@ -15,7 +15,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repo", type=Path, required=True, help="SAM 3D Objects repository path.")
     parser.add_argument("--image", type=Path, required=True, help="Input image path.")
     parser.add_argument("--mask", type=Path, help="Optional object mask path.")
-    parser.add_argument("--output", type=Path, required=True, help="Output triangle mesh path, usually .glb.")
+    parser.add_argument("--output", type=Path, required=True, help="Output triangle mesh path, usually .obj.")
     parser.add_argument(
         "--sam-command",
         help=(

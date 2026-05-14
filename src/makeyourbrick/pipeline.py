@@ -27,7 +27,7 @@ from makeyourbrick.voxel.sculpture import (
     preprocess_solid_occupancy,
     repair_sculpture_colors,
 )
-from makeyourbrick.voxel.voxelize import compute_pitch, load_voxel_artifact, voxelize_mesh
+from makeyourbrick.voxel.voxelize import compute_footprint_pitch, compute_pitch, load_voxel_artifact, voxelize_mesh
 
 HEIGHT_UNITS = ("brick", "plate")
 SCULPTURE_ENGINES = ("legacy", "layered")
@@ -51,6 +51,7 @@ def run_from_image(
     voxel_output_path: Path | None = None,
     target_longest_studs: int = 24,
     min_pitch: float = 0.005,
+    base_size_studs: int | None = None,
     target_width_studs: int | None = None,
     target_depth_studs: int | None = None,
     fill: bool = True,
@@ -101,6 +102,7 @@ def run_from_image(
         voxel_output_path=voxel_output_path,
         target_longest_studs=target_longest_studs,
         min_pitch=min_pitch,
+        base_size_studs=base_size_studs,
         target_width_studs=target_width_studs,
         target_depth_studs=target_depth_studs,
         fill=fill,
@@ -144,6 +146,7 @@ def convert_mesh_to_ldr(
     voxel_output_path: Path,
     target_longest_studs: int = 24,
     min_pitch: float = 0.005,
+    base_size_studs: int | None = None,
     target_width_studs: int | None = None,
     target_depth_studs: int | None = None,
     fill: bool = True,
@@ -179,6 +182,10 @@ def convert_mesh_to_ldr(
         raise ValueError(f"Unsupported sculpture engine: {sculpture_engine}")
     if color_strategy not in COLOR_STRATEGIES:
         raise ValueError(f"Unsupported color strategy: {color_strategy}")
+    if base_size_studs is not None and base_size_studs <= 0:
+        raise ValueError("base_size_studs must be positive.")
+    if base_size_studs is not None and (target_width_studs is not None or target_depth_studs is not None):
+        raise ValueError("base_size_studs cannot be combined with target_width_studs or target_depth_studs.")
     if height_unit == "plate" and (not optimize or brick_palette != "plates"):
         raise ValueError("Plate height output requires --optimize --brick-palette plates.")
     if repair_mode == "basic" and repair_report_path is None:
@@ -188,13 +195,27 @@ def convert_mesh_to_ldr(
         if repair_report_path is not None:
             write_repair_report(repair_report, repair_report_path)
     mesh, orientation_report = orient_mesh_to_y_up(mesh, up_axis=up_axis)
-    pitch = compute_pitch(mesh, target_longest_studs=target_longest_studs, min_pitch=min_pitch)
-    mesh, footprint_scale_report = fit_mesh_footprint_to_studs(
-        mesh,
-        pitch=pitch,
-        target_width_studs=target_width_studs,
-        target_depth_studs=target_depth_studs,
-    )
+    if base_size_studs is not None:
+        pitch = compute_footprint_pitch(mesh, base_size_studs=base_size_studs, min_pitch=min_pitch)
+        footprint_scale_report = {
+            "applied": False,
+            "mode": "uniform_base_size",
+            "base_size_studs": int(base_size_studs),
+            "target_width_studs": None,
+            "target_depth_studs": None,
+            "scale": [1.0, 1.0, 1.0],
+            "pitch": float(pitch),
+            "original_extents": [float(value) for value in mesh.extents],
+            "scaled_extents": [float(value) for value in mesh.extents],
+        }
+    else:
+        pitch = compute_pitch(mesh, target_longest_studs=target_longest_studs, min_pitch=min_pitch)
+        mesh, footprint_scale_report = fit_mesh_footprint_to_studs(
+            mesh,
+            pitch=pitch,
+            target_width_studs=target_width_studs,
+            target_depth_studs=target_depth_studs,
+        )
     if height_unit == "plate":
         mesh = scale_mesh_y(mesh, BRICK_HEIGHT_LDU / PLATE_HEIGHT_LDU)
     cleaned_mesh_path.parent.mkdir(parents=True, exist_ok=True)

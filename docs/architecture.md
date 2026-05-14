@@ -1,6 +1,6 @@
 # Architecture
 
-MakeYourBrick is a staged image/mesh-to-LDraw pipeline. The stable production path is mesh-first: every real or generated object must become a triangle mesh before voxelization and LEGO conversion.
+MakeYourBrick is a staged OBJ-first image/mesh-to-LDraw pipeline. The stable production path is mesh-first: every real or generated object must become a triangle mesh before voxelization and LEGO conversion.
 
 ## Pipeline
 
@@ -9,7 +9,7 @@ image
   -> Sam3DRunner command contract
   -> optional object mask
   -> raw SAM artifact preservation
-  -> triangle mesh artifact (.glb preferred)
+  -> triangle mesh artifact (.obj preferred)
   -> mesh inspection
   -> mesh repair
   -> voxelization
@@ -35,7 +35,7 @@ Location:
 
 The runner executes a configurable command template. The template can use `{image}`, `{mask}`, `{output}`, `{output_dir}`, and `{repo}` placeholders. The command must write a Trimesh-loadable triangle mesh to `{output}`.
 
-The preferred SAM 3D Objects path is direct GLB export from the upstream inference output. The wrapper falls back to exporting `output["mesh"][0]` through Trimesh when a GLB object is not available. Gaussian splat PLY files are preserved as debug artifacts only and are not accepted as the standard MakeYourBrick geometry input.
+The preferred SAM 3D Objects path is direct OBJ export from the upstream triangle mesh output. The wrapper can also export GLB when explicitly requested, but GLB is now treated as one supported mesh format rather than the default. Gaussian splat PLY files are preserved as debug artifacts only and are not accepted as the standard MakeYourBrick geometry input.
 
 This design keeps the repository testable without installing SAM 3D or requiring a GPU.
 
@@ -48,7 +48,7 @@ Location:
 - `src/makeyourbrick/mesh/repair.py`
 - `src/makeyourbrick/mesh/color_sampling.py`
 
-The mesh module loads `.stl`, `.obj`, `.glb`, mesh `.ply`, and other Trimesh-supported triangle mesh formats. It can merge `trimesh.Scene` geometry into one mesh, inspect compatibility, and repair with explicit modes: `none`, `basic`, `manifold`, and `convex-hull`.
+The mesh module loads `.obj`, `.stl`, `.glb`, mesh `.ply`, and other Trimesh-supported triangle mesh formats. It can merge `trimesh.Scene` geometry into one mesh, inspect compatibility, and repair with explicit modes: `none`, `basic`, `manifold`, and `convex-hull`.
 
 Meshes are oriented to the pipeline's Y-up coordinate system before voxelization. The default `auto` mode maps a clearly dominant longest axis, such as Z-up OBJ sculpture assets, to vertical Y so LDraw output is not laid on its side.
 
@@ -73,6 +73,7 @@ Two voxelizers are available:
 
 - `surface`: Trimesh surface voxelization with optional fill, useful for watertight meshes.
 - `ray`: vertical scanline filling that casts rays through each stud column, closer to Studio's layer-by-layer sculpture behavior and more useful for open OBJ/STL sculpture assets.
+- `slice`: layer-by-layer section filling, currently the preferred sculpture path for OBJ assets.
 
 ### Color Quantization
 
@@ -98,18 +99,21 @@ The optimizer uses a deterministic greedy placement strategy with a Studio-like 
 
 It preserves occupancy and color boundaries. The optional `layered` optimizer places bricks layer by layer and scores candidates by area, support ratio, overhang penalty, and vertical seam alignment. Reports include stability metrics such as unsupported brick count, floating brick count, low-support brick count, overhang-risk brick count, connected component count, average support ratio, seam alignment score, and layer count.
 
-### Sculpture Mode
+### Sculpture Engine
 
 Location:
 
 - `src/makeyourbrick/voxel/sculpture.py`
+- `src/makeyourbrick/sculpture/`
 
-Sculpture mode post-processes the voxel occupancy before brick placement:
+Sculpture conversion post-processes the voxel occupancy before brick placement:
 
 - `solid`: keep the filled voxel model
 - `shell`: keep surface voxels, optional wall thickness, and solid base layers
+- `contour-shell`: keep per-layer outline walls, base fill, and sparse support columns
+- `density`: keep shell/base plus deterministic interior infill
 
-Shell mode also applies conservative voxel cleanup: single-voxel gap closing, isolated feature removal, and minimal base anchoring when a base thickness is requested. This mirrors the useful parts of Studio-style sculpture import while keeping the original voxel artifact available for inspection.
+The `layered` sculpture engine separates `solid`, `shell`, `base`, `support`, and final `target` masks before brick placement. That mirrors the useful parts of Brickalize/Studio/BrickFormer-style sculpture conversion while keeping the implementation small and testable.
 
 ### LDraw Output
 
@@ -156,4 +160,4 @@ The backend exposes image upload, placeholder mask generation, job creation, job
 
 ## Current Status
 
-The local mesh-to-LDraw pipeline, web job flow, mesh inspection, repair reports, SAM adapter contract, and SAM 3D Objects export wrapper are implemented and tested. Real SAM 3D inference still needs to be run in a suitable GPU/Linux environment to validate the wrapper against the upstream model and record a real sample.
+The local OBJ-first mesh-to-LDraw pipeline, web job flow, mesh inspection, repair reports, SAM adapter contract, and SAM 3D Objects export wrapper are implemented and tested. Real SAM 3D inference still needs to be run in a suitable GPU/Linux environment to validate the wrapper against the upstream model and record a real sample.

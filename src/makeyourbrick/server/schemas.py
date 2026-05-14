@@ -42,6 +42,7 @@ class JobRequest(BaseModel):
     image_id: str
     mask_id: str | None = None
     target_studs: int = Field(default=48, ge=8, le=128)
+    base_size_studs: int | None = Field(default=None, ge=1, le=256)
     target_width_studs: int | None = Field(default=None, ge=1, le=256)
     target_depth_studs: int | None = Field(default=None, ge=1, le=256)
     sample_colors: bool = True

@@ -6,6 +6,9 @@
 - Manifold: https://github.com/elalish/manifold
 - Trimesh: https://github.com/mikedh/trimesh
 - Brickalize: https://github.com/CreativeMindstorms/brickalize
+- 3DToLD: https://github.com/Nexusnui/3DToLD
+- BrickFormer: https://github.com/loryruta/brickformer
+- LPub3D: https://github.com/trevorsandy/lpub3d
 - StableLego: https://github.com/intelligent-control-lab/StableLego
 - Brick Optimization Builder: https://github.com/dzungpng/brick-optimization-builder
 
@@ -13,6 +16,7 @@
 
 - LDraw file format specification: https://www.ldraw.org/article/218.html
 - LDraw color definitions: https://www.ldraw.org/article/547.html
+- LDraw third-party software directory: https://www.ldraw.org/downloads-2/third-party-software.html
 
 ## Academic and Technical Background
 

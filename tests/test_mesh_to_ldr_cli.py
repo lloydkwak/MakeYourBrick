@@ -13,7 +13,7 @@ trimesh = pytest.importorskip("trimesh")
 
 def test_mesh_to_ldr_cli_converts_generated_stl_to_ldr() -> None:
     input_mesh = Path("outputs/meshes/test_cli_box.stl")
-    cleaned_mesh = Path("outputs/meshes/test_cli_cleaned.glb")
+    cleaned_mesh = Path("outputs/meshes/test_cli_cleaned.obj")
     voxel_path = Path("outputs/voxels/test_cli_voxels.npz")
     ldr_path = Path("outputs/ldr/test_cli_mesh.ldr")
     try:
@@ -58,7 +58,7 @@ def test_mesh_to_ldr_cli_converts_generated_stl_to_ldr() -> None:
 
 def test_mesh_to_ldr_cli_quantizes_rgb_to_ldraw_color_id() -> None:
     input_mesh = Path("outputs/meshes/test_cli_rgb_box.stl")
-    cleaned_mesh = Path("outputs/meshes/test_cli_rgb_cleaned.glb")
+    cleaned_mesh = Path("outputs/meshes/test_cli_rgb_cleaned.obj")
     voxel_path = Path("outputs/voxels/test_cli_rgb_voxels.npz")
     ldr_path = Path("outputs/ldr/test_cli_rgb_mesh.ldr")
     try:
@@ -101,7 +101,7 @@ def test_mesh_to_ldr_cli_quantizes_rgb_to_ldraw_color_id() -> None:
 
 def test_mesh_to_ldr_cli_can_write_optimized_output() -> None:
     input_mesh = Path("outputs/meshes/test_cli_optimized_box.stl")
-    cleaned_mesh = Path("outputs/meshes/test_cli_optimized_cleaned.glb")
+    cleaned_mesh = Path("outputs/meshes/test_cli_optimized_cleaned.obj")
     voxel_path = Path("outputs/voxels/test_cli_optimized_voxels.npz")
     ldr_path = Path("outputs/ldr/test_cli_optimized_mesh.ldr")
     try:
@@ -142,7 +142,7 @@ def test_mesh_to_ldr_cli_can_write_optimized_output() -> None:
 
 def test_mesh_to_ldr_cli_can_write_optimizer_report() -> None:
     input_mesh = Path("outputs/meshes/test_cli_report_box.stl")
-    cleaned_mesh = Path("outputs/meshes/test_cli_report_cleaned.glb")
+    cleaned_mesh = Path("outputs/meshes/test_cli_report_cleaned.obj")
     voxel_path = Path("outputs/voxels/test_cli_report_voxels.npz")
     ldr_path = Path("outputs/ldr/test_cli_report_mesh.ldr")
     report_path = Path("outputs/reports/test_cli_report.json")
@@ -199,7 +199,7 @@ def test_mesh_to_ldr_cli_can_write_optimizer_report() -> None:
 
 def test_mesh_to_ldr_cli_can_use_studio_brick_palette() -> None:
     input_mesh = Path("outputs/meshes/test_cli_studio_palette_box.stl")
-    cleaned_mesh = Path("outputs/meshes/test_cli_studio_palette_cleaned.glb")
+    cleaned_mesh = Path("outputs/meshes/test_cli_studio_palette_cleaned.obj")
     voxel_path = Path("outputs/voxels/test_cli_studio_palette_voxels.npz")
     ldr_path = Path("outputs/ldr/test_cli_studio_palette_mesh.ldr")
     report_path = Path("outputs/reports/test_cli_studio_palette_report.json")
@@ -246,7 +246,7 @@ def test_mesh_to_ldr_cli_can_use_studio_brick_palette() -> None:
 
 def test_mesh_to_ldr_cli_can_use_plate_height_unit_and_palette() -> None:
     input_mesh = Path("outputs/meshes/test_cli_plate_box.stl")
-    cleaned_mesh = Path("outputs/meshes/test_cli_plate_cleaned.glb")
+    cleaned_mesh = Path("outputs/meshes/test_cli_plate_cleaned.obj")
     voxel_path = Path("outputs/voxels/test_cli_plate_voxels.npz")
     ldr_path = Path("outputs/ldr/test_cli_plate_mesh.ldr")
     report_path = Path("outputs/reports/test_cli_plate_report.json")
@@ -296,9 +296,56 @@ def test_mesh_to_ldr_cli_can_use_plate_height_unit_and_palette() -> None:
         report_path.unlink(missing_ok=True)
 
 
+def test_mesh_to_ldr_cli_base_size_uses_uniform_footprint_pitch() -> None:
+    input_mesh = Path("outputs/meshes/test_cli_base_size_box.stl")
+    cleaned_mesh = Path("outputs/meshes/test_cli_base_size_cleaned.obj")
+    voxel_path = Path("outputs/voxels/test_cli_base_size_voxels.npz")
+    ldr_path = Path("outputs/ldr/test_cli_base_size.ldr")
+    report_path = Path("outputs/reports/test_cli_base_size_report.json")
+    try:
+        input_mesh.parent.mkdir(parents=True, exist_ok=True)
+        trimesh.creation.box(extents=(2, 6, 4)).export(input_mesh)
+
+        subprocess.run(
+            [
+                sys.executable,
+                "scripts/mesh_to_ldr.py",
+                "--mesh",
+                str(input_mesh),
+                "--base-size-studs",
+                "8",
+                "--optimize",
+                "--cleaned-mesh",
+                str(cleaned_mesh),
+                "--voxels",
+                str(voxel_path),
+                "--output",
+                str(ldr_path),
+                "--report",
+                str(report_path),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        occupancy = np.load(voxel_path)["occupancy"]
+        assert report["footprint_scale"]["mode"] == "uniform_base_size"
+        assert report["footprint_scale"]["base_size_studs"] == 8
+        assert occupancy.shape[2] <= 9
+        assert occupancy.shape[1] > occupancy.shape[2]
+    finally:
+        input_mesh.unlink(missing_ok=True)
+        cleaned_mesh.unlink(missing_ok=True)
+        voxel_path.unlink(missing_ok=True)
+        ldr_path.unlink(missing_ok=True)
+        report_path.unlink(missing_ok=True)
+
+
 def test_mesh_to_ldr_cli_supports_sculpture_shell_layered_steps() -> None:
     input_mesh = Path("outputs/meshes/test_cli_sculpture_box.stl")
-    cleaned_mesh = Path("outputs/meshes/test_cli_sculpture_cleaned.glb")
+    cleaned_mesh = Path("outputs/meshes/test_cli_sculpture_cleaned.obj")
     voxel_path = Path("outputs/voxels/test_cli_sculpture_voxels.npz")
     ldr_path = Path("outputs/ldr/test_cli_sculpture_mesh.ldr")
     report_path = Path("outputs/reports/test_cli_sculpture_report.json")
@@ -354,7 +401,7 @@ def test_mesh_to_ldr_cli_supports_sculpture_shell_layered_steps() -> None:
 
 def test_mesh_to_ldr_cli_supports_layered_sculpture_engine() -> None:
     input_mesh = Path("outputs/meshes/test_cli_layered_engine_box.stl")
-    cleaned_mesh = Path("outputs/meshes/test_cli_layered_engine_cleaned.glb")
+    cleaned_mesh = Path("outputs/meshes/test_cli_layered_engine_cleaned.obj")
     voxel_path = Path("outputs/voxels/test_cli_layered_engine_voxels.npz")
     ldr_path = Path("outputs/ldr/test_cli_layered_engine.ldr")
     report_path = Path("outputs/reports/test_cli_layered_engine_report.json")
@@ -415,7 +462,7 @@ def test_mesh_to_ldr_cli_supports_layered_sculpture_engine() -> None:
 
 def test_mesh_to_ldr_cli_can_sample_mesh_colors_and_write_report() -> None:
     input_mesh = Path("outputs/meshes/test_cli_sampled_color.ply")
-    cleaned_mesh = Path("outputs/meshes/test_cli_sampled_color_cleaned.glb")
+    cleaned_mesh = Path("outputs/meshes/test_cli_sampled_color_cleaned.obj")
     voxel_path = Path("outputs/voxels/test_cli_sampled_color_voxels.npz")
     ldr_path = Path("outputs/ldr/test_cli_sampled_color.ldr")
     report_path = Path("outputs/reports/test_cli_sampled_color_report.json")

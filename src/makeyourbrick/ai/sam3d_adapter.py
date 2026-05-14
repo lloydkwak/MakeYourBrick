@@ -70,7 +70,7 @@ def classify_sam_artifact(path: Path) -> dict:
         if has_faces:
             artifact_type = "mesh_ply"
             mesh_compatible = True
-            next_action = "adapt_to_glb"
+            next_action = "adapt_to_mesh"
         elif gaussian_markers:
             artifact_type = "gaussian_splat_ply"
             mesh_compatible = False

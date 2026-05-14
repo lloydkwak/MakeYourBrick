@@ -106,23 +106,23 @@ def test_export_sam3d_output_prefers_glb_export() -> None:
 
 
 def test_export_sam3d_output_falls_back_to_mesh_vertices_faces() -> None:
-    output_path = Path("outputs/meshes/test_sam3d_real_export_mesh.glb")
+    output_path = Path("outputs/meshes/test_sam3d_real_export_mesh.obj")
     try:
         metadata = sam3d_export.export_sam3d_output({"mesh": [FakeMesh()]}, output_path)
         loaded = trimesh.load(output_path)
 
         assert output_path.exists()
-        assert metadata["export_method"] == "mesh_to_trimesh_glb"
+        assert metadata["export_method"] == "mesh_to_trimesh_obj"
         assert len(loaded.geometry) > 0 if isinstance(loaded, trimesh.Scene) else len(loaded.faces) > 0
     finally:
         output_path.unlink(missing_ok=True)
 
 
 def test_export_sam3d_output_rejects_splat_only_output() -> None:
-    output_path = Path("outputs/meshes/test_sam3d_real_export_missing.glb")
+    output_path = Path("outputs/meshes/test_sam3d_real_export_missing.obj")
     splat_path = Path("outputs/meshes/test_sam3d_real_export_debug_splat.ply")
     try:
-        with pytest.raises(ValueError, match="did not contain exportable GLB or triangle mesh"):
+        with pytest.raises(ValueError, match="did not contain exportable mesh data"):
             sam3d_export.export_sam3d_output({"gs": FakeSplat()}, output_path, splat_output_path=splat_path)
 
         assert not output_path.exists()
@@ -130,3 +130,16 @@ def test_export_sam3d_output_rejects_splat_only_output() -> None:
     finally:
         output_path.unlink(missing_ok=True)
         splat_path.unlink(missing_ok=True)
+
+
+def test_export_sam3d_output_can_export_glb_object_as_obj_when_no_mesh_key() -> None:
+    output_path = Path("outputs/meshes/test_sam3d_real_export_glb_as_obj.obj")
+    glb = FakeGlb()
+    try:
+        metadata = sam3d_export.export_sam3d_output({"glb": glb}, output_path)
+
+        assert output_path.exists()
+        assert glb.exported_path == output_path
+        assert metadata["export_method"] == "output_glb_exported_as_obj"
+    finally:
+        output_path.unlink(missing_ok=True)

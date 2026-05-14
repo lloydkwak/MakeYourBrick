@@ -59,7 +59,7 @@ def compare_mesh_samples(
     sample_reports = []
     for name in samples:
         mesh_path = write_sample_mesh(name, output_dir / "meshes" / f"{name}.stl")
-        cleaned_mesh_path = output_dir / "cleaned" / f"{name}.glb"
+        cleaned_mesh_path = output_dir / "cleaned" / f"{name}.obj"
         voxel_path = output_dir / "voxels" / f"{name}.npz"
         ldr_path = output_dir / "ldr" / f"{name}.ldr"
         report_path = output_dir / "reports" / f"{name}.json"

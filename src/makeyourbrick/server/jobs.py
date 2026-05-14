@@ -147,8 +147,8 @@ def run_pipeline_job(
             mask_path = storage.mask_path(request.image_id, request.mask_id)
             if not mask_path.exists():
                 raise FileNotFoundError(f"Mask not found: {request.mask_id}")
-        raw_mesh_path = storage.job_mesh_dir(request.image_id, job_id) / "raw_model.glb"
-        cleaned_mesh_path = storage.job_mesh_dir(request.image_id, job_id) / "cleaned_model.glb"
+        raw_mesh_path = storage.job_mesh_dir(request.image_id, job_id) / "raw_model.obj"
+        cleaned_mesh_path = storage.job_mesh_dir(request.image_id, job_id) / "cleaned_model.obj"
         voxel_path = storage.job_voxel_dir(request.image_id, job_id) / "model_voxels.npz"
         ldr_path = storage.job_ldr_dir(request.image_id, job_id) / "output.ldr"
         report_path = storage.job_report_dir(request.image_id, job_id) / "report.json"
@@ -185,6 +185,7 @@ def run_pipeline_job(
             voxel_output_path=voxel_path,
             ldr_output_path=ldr_path,
             target_longest_studs=request.target_studs,
+            base_size_studs=request.base_size_studs,
             target_width_studs=request.target_width_studs,
             target_depth_studs=request.target_depth_studs,
             fill=request.fill,

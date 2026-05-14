@@ -9,8 +9,8 @@ from pathlib import Path
 def test_image_to_ldr_cli_runs_fake_sam_command_to_ldr() -> None:
     image_path = Path("outputs/test_cli_image.png")
     mask_path = Path("outputs/test_cli_mask.png")
-    raw_mesh = Path("outputs/meshes/test_cli_image_raw.ply")
-    cleaned_mesh = Path("outputs/meshes/test_cli_image_cleaned.glb")
+    raw_mesh = Path("outputs/meshes/test_cli_image_raw.obj")
+    cleaned_mesh = Path("outputs/meshes/test_cli_image_cleaned.obj")
     voxel_path = Path("outputs/voxels/test_cli_image_voxels.npz")
     ldr_path = Path("outputs/ldr/test_cli_image.ldr")
     report_path = Path("outputs/reports/test_cli_image_report.json")

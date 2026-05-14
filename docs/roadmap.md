@@ -16,7 +16,7 @@
 - Mesh repair modes
 - SAM adapter contract with PLY artifact classification
 - Backend job runner selection for fake, command, and SAM adapter modes
-- SAM 3D Objects GLB export wrapper
+- SAM 3D Objects OBJ export wrapper
 - Backend `sam3d` mode mask validation and config endpoint
 - Studio-like sculpture options: shell mode, base thickness, layer steps, layered optimizer, and stability metrics
 - LDraw center-origin placement calibration for the supported basic brick set
@@ -31,9 +31,7 @@
 
 Run `facebookresearch/sam-3d-objects` in a suitable GPU/Linux environment and finalize the upstream command that writes or exposes a triangle mesh.
 
-This is the highest-risk remaining task because it requires external checkpoints, CUDA, and enough VRAM. The local wrapper already prefers `output["glb"]`, falls back to `output["mesh"][0]`, and preserves Gaussian splat PLY only as a debug artifact.
-
-See `docs/real_sam3d_integration.md` for the detailed preparation plan.
+This is the highest-risk remaining task because it requires external checkpoints, CUDA, and enough VRAM. The local wrapper exports triangle mesh output as OBJ by default and preserves Gaussian splat PLY only as a debug artifact.
 
 ### 1.5 Real SAM Backend Configuration
 
@@ -45,7 +43,7 @@ Replace placeholder mask generation with a real SAM/SAM 2 segmentation predictor
 
 ### 3. Better Color Sampling
 
-Current color sampling supports nearest vertex and nearest face color. Add material and UV texture sampling for GLB assets.
+Current color sampling supports nearest vertex and nearest face color. Add material and UV texture sampling for OBJ/GLTF assets.
 
 ### 4. LDraw Visual Calibration
 
@@ -66,7 +64,7 @@ The bundled LDraw palette is a starter subset. Replace it with a broader, valida
 ## Current Risk Summary
 
 - Real SAM inference has not been run inside this repository.
-- Real SAM output may need a mesh extraction path if the current upstream wrapper cannot access GLB or mesh output in the installed version.
+- Real SAM output may need a mesh extraction path if the current upstream wrapper cannot access triangle mesh output in the installed version.
 - Watertight repair is explicit but may still approximate difficult AI-generated meshes.
 - Non-watertight meshes can still produce holes unless repaired externally or approximated with `convex-hull`.
 - Physical buildability is only approximate.

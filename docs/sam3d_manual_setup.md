@@ -59,7 +59,7 @@ The command template can use these placeholders:
 - `{output_dir}`: output mesh directory
 - `{repo}`: SAM 3D repo path
 
-The command must create the file at `{output}` in a mesh format supported by Trimesh. GLB is preferred.
+The command must create the file at `{output}` in a mesh format supported by Trimesh. OBJ is preferred.
 
 The prepared MakeYourBrick wrapper is:
 
@@ -68,7 +68,7 @@ python scripts/adapters/run_sam3d_objects_export.py \
   --repo third_party/sam-3d-objects \
   --image data/input_images/sample.png \
   --mask data/masks/sample.png \
-  --output outputs/meshes/raw_model.glb \
+  --output outputs/meshes/raw_model.obj \
   --splat-output outputs/meshes/raw_splat.ply \
   --metadata outputs/reports/sam3d_export.json
 ```
@@ -83,7 +83,7 @@ python scripts/image_to_ldr.py \
   --mask data/masks/sample.png \
   --sam-repo third_party/sam-3d-objects \
   --sam-command "python scripts/adapters/run_sam3d_objects_export.py --repo {repo} --image {image} --mask {mask} --output {output} --metadata {output_dir}/sam3d_export.json" \
-  --raw-mesh outputs/meshes/raw_model.glb \
+  --raw-mesh outputs/meshes/raw_model.obj \
   --target-studs 48 \
   --sample-colors \
   --optimize \
@@ -93,4 +93,4 @@ python scripts/image_to_ldr.py \
 
 ## Important Caveat
 
-The upstream quick-start demo demonstrates saving a Gaussian splat PLY. MakeYourBrick's downstream pipeline expects a Trimesh-loadable triangle mesh. The local wrapper prefers `output["glb"]`, falls back to `output["mesh"][0]`, and saves splat PLY only as an optional debug artifact.
+The upstream quick-start demo demonstrates saving a Gaussian splat PLY. MakeYourBrick's downstream pipeline expects a Trimesh-loadable triangle mesh. The local wrapper prefers `output["mesh"][0]` exported as OBJ, can still export GLB when requested, and saves splat PLY only as an optional debug artifact.

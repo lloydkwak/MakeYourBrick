@@ -30,7 +30,7 @@ The current suite covers:
 - mesh-to-LDraw CLI
 - image-to-LDraw orchestration with a fake SAM command
 - SAM 3D adapter command contract
-- SAM 3D Objects GLB export wrapper behavior
+- SAM 3D Objects OBJ export wrapper behavior
 - FastAPI image upload and selection endpoints
 - FastAPI pipeline job endpoints
 - backend `sam3d` mode mask validation

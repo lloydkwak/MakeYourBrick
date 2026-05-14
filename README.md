@@ -2,7 +2,7 @@
 
 MakeYourBrick is a Python pipeline for converting a 2D image or 3D mesh into an LDraw `.ldr` LEGO model.
 
-The local mesh-to-LDraw pipeline, static web shell, FastAPI job flow, mesh inspection, mesh repair, and SAM 3D adapter contract are implemented and tested. Real SAM 3D inference still requires a separate GPU/Linux setup and one manual validation run.
+The local OBJ-first mesh-to-LDraw pipeline, static web shell, FastAPI job flow, mesh inspection, mesh repair, and SAM 3D adapter contract are implemented and tested. Real SAM 3D inference still requires a separate GPU/Linux setup and one manual validation run.
 
 ## Status
 
@@ -21,7 +21,7 @@ Implemented:
 - mesh inspection and repair reports
 - SAM adapter contract with PLY artifact classification
 - backend runner selection for fake, command, and SAM adapter modes
-- SAM 3D Objects GLB export wrapper
+- SAM 3D Objects OBJ mesh export wrapper
 - backend `sam3d` mode mask validation and config endpoint
 - Studio-like sculpture mode, layer steps, layered optimizer, and stability report metrics
 
@@ -32,7 +32,7 @@ python -m compileall src scripts tests/fake_sam3d_command.py
 python -m pytest
 ```
 
-Latest local result: `190 passed`.
+Latest local result: `193 passed`.
 
 ## Installation
 
@@ -51,10 +51,10 @@ Optimized synthetic model:
 python scripts/make_synthetic_ldr.py --shape box --size 4 1 2 --color 16 --optimize --output outputs/ldr/optimized_box.ldr
 ```
 
-Mesh to optimized LDraw:
+OBJ mesh to optimized LDraw:
 
 ```bash
-python scripts/mesh_to_ldr.py --mesh data/examples/sample.stl --target-studs 8 --optimize --output outputs/ldr/mesh_optimized.ldr
+python scripts/mesh_to_ldr.py --mesh data/examples/sample.obj --base-size-studs 32 --optimize --output outputs/ldr/mesh_optimized.ldr
 ```
 
 Colored mesh to optimized LDraw with report:
@@ -66,7 +66,7 @@ python scripts/mesh_to_ldr.py --mesh data/examples/sample_colored.ply --target-s
 Image to LDraw through a SAM command template:
 
 ```bash
-python scripts/image_to_ldr.py --image data/input_images/sample.png --mask data/masks/sample.png --sam-repo third_party/sam-3d-objects --sam-command "python scripts/adapters/run_sam3d_objects_export.py --repo {repo} --image {image} --mask {mask} --output {output}" --target-studs 48 --sample-colors --optimize --report outputs/reports/image_report.json --output outputs/ldr/image_output.ldr
+python scripts/image_to_ldr.py --image data/input_images/sample.png --mask data/masks/sample.png --sam-repo third_party/sam-3d-objects --sam-command "python scripts/adapters/run_sam3d_objects_export.py --repo {repo} --image {image} --mask {mask} --output {output}" --base-size-studs 32 --sample-colors --optimize --sculpture-engine layered --sculpture-mode contour-shell --report outputs/reports/image_report.json --output outputs/ldr/image_output.ldr
 ```
 
 ## Documentation
@@ -77,15 +77,14 @@ python scripts/image_to_ldr.py --image data/input_images/sample.png --mask data/
 - [Testing](docs/testing.md)
 - [SAM 3D manual setup](docs/sam3d_manual_setup.md)
 - [SAM 3D adapter](docs/sam3d_adapter.md)
-- [Real SAM 3D integration status](docs/real_sam3d_integration.md)
-- [Sculpture brickification TODO](docs/sculpture_brickification_todo.md)
+- [Conversion reference review](docs/conversion_references.md)
 - [Roadmap and limitations](docs/roadmap.md)
 - [References](docs/references.md)
 
 ## Important Limitations
 
 - Real SAM 3D inference has not been executed in this repository.
-- The SAM command must produce or expose a Trimesh-loadable triangle mesh. Gaussian splat PLY is preserved as a raw artifact but is not the default LEGO conversion input.
+- The SAM command must produce or expose a Trimesh-loadable triangle mesh, preferably OBJ. Gaussian splat PLY is preserved as a raw artifact but is not the default LEGO conversion input.
 - Mesh repair is explicit and reported, but severe AI-generated meshes may still require approximation.
 - Brick optimization reduces brick count but does not yet score real physical stability.
 - LDraw part origins should be visually checked in Stud.io or another LDraw-compatible tool.
@@ -98,6 +97,9 @@ This project is informed by:
 - Manifold: https://github.com/elalish/manifold
 - Trimesh: https://github.com/mikedh/trimesh
 - Brickalize: https://github.com/CreativeMindstorms/brickalize
+- 3DToLD: https://github.com/Nexusnui/3DToLD
+- BrickFormer: https://github.com/loryruta/brickformer
+- LPub3D: https://github.com/trevorsandy/lpub3d
 - StableLego: https://github.com/intelligent-control-lab/StableLego
 - Brick Optimization Builder: https://github.com/dzungpng/brick-optimization-builder
 - LDraw file format: https://www.ldraw.org/article/218.html

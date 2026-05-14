@@ -33,7 +33,7 @@ class FakeImageToMeshRunner:
 def test_run_from_image_generates_ldr_and_report_with_fake_runner() -> None:
     image_path = Path("outputs/test_input_image.png")
     raw_mesh_path = Path("outputs/meshes/test_image_raw.ply")
-    cleaned_mesh_path = Path("outputs/meshes/test_image_cleaned.glb")
+    cleaned_mesh_path = Path("outputs/meshes/test_image_cleaned.obj")
     voxel_path = Path("outputs/voxels/test_image_voxels.npz")
     ldr_path = Path("outputs/ldr/test_image_output.ldr")
     report_path = Path("outputs/reports/test_image_report.json")
@@ -88,7 +88,7 @@ def test_run_from_image_forwards_mask_to_runner() -> None:
     image_path = Path("outputs/test_input_image.png")
     mask_path = Path("outputs/test_input_mask.png")
     raw_mesh_path = Path("outputs/meshes/test_image_raw.ply")
-    cleaned_mesh_path = Path("outputs/meshes/test_image_cleaned.glb")
+    cleaned_mesh_path = Path("outputs/meshes/test_image_cleaned.obj")
     voxel_path = Path("outputs/voxels/test_image_voxels.npz")
     ldr_path = Path("outputs/ldr/test_image_output.ldr")
     try:

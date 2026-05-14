@@ -26,6 +26,15 @@ def compute_pitch(mesh, target_longest_studs: int, min_pitch: float = 0.005) -> 
     return max(longest / target_longest_studs, min_pitch)
 
 
+def compute_footprint_pitch(mesh, base_size_studs: int, min_pitch: float = 0.005) -> float:
+    if base_size_studs <= 0:
+        raise ValueError("base_size_studs must be positive.")
+    footprint = float(max(mesh.extents[0], mesh.extents[2]))
+    if footprint <= 0:
+        raise ValueError("Mesh has zero-sized X/Z footprint.")
+    return max(footprint / base_size_studs, min_pitch)
+
+
 def save_voxel_artifact(
     output_path: Path,
     occupancy: np.ndarray,

@@ -11,7 +11,7 @@ from makeyourbrick.ai.sam3d_runner import Sam3DRunner
 from makeyourbrick.brickify.optimizer import BRICK_PALETTES
 from makeyourbrick.mesh.orient import UP_AXIS_OPTIONS
 from makeyourbrick.mesh.repair import REPAIR_MODES
-from makeyourbrick.pipeline import HEIGHT_UNITS, run_from_image
+from makeyourbrick.pipeline import COLOR_STRATEGIES, HEIGHT_UNITS, SCULPTURE_ENGINES, run_from_image
 from makeyourbrick.voxel.sculpture import INFILL_PATTERNS, SCULPTURE_MODES, VOXEL_SMOOTHING_PRESETS
 from makeyourbrick.voxel.voxelize import RAY_FILL_MODES, VOXELIZERS
 
@@ -33,6 +33,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--sam-timeout", type=int, default=3600, help="SAM command timeout in seconds.")
     parser.add_argument("--target-studs", type=int, default=48, help="Longest model extent in studs.")
+    parser.add_argument("--base-size-studs", type=int, help="Uniform Studio-style base footprint size in studs.")
     parser.add_argument("--target-width-studs", type=int, help="Optional Studio-style target X footprint in studs.")
     parser.add_argument("--target-depth-studs", type=int, help="Optional Studio-style target Z footprint in studs.")
     parser.add_argument("--min-pitch", type=float, default=0.005, help="Minimum voxel pitch.")
@@ -89,8 +90,15 @@ def parse_args() -> argparse.Namespace:
         default="solid",
         help="Voxel occupancy mode before brickification.",
     )
+    parser.add_argument(
+        "--sculpture-engine",
+        choices=SCULPTURE_ENGINES,
+        default="legacy",
+        help="Sculpture conversion engine. Use layered for Studio-like target and placement separation.",
+    )
     parser.add_argument("--wall-thickness", type=int, default=1, help="Shell wall thickness in studs.")
     parser.add_argument("--base-thickness", type=int, default=0, help="Solid base thickness in layers.")
+    parser.add_argument("--support-spacing", type=int, default=3, help="Sparse support column spacing.")
     parser.add_argument(
         "--infill-density",
         type=float,
@@ -109,9 +117,15 @@ def parse_args() -> argparse.Namespace:
         default="none",
         help="Optional sculpture voxel cleanup preset.",
     )
+    parser.add_argument(
+        "--color-strategy",
+        choices=COLOR_STRATEGIES,
+        default="strict",
+        help="Use strict color boundaries or majority per-brick color assignment.",
+    )
     parser.add_argument("--steps-by-layer", action="store_true", help="Insert LDraw 0 STEP markers per layer.")
-    parser.add_argument("--raw-mesh", type=Path, default=Path("outputs/meshes/raw_model.glb"))
-    parser.add_argument("--cleaned-mesh", type=Path, default=Path("outputs/meshes/watertight_model.glb"))
+    parser.add_argument("--raw-mesh", type=Path, default=Path("outputs/meshes/raw_model.obj"))
+    parser.add_argument("--cleaned-mesh", type=Path, default=Path("outputs/meshes/cleaned_model.obj"))
     parser.add_argument("--voxels", type=Path, default=Path("outputs/voxels/model_voxels.npz"))
     parser.add_argument("--report", type=Path, help="Optional optimizer report JSON path.")
     parser.add_argument(
@@ -148,6 +162,7 @@ def main() -> None:
         ldr_output_path=args.output,
         target_longest_studs=args.target_studs,
         min_pitch=args.min_pitch,
+        base_size_studs=args.base_size_studs,
         target_width_studs=args.target_width_studs,
         target_depth_studs=args.target_depth_studs,
         fill=not args.no_fill,
@@ -166,11 +181,14 @@ def main() -> None:
         repair_report_path=args.repair_report,
         up_axis=args.up_axis,
         sculpture_mode=args.sculpture_mode,
+        sculpture_engine=args.sculpture_engine,
         wall_thickness=args.wall_thickness,
         base_thickness=args.base_thickness,
+        support_spacing=args.support_spacing,
         voxel_smoothing=args.voxel_smoothing,
         infill_density=args.infill_density,
         infill_pattern=args.infill_pattern,
+        color_strategy=args.color_strategy,
         steps_by_layer=args.steps_by_layer,
     )
     print(f"Wrote LDraw model to {output_path}")

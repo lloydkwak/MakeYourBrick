@@ -56,21 +56,20 @@ Convert with Studio-like sculpture options:
 ```bash
 python scripts/mesh_to_ldr.py \
   --mesh data/examples/sample.stl \
-  --target-studs 48 \
-  --target-width-studs 38 \
-  --target-depth-studs 37 \
+  --base-size-studs 32 \
   --up-axis auto \
   --voxelizer slice \
   --ray-fill wide \
   --optimize \
   --optimizer layered \
   --brick-palette studio \
-  --sculpture-mode density \
-  --wall-thickness 1 \
+  --sculpture-engine layered \
+  --sculpture-mode contour-shell \
+  --wall-thickness 2 \
   --base-thickness 2 \
-  --infill-density 0.35 \
-  --infill-pattern ribs \
-  --voxel-smoothing studio \
+  --support-spacing 3 \
+  --voxel-smoothing polished \
+  --color-strategy majority \
   --steps-by-layer \
   --report outputs/reports/sculpture_report.json \
   --output outputs/ldr/sculpture_output.ldr
@@ -107,14 +106,15 @@ Voxelization:
 - `--voxelizer ray`: cast vertical rays through each stud column; better for Studio-like sculpture imports from open OBJ/STL assets
 - `--voxelizer slice`: slice the mesh layer by layer, project section contours to X/Z, and fill each layer; closest to Studio's sculpture import model. The slice path unions same-layer contours to avoid false holes from open OBJ contour fragments.
 - `--ray-fill wide|balanced`: choose how odd ray-hit columns are filled; `wide` preserves the original broad fill behavior, while `balanced` drops one outlier hit to reduce overfilled columns
-- `--target-width-studs` / `--target-depth-studs`: optional Studio-style base footprint scaling before voxelization
+- `--base-size-studs`: Studio-style uniform base footprint size. This changes voxel pitch and preserves model proportions.
+- `--target-width-studs` / `--target-depth-studs`: optional non-uniform X/Z fitting. Do not use this as Studio base size.
 
 ## Mesh Inspection
 
 Inspect a mesh before conversion:
 
 ```bash
-python scripts/inspect_mesh.py --mesh outputs/meshes/raw_model.glb --report outputs/reports/mesh_inspect.json
+python scripts/inspect_mesh.py --mesh outputs/meshes/raw_model.obj --report outputs/reports/mesh_inspect.json
 ```
 
 The report records asset type, geometry count, vertices, faces, bounds, watertightness, color availability, warnings, and whether the artifact is ready for voxelization.
@@ -129,13 +129,16 @@ python scripts/image_to_ldr.py \
   --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
   --sam-repo third_party/sam-3d-objects \
   --sam-command "<command that reads {image} and {mask}, then writes {output}>" \
-  --target-studs 48 \
+  --base-size-studs 32 \
   --sample-colors \
   --optimize \
   --optimizer layered \
-  --sculpture-mode shell \
-  --wall-thickness 1 \
+  --sculpture-engine layered \
+  --sculpture-mode contour-shell \
+  --wall-thickness 2 \
   --base-thickness 2 \
+  --support-spacing 3 \
+  --color-strategy majority \
   --steps-by-layer \
   --report outputs/reports/image_report.json \
   --output outputs/ldr/image_output.ldr
@@ -151,6 +154,7 @@ Supported command placeholders:
 
 Sculpture options:
 
+- `--sculpture-engine legacy|layered`: use the original direct occupancy path or the separated shell/base/support layered engine
 - `--sculpture-mode solid|shell|contour-shell|density`: keep a fully solid model, keep a 3D surface shell, keep per-layer contour walls, or keep shell/base plus deterministic lattice infill
 - `--wall-thickness`: number of voxel/stud layers to keep from the surface in shell mode
 - `--base-thickness`: number of bottom layers to force solid
@@ -160,6 +164,7 @@ Sculpture options:
 - `--optimizer greedy|layered`: largest-first greedy optimizer or support/seam-aware optimizer
 - `--brick-palette full|studio|compact|plates`: choose the full experimental set, the Studio-reference sculpture set, a compact visual-debug set, or a plate-only set
 - `--height-unit brick|plate`: choose full-brick vertical layers or plate-height vertical layers. `plate` requires `--optimize --brick-palette plates` because a plate is one third of a brick height.
+- `--color-strategy strict|majority`: preserve voxel color boundaries or assign each placed brick the majority color from its covered voxels
 - `--steps-by-layer`: insert `0 STEP` markers between vertical layers in the LDR file
 
 ## Placement and Quality Fixtures
@@ -200,8 +205,8 @@ python scripts/adapters/sam3d_to_mesh.py \
   --repo third_party/sam-3d-objects \
   --image data/input_images/sample.png \
   --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
-  --candidate path/to/sam/output.glb \
-  --output outputs/meshes/raw_model.glb \
+  --candidate path/to/sam/output.obj \
+  --output outputs/meshes/raw_model.obj \
   --report outputs/reports/sam3d_adapter.json
 ```
 
@@ -212,18 +217,18 @@ python scripts/adapters/sam3d_to_mesh.py \
   --repo third_party/sam-3d-objects \
   --image data/input_images/sample.png \
   --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
-  --output outputs/meshes/raw_model.glb \
+  --output outputs/meshes/raw_model.obj \
   --sam-command "<command that reads {image} and {mask}, then writes {output} or files under {work_dir}>"
 ```
 
-Run the prepared SAM 3D Objects GLB export wrapper directly:
+Run the prepared SAM 3D Objects OBJ export wrapper directly:
 
 ```bash
 python scripts/adapters/run_sam3d_objects_export.py \
   --repo third_party/sam-3d-objects \
   --image data/input_images/sample.png \
   --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
-  --output outputs/meshes/raw_model.glb \
+  --output outputs/meshes/raw_model.obj \
   --splat-output outputs/meshes/raw_splat.ply \
   --metadata outputs/reports/sam3d_export.json
 ```
@@ -271,7 +276,7 @@ Backend runner configuration:
 - `MAKEYOURBRICK_RUNNER_MODE=sam3d`: alias for command mode when wiring the real SAM adapter
 - `MAKEYOURBRICK_SAM_REPO=third_party/sam-3d-objects`: external repository path
 - `MAKEYOURBRICK_SAM_COMMAND="<command that reads {image} and {mask}, then writes {output}>"`
-- SAM command placeholders include `{image}`, `{mask}`, `{output}`, `{output_dir}`, and `{repo}`
+- SAM command placeholders include `{image}`, `{mask}`, `{output}`, `{output_dir}`, and `{repo}`. The default output is OBJ.
 - `MAKEYOURBRICK_SAM_TIMEOUT_SECONDS=3600`
 
 Example real SAM 3D backend configuration:
@@ -291,9 +296,13 @@ Backend job requests also accept:
 - `optimizer`: `greedy` or `layered`
 - `brick_palette`: `full`, `studio`, `compact`, or `plates`
 - `height_unit`: `brick` or `plate`
-- `sculpture_mode`: `solid`, `shell`, or `density`
+- `base_size_studs`
+- `sculpture_engine`: `legacy` or `layered`
+- `sculpture_mode`: `solid`, `shell`, `contour-shell`, or `density`
 - `wall_thickness`
 - `base_thickness`
+- `support_spacing`
+- `color_strategy`: `strict` or `majority`
 - `infill_density`
 - `infill_pattern`: `lattice` or `ribs`
 - `voxel_smoothing`: `none`, `light`, `contour`, `studio`, `profile`, or `polished`
