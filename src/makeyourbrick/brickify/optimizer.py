@@ -47,6 +47,13 @@ COMPACT_SCULPTURE_BRICKS = (
 )
 
 PLATE_SCULPTURE_BRICKS = (
+    BrickSpec("3035.dat", 4, 8),
+    BrickSpec("3032.dat", 4, 6),
+    BrickSpec("3031.dat", 4, 4),
+    BrickSpec("3034.dat", 2, 8),
+    BrickSpec("3460.dat", 1, 8),
+    BrickSpec("3795.dat", 2, 6),
+    BrickSpec("3666.dat", 1, 6),
     BrickSpec("3020.dat", 2, 4),
     BrickSpec("3710.dat", 1, 4),
     BrickSpec("3021.dat", 2, 3),

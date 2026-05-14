@@ -258,8 +258,6 @@ def convert_mesh_to_ldr(
     occupancy, color_ids, _rgb, _origin, _pitch = load_voxel_artifact(voxel_output_path)
     target_model = None
     if sculpture_engine == "layered":
-        if sculpture_mode != "contour-shell":
-            raise ValueError("The layered sculpture engine currently requires sculpture_mode='contour-shell'.")
         solid_occupancy = apply_voxel_smoothing(preprocess_solid_occupancy(occupancy), voxel_smoothing)
         solid_color_ids = repair_sculpture_colors(occupancy, solid_occupancy, color_ids)
         solid_model = VoxelModel(
@@ -269,17 +267,22 @@ def convert_mesh_to_ldr(
             origin=tuple(float(value) for value in _origin),
             height_unit=height_unit,
         )
-        targets = build_contour_shell_targets(
-            solid_model,
-            SculptureSettings(
-                wall_thickness=wall_thickness,
-                base_thickness=base_thickness,
-                support_spacing=support_spacing,
-                brick_palette=brick_palette,
-                height_unit=height_unit,
-            ),
-        )
-        target_model = targets.target
+        if sculpture_mode == "solid":
+            target_model = solid_model
+        elif sculpture_mode == "contour-shell":
+            targets = build_contour_shell_targets(
+                solid_model,
+                SculptureSettings(
+                    wall_thickness=wall_thickness,
+                    base_thickness=base_thickness,
+                    support_spacing=support_spacing,
+                    brick_palette=brick_palette,
+                    height_unit=height_unit,
+                ),
+            )
+            target_model = targets.target
+        else:
+            raise ValueError("The layered sculpture engine supports sculpture_mode='solid' or 'contour-shell'.")
         occupancy, color_ids = target_model.occupancy, target_model.color_ids
     else:
         occupancy, color_ids = apply_sculpture_mode(

@@ -64,9 +64,10 @@ def test_image_to_ldr_cli_runs_fake_sam_command_to_ldr() -> None:
         assert all(line.split()[1] == "14" for line in brick_lines)
         assert report["optimized"] is True
         assert report["optimizer"] == "reward-sculpture"
-        assert report["brick_palette"] == "studio"
+        assert report["brick_palette"] == "plates"
         assert report["sculpture"]["engine"] == "layered"
-        assert report["sculpture"]["mode"] == "contour-shell"
+        assert report["sculpture"]["mode"] == "solid"
+        assert report["sculpture"]["height_unit"] == "plate"
         assert report["sculpture"]["voxel_smoothing"] == "polished"
         assert report["stability"]["layer_count"] > 0
         assert "0 STEP" in ldr_path.read_text(encoding="utf-8")

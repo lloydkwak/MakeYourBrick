@@ -26,6 +26,7 @@ Implemented:
 - Studio-like sculpture mode, layer steps, layered optimizer, and stability report metrics
 - LDraw height-unit scaling so base-size OBJ imports use LEGO brick/plate proportions instead of cubic voxel height
 - BrickFormer-style reward placement for layered sculpture conversion
+- Studio-import preset with solid layer targets and a wide plate palette
 
 Current verification:
 
@@ -34,7 +35,7 @@ python -m compileall src scripts tests/fake_sam3d_command.py
 python -m pytest
 ```
 
-Latest local result: `197 passed`.
+Latest local result: `199 passed`.
 
 ## Installation
 

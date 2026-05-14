@@ -60,6 +60,8 @@ Use in MakeYourBrick:
 - Replace local scan-order placement with a reward-based per-slice placement solver.
 - Score candidate bricks by area, same-layer neighbors, previous-layer support/connectivity, and
   color-compatible coverage.
+- Prefer plate-height solid layer targets for dense visual sculpture imports; keep contour-shell
+  targets as an experimental lightweight option.
 - Preserve bottom-to-top construction slices through LDraw `0 STEP`.
 - Keep CPU Python implementation small and testable; do not copy BrickFormer GPL source.
 
@@ -102,7 +104,7 @@ image + mask
   -> mesh inspect / repair / orientation
   -> base-size or longest-axis pitch
   -> voxel target
-  -> contour shell + base + sparse support
+  -> solid plate-height layer target
   -> reward-based layered brick placement
   -> strict or majority color assignment
   -> output.ldr with 0 STEP markers

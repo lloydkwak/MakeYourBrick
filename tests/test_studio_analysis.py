@@ -85,6 +85,7 @@ def test_load_studio_brick_footprints_adds_required_fallback_parts() -> None:
         assert footprints["3001.dat"] == StudioPartFootprint("3001.dat", width=2, depth=4)
         assert footprints["3005.dat"] == StudioPartFootprint("3005.dat", width=1, depth=1)
         assert footprints["3020.dat"] == StudioPartFootprint("3020.dat", width=2, depth=4)
+        assert footprints["3035.dat"] == StudioPartFootprint("3035.dat", width=4, depth=8)
     finally:
         csv_path.unlink(missing_ok=True)
         for path in [

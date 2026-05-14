@@ -117,7 +117,7 @@ Sculpture conversion post-processes the voxel occupancy before brick placement:
 
 The `layered` sculpture engine separates `solid`, `shell`, `base`, `support`, and final `target` masks before brick placement. Placement uses a CPU reward solver inspired by BrickFormer-style conversion: for each layer it enumerates all valid brick placements, repeatedly picks the highest-scoring candidate, and scores by brick area, same-layer neighbors, previous-layer support/connectivity, and exact color-compatible coverage. This replaces scan-order local greedy behavior in the sculpture path.
 
-The CLI `--studio-import-preset` selects the recommended OBJ sculpture path for visual checks: slice voxelization, layered contour-shell targets, wall/base thickness of one layer, sparse supports, polished layer cleanup, Studio brick palette, majority color assignment, and LDraw steps by layer.
+The CLI `--studio-import-preset` selects the recommended OBJ sculpture path for visual checks: slice voxelization, solid layer targets, plate-height output, polished layer cleanup, the wide plate palette, majority color assignment, reward-based layered placement, and LDraw steps by layer. This is the preferred path for dense Studio-style imports because it avoids the hollow gaps produced by contour-only targets.
 
 ### LDraw Output
 

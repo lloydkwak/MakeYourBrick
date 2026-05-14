@@ -87,6 +87,24 @@ def test_plate_brick_palette_uses_plate_parts() -> None:
     np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)
 
 
+def test_plate_brick_palette_includes_wide_flat_parts() -> None:
+    part_ids = {spec.part_id for spec in PLATE_SCULPTURE_BRICKS}
+
+    assert {"3035.dat", "3032.dat", "3031.dat", "3034.dat", "3795.dat", "3460.dat", "3666.dat"} <= part_ids
+
+
+def test_reward_layered_plate_palette_uses_wide_flat_parts() -> None:
+    occupancy, color_ids = make_solid_box((4, 1, 8), color_id=7)
+
+    optimized = reward_layered_brickify(occupancy, color_ids, brick_specs=PLATE_SCULPTURE_BRICKS)
+
+    assert len(optimized) == 1
+    assert optimized[0].part_id == "3035.dat"
+    assert optimized[0].width == 4
+    assert optimized[0].depth == 8
+    np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)
+
+
 def test_brick_specs_for_palette_validates_names() -> None:
     assert brick_specs_for_palette("studio") == STUDIO_SCULPTURE_BRICKS
     assert brick_specs_for_palette("compact") == COMPACT_SCULPTURE_BRICKS

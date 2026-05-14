@@ -288,7 +288,21 @@ def test_mesh_to_ldr_cli_can_use_plate_height_unit_and_palette() -> None:
         y_values = [int(line.split()[3]) for line in ldr_path.read_text(encoding="utf-8").splitlines() if line.startswith("1 ")]
         assert report["brick_palette"] == "plates"
         assert report["sculpture"]["height_unit"] == "plate"
-        assert part_ids <= {"3710.dat", "3020.dat", "3021.dat", "3022.dat", "3023.dat", "3024.dat"}
+        assert part_ids <= {
+            "3035.dat",
+            "3032.dat",
+            "3031.dat",
+            "3034.dat",
+            "3460.dat",
+            "3795.dat",
+            "3666.dat",
+            "3710.dat",
+            "3020.dat",
+            "3021.dat",
+            "3022.dat",
+            "3023.dat",
+            "3024.dat",
+        }
         assert any(abs(y) % 8 == 0 for y in y_values)
     finally:
         input_mesh.unlink(missing_ok=True)
@@ -504,11 +518,12 @@ def test_mesh_to_ldr_cli_supports_studio_import_preset() -> None:
         assert "0 STEP" in ldr_path.read_text(encoding="utf-8")
         assert report["optimized"] is True
         assert report["optimizer"] == "reward-sculpture"
-        assert report["brick_palette"] == "studio"
+        assert report["brick_palette"] == "plates"
         assert report["sculpture"]["engine"] == "layered"
-        assert report["sculpture"]["mode"] == "contour-shell"
+        assert report["sculpture"]["mode"] == "solid"
+        assert report["sculpture"]["height_unit"] == "plate"
         assert report["sculpture"]["wall_thickness"] == 1
-        assert report["sculpture"]["base_thickness"] == 1
+        assert report["sculpture"]["base_thickness"] == 0
         assert report["sculpture"]["voxel_smoothing"] == "polished"
         assert report["sculpture"]["color_strategy"] == "majority"
     finally:
