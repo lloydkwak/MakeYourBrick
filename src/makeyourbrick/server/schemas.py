@@ -51,20 +51,20 @@ class JobRequest(BaseModel):
     brick_palette: Literal["full", "studio", "compact", "plates"] = "full"
     height_unit: Literal["brick", "plate"] = "brick"
     fill: bool = True
-    voxelizer: Literal["surface", "ray", "slice"] = "surface"
+    voxelizer: Literal["surface", "ray", "slice", "slice-surface"] = "surface"
     ray_fill: Literal["wide", "balanced"] = "wide"
     default_color_id: int = Field(default=16, ge=0, le=999)
     repair_mode: Literal["none", "basic", "manifold", "convex-hull"] = "basic"
     up_axis: Literal["auto", "none", "x", "y", "z"] = "auto"
-    sculpture_mode: Literal["solid", "shell", "contour-shell", "density"] = "solid"
+    sculpture_mode: Literal["solid", "shell", "contour-shell", "density", "brickformer"] = "solid"
     sculpture_engine: Literal["legacy", "layered"] = "legacy"
     wall_thickness: int = Field(default=1, ge=1, le=16)
     base_thickness: int = Field(default=0, ge=0, le=64)
-    support_spacing: int = Field(default=3, ge=1, le=64)
+    support_spacing: int = Field(default=3, ge=0, le=64)
     voxel_smoothing: Literal["none", "light", "contour", "studio", "profile", "polished"] = "none"
     infill_density: float = Field(default=0.35, ge=0.0, le=1.0)
     infill_pattern: Literal["lattice", "ribs"] = "lattice"
-    color_strategy: Literal["strict", "majority"] = "strict"
+    color_strategy: Literal["strict", "majority", "layer"] = "strict"
     steps_by_layer: bool = False
 
 

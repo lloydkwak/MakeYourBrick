@@ -71,11 +71,12 @@ Meshes are voxelized with Trimesh. Voxel artifacts are saved as compressed `.npz
 
 The horizontal pitch is defined in studs from the selected longest-axis or base-size target. Before voxelization, the mesh Y dimension is scaled to the selected LDraw layer height: `20/24` for normal bricks and `20/8` for plates. This keeps Studio-like base-size imports from becoming too tall or too thin when LEGO's non-cubic brick proportions are written back to LDraw.
 
-Two voxelizers are available:
+Voxelizers:
 
 - `surface`: Trimesh surface voxelization with optional fill, useful for watertight meshes.
 - `ray`: vertical scanline filling that casts rays through each stud column, closer to Studio's layer-by-layer sculpture behavior and more useful for open OBJ/STL sculpture assets.
-- `slice`: layer-by-layer section filling, currently the preferred sculpture path for OBJ assets.
+- `slice`: layer-by-layer section filling, currently the preferred Studio-style sculpture path for OBJ assets.
+- `slice-surface`: experimental layer-by-layer section contour cells without interior fill. This feeds the lightweight native BrickFormer-style path but is not the default sculpture preset.
 
 ### Color Quantization
 
@@ -114,10 +115,11 @@ Sculpture conversion post-processes the voxel occupancy before brick placement:
 - `shell`: keep surface voxels, optional wall thickness, and solid base layers
 - `contour-shell`: keep per-layer outline walls, base fill, and sparse support columns
 - `density`: keep shell/base plus deterministic interior infill
+- `brickformer`: keep surface slice cells and let the placement solver cover them with partial-coverage bricks
 
-The `layered` sculpture engine separates `solid`, `shell`, `base`, `support`, and final `target` masks before brick placement. Placement uses a CPU reward solver inspired by BrickFormer-style conversion: for each layer it enumerates all valid brick placements, repeatedly picks the highest-scoring candidate, and scores by brick area, same-layer neighbors, previous-layer support/connectivity, and exact color-compatible coverage. This replaces scan-order local greedy behavior in the sculpture path.
+The `layered` sculpture engine separates `solid`, `shell`, `base`, `support`, and final `target` masks before brick placement. Solid targets use a CPU reward solver inspired by BrickFormer-style conversion: for each layer it enumerates valid brick placements, repeatedly picks the highest-scoring candidate, and scores by brick area, same-layer neighbors, previous-layer support/connectivity, color-compatible coverage, and surface coverage. Contour-shell targets remain available as an experimental mode for hollow models, but they are not the default Studio-style import path.
 
-The CLI `--studio-import-preset` selects the recommended OBJ sculpture path for visual checks: slice voxelization, solid layer targets, plate-height output, polished layer cleanup, the wide plate palette, majority color assignment, reward-based layered placement, and LDraw steps by layer. This is the preferred path for dense Studio-style imports because it avoids the hollow gaps produced by contour-only targets.
+The CLI `--studio-import-preset` selects the recommended OBJ sculpture path for visual checks: direct OBJ loading, no default repair/mesh rewriting, `slice` voxelization, filled layer footprints, a thick contour wall target, normal brick height, polished layer cleanup, the Studio brick palette, majority color assignment, alternating run placement for Studio bricks, and LDraw steps by layer. Internal support columns are disabled in the preset, because the provided Studio reference matches a wall-only sculpture much more closely than the earlier support-column outputs.
 
 ### LDraw Output
 

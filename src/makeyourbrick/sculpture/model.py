@@ -73,8 +73,8 @@ class SculptureSettings:
             raise ValueError("wall_thickness must be at least 1.")
         if self.base_thickness < 0:
             raise ValueError("base_thickness must be non-negative.")
-        if self.support_spacing < 1:
-            raise ValueError("support_spacing must be at least 1.")
+        if self.support_spacing < 0:
+            raise ValueError("support_spacing must be non-negative.")
         if self.height_unit not in {"brick", "plate"}:
             raise ValueError(f"Unsupported height unit: {self.height_unit}")
         if self.color_mode not in {"constant", "mesh", "layer"}:

@@ -4,16 +4,17 @@ STUDIO_IMPORT_PRESET_OPTIONS = {
     "voxelizer": "slice",
     "optimize": True,
     "optimizer": "layered",
-    "brick_palette": "plates",
-    "height_unit": "plate",
+    "brick_palette": "studio",
+    "height_unit": "brick",
     "sculpture_engine": "layered",
-    "sculpture_mode": "solid",
-    "wall_thickness": 1,
+    "sculpture_mode": "contour-shell",
+    "wall_thickness": 3,
     "base_thickness": 0,
-    "support_spacing": 3,
+    "support_spacing": 0,
     "voxel_smoothing": "polished",
     "color_strategy": "majority",
     "steps_by_layer": True,
+    "repair_mode": "none",
 }
 
 

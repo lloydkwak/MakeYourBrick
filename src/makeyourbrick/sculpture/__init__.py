@@ -14,6 +14,8 @@ from makeyourbrick.sculpture.model import (
     VoxelModel,
 )
 from makeyourbrick.sculpture.placement import (
+    STUDIO_LAYER_COLOR_IDS,
+    assign_brick_colors_by_layer,
     assign_brick_colors_by_majority,
     layered_model_matches_target,
     layered_model_occupancy,
@@ -27,7 +29,9 @@ __all__ = [
     "LayeredBrickModel",
     "SculptureSettings",
     "SculptureTargets",
+    "STUDIO_LAYER_COLOR_IDS",
     "VoxelModel",
+    "assign_brick_colors_by_layer",
     "assign_brick_colors_by_majority",
     "build_contour_shell_targets",
     "catalog_for_palette",

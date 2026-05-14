@@ -26,7 +26,7 @@ Implemented:
 - Studio-like sculpture mode, layer steps, layered optimizer, and stability report metrics
 - LDraw height-unit scaling so base-size OBJ imports use LEGO brick/plate proportions instead of cubic voxel height
 - BrickFormer-style reward placement for layered sculpture conversion
-- Studio-import preset with solid layer targets and a wide plate palette
+- Studio-import preset with native BrickFormer-style surface slicing and partial-coverage placement
 
 Current verification:
 
@@ -35,7 +35,7 @@ python -m compileall src scripts tests/fake_sam3d_command.py
 python -m pytest
 ```
 
-Latest local result: `199 passed`.
+Latest local result: `208 passed`.
 
 ## Installation
 
@@ -81,6 +81,8 @@ python scripts/image_to_ldr.py --image data/input_images/sample.png --mask data/
 - [SAM 3D manual setup](docs/sam3d_manual_setup.md)
 - [SAM 3D adapter](docs/sam3d_adapter.md)
 - [Conversion reference review](docs/conversion_references.md)
+- [Studio-style sculpture layer fill](docs/studio_sculpture_layerfill.md)
+- [Native BrickFormer-style upgrade](docs/brickformer_native_upgrade.md)
 - [Roadmap and limitations](docs/roadmap.md)
 - [References](docs/references.md)
 

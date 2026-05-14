@@ -24,7 +24,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--studio-import-preset",
         action="store_true",
-        help="Use the Studio-like sculpture preset: slice voxelization, layered contour shell, Studio brick set, polished cleanup, and layer steps.",
+        help=(
+            "Use the Studio-like sculpture preset: direct mesh loading, filled layer slices, "
+            "Studio brick set, polished cleanup, and layer steps."
+        ),
     )
     parser.add_argument("--target-width-studs", type=int, help="Optional Studio-style target X footprint in studs.")
     parser.add_argument("--target-depth-studs", type=int, help="Optional Studio-style target Z footprint in studs.")
@@ -48,7 +51,7 @@ def parse_args() -> argparse.Namespace:
         "--voxelizer",
         choices=VOXELIZERS,
         default="surface",
-        help="Voxelization method. Use ray for layer-by-layer sculpture-style filling.",
+        help="Voxelization method. Use slice for Studio-style filled layer sections.",
     )
     parser.add_argument(
         "--ray-fill",
@@ -89,7 +92,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--wall-thickness", type=int, default=1, help="Shell wall thickness in studs.")
     parser.add_argument("--base-thickness", type=int, default=0, help="Solid base thickness in layers.")
-    parser.add_argument("--support-spacing", type=int, default=3, help="Sparse support column spacing.")
+    parser.add_argument("--support-spacing", type=int, default=3, help="Sparse support column spacing; use 0 to disable supports.")
     parser.add_argument(
         "--infill-density",
         type=float,
@@ -137,8 +140,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--cleaned-mesh",
         type=Path,
-        default=Path("outputs/meshes/cleaned_model.obj"),
-        help="Cleaned mesh artifact path.",
+        default=None,
+        help="Optional oriented/repaired mesh debug artifact path. Omit it for direct OBJ slicing.",
     )
     parser.add_argument(
         "--voxels",

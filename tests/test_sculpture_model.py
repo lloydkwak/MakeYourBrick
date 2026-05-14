@@ -7,6 +7,7 @@ from makeyourbrick.sculpture import (
     LayeredBrickModel,
     SculptureSettings,
     VoxelModel,
+    assign_brick_colors_by_layer,
     assign_brick_colors_by_majority,
     build_contour_shell_targets,
     catalog_for_palette,
@@ -52,8 +53,11 @@ def test_sculpture_settings_validate_wall_and_base() -> None:
     with pytest.raises(ValueError, match="wall_thickness"):
         SculptureSettings(wall_thickness=0)
 
+    no_support = SculptureSettings(support_spacing=0)
+    assert no_support.support_spacing == 0
+
     with pytest.raises(ValueError, match="support_spacing"):
-        SculptureSettings(support_spacing=0)
+        SculptureSettings(support_spacing=-1)
 
 
 def test_layered_brick_model_groups_bricks_by_layer() -> None:
@@ -114,6 +118,22 @@ def test_contour_shell_targets_add_sparse_support_for_overhangs() -> None:
     assert targets.target.color_ids[targets.target.occupancy].min() == 16
 
 
+def test_contour_shell_targets_can_disable_sparse_support() -> None:
+    occupancy = np.zeros((5, 3, 5), dtype=bool)
+    occupancy[:, 0:2, :] = True
+    occupancy[2, 2, 2] = True
+    colors = np.full(occupancy.shape, 16, dtype=np.int32)
+    model = VoxelModel(occupancy, colors, pitch=1.0, origin=(0.0, 0.0, 0.0))
+
+    targets = build_contour_shell_targets(
+        model,
+        SculptureSettings(wall_thickness=1, base_thickness=1, support_spacing=0),
+    )
+
+    assert targets.support.occupied_count == 0
+    assert np.array_equal(targets.target.occupancy, targets.shell.occupancy | targets.base.occupancy)
+
+
 def test_sparse_support_planner_uses_fewer_columns_at_wider_spacing() -> None:
     solid = np.zeros((7, 3, 7), dtype=bool)
     solid[:, 0:2, :] = True
@@ -160,6 +180,18 @@ def test_assign_brick_colors_by_majority_uses_voxel_region_colors() -> None:
     assert colored[0].color_id == 4
 
 
+def test_assign_brick_colors_by_layer_cycles_studio_palette() -> None:
+    bricks = [
+        Brick("3005.dat", 16, 0, 0, 0, 1, 1),
+        Brick("3005.dat", 16, 0, 1, 0, 1, 1),
+        Brick("3005.dat", 16, 0, 8, 0, 1, 1),
+    ]
+
+    colored = assign_brick_colors_by_layer(bricks)
+
+    assert [brick.color_id for brick in colored] == [1, 2, 1]
+
+
 def test_majority_color_strategy_can_span_voxel_color_boundaries() -> None:
     occupancy = np.ones((2, 1, 2), dtype=bool)
     colors = np.array([[[4, 4]], [[4, 14]]], dtype=np.int32)
@@ -174,3 +206,35 @@ def test_majority_color_strategy_can_span_voxel_color_boundaries() -> None:
     assert len(model.bricks()) == 1
     assert model.bricks()[0].color_id == 4
     assert layered_model_matches_target(model, target)
+
+
+def test_layer_color_strategy_assigns_one_color_per_layer() -> None:
+    occupancy = np.ones((2, 2, 2), dtype=bool)
+    colors = np.full(occupancy.shape, 16, dtype=np.int32)
+    target = VoxelModel(occupancy, colors, pitch=1.0, origin=(0.0, 0.0, 0.0))
+
+    model = place_layered_bricks(
+        target,
+        catalog_for_palette("compact"),
+        color_strategy="layer",
+    )
+
+    assert {brick.color_id for brick in model.bricks_by_layer[0]} == {1}
+    assert {brick.color_id for brick in model.bricks_by_layer[1]} == {2}
+
+
+def test_run_placement_uses_long_one_wide_bricks_for_layer_runs() -> None:
+    occupancy = np.zeros((8, 2, 2), dtype=bool)
+    occupancy[:, :, 0] = True
+    occupancy[0, :, :] = True
+    colors = np.full(occupancy.shape, 16, dtype=np.int32)
+    target = VoxelModel(occupancy, colors, pitch=1.0, origin=(0.0, 0.0, 0.0))
+
+    model = place_layered_bricks(
+        target,
+        catalog_for_palette("studio"),
+        placement_mode="run",
+    )
+
+    assert layered_model_matches_target(model, target)
+    assert any(brick.part_id == "3008.dat" for brick in model.bricks())

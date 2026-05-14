@@ -31,7 +31,7 @@ from makeyourbrick.voxel.voxelize import compute_footprint_pitch, compute_pitch,
 
 HEIGHT_UNITS = ("brick", "plate")
 SCULPTURE_ENGINES = ("legacy", "layered")
-COLOR_STRATEGIES = ("strict", "majority")
+COLOR_STRATEGIES = ("strict", "majority", "layer")
 
 
 def scale_mesh_y(mesh, scale_y: float):
@@ -97,7 +97,6 @@ def run_from_image(
     config = config or PipelineConfig()
     raw_mesh_path = raw_mesh_path or config.paths.raw_mesh
     ldr_output_path = ldr_output_path or config.paths.ldr_output
-    cleaned_mesh_path = cleaned_mesh_path or config.paths.watertight_mesh
     voxel_output_path = voxel_output_path or config.paths.voxel_npz
     runner = runner or Sam3DRunner(config.paths.sam3d_repo)
 
@@ -154,7 +153,7 @@ def run_from_mesh(mesh_path: Path, config: PipelineConfig | None = None) -> Mesh
 def convert_mesh_to_ldr(
     mesh_path: Path,
     ldr_output_path: Path,
-    cleaned_mesh_path: Path,
+    cleaned_mesh_path: Path | None,
     voxel_output_path: Path,
     target_longest_studs: int = 24,
     min_pitch: float = 0.005,
@@ -200,10 +199,13 @@ def convert_mesh_to_ldr(
         raise ValueError("base_size_studs cannot be combined with target_width_studs or target_depth_studs.")
     if height_unit == "plate" and (not optimize or brick_palette != "plates"):
         raise ValueError("Plate height output requires --optimize --brick-palette plates.")
-    if repair_mode == "basic" and repair_report_path is None:
-        mesh = clean_mesh(load_mesh(mesh_path))
+    loaded_mesh = load_mesh(mesh_path)
+    if repair_mode == "none" and repair_report_path is None:
+        mesh = loaded_mesh
+    elif repair_mode == "basic" and repair_report_path is None:
+        mesh = clean_mesh(loaded_mesh)
     else:
-        mesh, repair_report = repair_mesh(load_mesh(mesh_path), mode=repair_mode)
+        mesh, repair_report = repair_mesh(loaded_mesh, mode=repair_mode)
         if repair_report_path is not None:
             write_repair_report(repair_report, repair_report_path)
     mesh, orientation_report = orient_mesh_to_y_up(mesh, up_axis=up_axis)
@@ -235,8 +237,9 @@ def convert_mesh_to_ldr(
     footprint_scale_report["height_unit_voxel_scale"] = float(voxel_height_scale)
     if voxel_height_scale != 1.0:
         mesh = scale_mesh_y(mesh, voxel_height_scale)
-    cleaned_mesh_path.parent.mkdir(parents=True, exist_ok=True)
-    mesh.export(cleaned_mesh_path)
+    if cleaned_mesh_path is not None:
+        cleaned_mesh_path.parent.mkdir(parents=True, exist_ok=True)
+        mesh.export(cleaned_mesh_path)
 
     palette_ids = None
     palette_rgb = None
@@ -257,32 +260,54 @@ def convert_mesh_to_ldr(
     )
     occupancy, color_ids, _rgb, _origin, _pitch = load_voxel_artifact(voxel_output_path)
     target_model = None
+    placement_mode = "solid"
+    placement_min_coverage_ratio = 0.2
+    placement_strict_coverage = False
     if sculpture_engine == "layered":
-        solid_occupancy = apply_voxel_smoothing(preprocess_solid_occupancy(occupancy), voxel_smoothing)
-        solid_color_ids = repair_sculpture_colors(occupancy, solid_occupancy, color_ids)
-        solid_model = VoxelModel(
-            solid_occupancy,
-            solid_color_ids,
-            pitch=float(_pitch),
-            origin=tuple(float(value) for value in _origin),
-            height_unit=height_unit,
-        )
-        if sculpture_mode == "solid":
-            target_model = solid_model
-        elif sculpture_mode == "contour-shell":
-            targets = build_contour_shell_targets(
-                solid_model,
-                SculptureSettings(
-                    wall_thickness=wall_thickness,
-                    base_thickness=base_thickness,
-                    support_spacing=support_spacing,
-                    brick_palette=brick_palette,
-                    height_unit=height_unit,
-                ),
+        if sculpture_mode == "brickformer":
+            target_occupancy = apply_voxel_smoothing(occupancy, voxel_smoothing)
+            target_color_ids = repair_sculpture_colors(occupancy, target_occupancy, color_ids)
+            target_model = VoxelModel(
+                target_occupancy,
+                target_color_ids,
+                pitch=float(_pitch),
+                origin=tuple(float(value) for value in _origin),
+                height_unit=height_unit,
             )
-            target_model = targets.target
+            placement_mode = "surface"
+            placement_min_coverage_ratio = 0.35
         else:
-            raise ValueError("The layered sculpture engine supports sculpture_mode='solid' or 'contour-shell'.")
+            solid_occupancy = apply_voxel_smoothing(preprocess_solid_occupancy(occupancy), voxel_smoothing)
+            solid_color_ids = repair_sculpture_colors(occupancy, solid_occupancy, color_ids)
+            solid_model = VoxelModel(
+                solid_occupancy,
+                solid_color_ids,
+                pitch=float(_pitch),
+                origin=tuple(float(value) for value in _origin),
+                height_unit=height_unit,
+            )
+            if sculpture_mode == "solid":
+                target_model = solid_model
+                if brick_palette == "studio":
+                    placement_mode = "run"
+            elif sculpture_mode == "contour-shell":
+                targets = build_contour_shell_targets(
+                    solid_model,
+                    SculptureSettings(
+                        wall_thickness=wall_thickness,
+                        base_thickness=base_thickness,
+                        support_spacing=support_spacing,
+                        brick_palette=brick_palette,
+                        height_unit=height_unit,
+                    ),
+                )
+                target_model = targets.target
+                placement_mode = "run"
+            else:
+                raise ValueError(
+                    "The layered sculpture engine supports sculpture_mode='solid', "
+                    "'contour-shell', or 'brickformer'."
+                )
         occupancy, color_ids = target_model.occupancy, target_model.color_ids
     else:
         occupancy, color_ids = apply_sculpture_mode(
@@ -307,6 +332,9 @@ def convert_mesh_to_ldr(
                 target_model,
                 catalog_for_palette(brick_palette),
                 color_strategy=color_strategy,
+                placement_mode=placement_mode,
+                min_coverage_ratio=placement_min_coverage_ratio,
+                strict_coverage=placement_strict_coverage,
             ).bricks()
         else:
             bricks = (
@@ -316,7 +344,13 @@ def convert_mesh_to_ldr(
             )
     else:
         bricks = input_bricks
-    optimizer_name = "reward-sculpture" if optimize and sculpture_engine == "layered" else optimizer
+    optimizer_name = (
+        "brickformer-reward"
+        if optimize and sculpture_engine == "layered" and sculpture_mode == "brickformer"
+        else "reward-sculpture"
+        if optimize and sculpture_engine == "layered"
+        else optimizer
+    )
     if report_path is not None:
         write_brick_report(
             build_brick_report(

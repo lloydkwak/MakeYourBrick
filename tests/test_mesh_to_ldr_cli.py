@@ -518,12 +518,13 @@ def test_mesh_to_ldr_cli_supports_studio_import_preset() -> None:
         assert "0 STEP" in ldr_path.read_text(encoding="utf-8")
         assert report["optimized"] is True
         assert report["optimizer"] == "reward-sculpture"
-        assert report["brick_palette"] == "plates"
+        assert report["brick_palette"] == "studio"
         assert report["sculpture"]["engine"] == "layered"
-        assert report["sculpture"]["mode"] == "solid"
-        assert report["sculpture"]["height_unit"] == "plate"
-        assert report["sculpture"]["wall_thickness"] == 1
+        assert report["sculpture"]["mode"] == "contour-shell"
+        assert report["sculpture"]["height_unit"] == "brick"
+        assert report["sculpture"]["wall_thickness"] == 3
         assert report["sculpture"]["base_thickness"] == 0
+        assert report["sculpture"]["support_spacing"] == 0
         assert report["sculpture"]["voxel_smoothing"] == "polished"
         assert report["sculpture"]["color_strategy"] == "majority"
     finally:

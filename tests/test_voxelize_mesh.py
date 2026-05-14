@@ -16,6 +16,7 @@ from makeyourbrick.voxel.voxelize import (
     load_voxel_artifact,
     save_voxel_artifact,
     voxelize_mesh_with_layer_slices,
+    voxelize_mesh_with_surface_layer_slices,
     voxelize_mesh_with_vertical_rays,
     voxelize_mesh,
 )
@@ -119,6 +120,18 @@ def test_layer_slice_voxelizer_fills_box_layers() -> None:
     assert origin.shape == (3,)
 
 
+def test_surface_layer_slice_voxelizer_keeps_layer_contours_only() -> None:
+    mesh = trimesh.creation.box(extents=(1, 1, 1))
+
+    occupancy, origin, _points = voxelize_mesh_with_surface_layer_slices(mesh, pitch=0.25)
+
+    assert occupancy.shape == (4, 4, 4)
+    assert occupancy.any()
+    assert not occupancy[:, 1, :].all()
+    assert occupancy.sum() < voxelize_mesh_with_layer_slices(mesh, pitch=0.25)[0].sum()
+    assert origin.shape == (3,)
+
+
 def test_pair_ray_hit_intervals_pairs_even_hits() -> None:
     intervals = _pair_ray_hit_intervals([0.0, 1.0, 3.0, 4.0])
 
@@ -159,6 +172,21 @@ def test_voxelize_mesh_supports_slice_voxelizer() -> None:
         occupancy, color_ids, _rgb, _origin, _pitch = load_voxel_artifact(output_path)
         assert occupancy.shape == (4, 4, 4)
         assert occupancy.all()
+        assert set(color_ids[occupancy]) == {4}
+    finally:
+        output_path.unlink(missing_ok=True)
+
+
+def test_voxelize_mesh_supports_surface_slice_voxelizer() -> None:
+    output_path = Path("outputs/voxels/test_slice_surface_box_voxels.npz")
+    mesh = trimesh.creation.box(extents=(1, 1, 1))
+    try:
+        voxelize_mesh(mesh, output_path, pitch=0.25, voxelizer="slice-surface", default_color_id=4)
+
+        occupancy, color_ids, _rgb, _origin, _pitch = load_voxel_artifact(output_path)
+        assert occupancy.shape == (4, 4, 4)
+        assert occupancy.any()
+        assert not occupancy.all()
         assert set(color_ids[occupancy]) == {4}
     finally:
         output_path.unlink(missing_ok=True)

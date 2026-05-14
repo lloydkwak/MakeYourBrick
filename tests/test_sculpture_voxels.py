@@ -136,6 +136,16 @@ def test_add_vertical_support_columns_can_use_sparse_spacing() -> None:
     assert supported.sum() < add_vertical_support_columns(shell, occupancy, support_spacing=1).sum()
 
 
+def test_add_vertical_support_columns_can_be_disabled() -> None:
+    occupancy = np.ones((5, 4, 5), dtype=bool)
+    shell = np.zeros_like(occupancy)
+    shell[2, 3, 2] = True
+
+    supported = add_vertical_support_columns(shell, occupancy, support_spacing=0)
+
+    assert np.array_equal(supported, shell)
+
+
 def test_contour_shell_mode_adds_minimal_vertical_support_columns() -> None:
     occupancy = np.zeros((4, 4, 4), dtype=bool)
     occupancy[:, 0, :] = True
@@ -215,6 +225,28 @@ def test_density_mode_can_use_rib_support_infill() -> None:
     assert density[2, 2, 0]
     assert density[0, 2, 4]
     assert not density[3, 2, 3]
+
+
+def test_brickformer_mode_preserves_surface_slice_without_filling_interior() -> None:
+    occupancy = np.zeros((5, 1, 5), dtype=bool)
+    occupancy[0, 0, :] = True
+    occupancy[-1, 0, :] = True
+    occupancy[:, 0, 0] = True
+    occupancy[:, 0, -1] = True
+    color_ids = np.full(occupancy.shape, 16, dtype=np.int32)
+
+    target, target_colors = apply_sculpture_mode(
+        occupancy,
+        color_ids,
+        mode="brickformer",
+        wall_thickness=1,
+        base_thickness=0,
+        voxel_smoothing="none",
+    )
+
+    np.testing.assert_array_equal(target, occupancy)
+    assert not target[2, 0, 2]
+    assert target_colors[target].min() == 16
 
 
 def test_lattice_infill_density_bounds() -> None:

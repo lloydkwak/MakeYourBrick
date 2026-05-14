@@ -62,7 +62,7 @@ python scripts/mesh_to_ldr.py \
   --output outputs/ldr/sculpture_output.ldr
 ```
 
-The preset expands to the current recommended BrickFormer/Studio-like path. It uses slice-first voxelization, solid layer targets, plate-height output, a wide plate palette, and the reward-based layered placement solver:
+The preset expands to the current recommended Studio-style sculpture path. It uses filled layer slices, a thick wall target, normal brick-height output, the Studio brick palette, polished layer cleanup, no internal support columns, and alternating run placement for Studio bricks:
 
 ```bash
 python scripts/mesh_to_ldr.py \
@@ -72,13 +72,13 @@ python scripts/mesh_to_ldr.py \
   --voxelizer slice \
   --optimize \
   --optimizer layered \
-  --brick-palette plates \
-  --height-unit plate \
+  --brick-palette studio \
+  --height-unit brick \
   --sculpture-engine layered \
-  --sculpture-mode solid \
-  --wall-thickness 1 \
+  --sculpture-mode contour-shell \
+  --wall-thickness 3 \
   --base-thickness 0 \
-  --support-spacing 3 \
+  --support-spacing 0 \
   --voxel-smoothing polished \
   --color-strategy majority \
   --steps-by-layer \
@@ -115,10 +115,11 @@ Voxelization:
 
 - `--voxelizer surface`: use Trimesh surface voxelization and fill; best for watertight meshes
 - `--voxelizer ray`: cast vertical rays through each stud column; better for Studio-like sculpture imports from open OBJ/STL assets
-- `--voxelizer slice`: slice the mesh layer by layer, project section contours to X/Z, and fill each layer; closest to Studio's sculpture import model. The slice path unions same-layer contours to avoid false holes from open OBJ contour fragments.
+- `--voxelizer slice`: slice the mesh layer by layer, project section contours to X/Z, and fill each layer. This is the default Studio-import preset path because Studio's sculpture tool builds the model layer by layer from the source OBJ/STL footprint.
+- `--voxelizer slice-surface`: experimental BrickFormer-inspired path that keeps only cells near section contours. It is useful for lightweight surface tests but can leave large visible gaps on sculptures.
 - `--ray-fill wide|balanced`: choose how odd ray-hit columns are filled; `wide` preserves the original broad fill behavior, while `balanced` drops one outlier hit to reduce overfilled columns
 - `--base-size-studs`: Studio-style uniform base footprint size. This changes voxel pitch from the X/Z footprint and preserves model proportions.
-- `--studio-import-preset`: recommended OBJ-to-sculpture preset. It enables slice voxelization, solid layer targets, plate-height output, the wide plate palette, reward-based placement, polished layer cleanup, majority color assignment, and per-layer LDraw steps.
+- `--studio-import-preset`: recommended OBJ-to-sculpture preset. It loads the source mesh directly without default repair/mesh rewriting, then enables filled layer-slice voxelization, a thick contour wall target, normal brick-height output, the Studio brick palette, polished layer cleanup, majority color assignment, alternating run placement, and per-layer LDraw steps.
 - `--target-width-studs` / `--target-depth-studs`: optional non-uniform X/Z fitting. Do not use this as Studio base size.
 
 ## Mesh Inspection
@@ -159,16 +160,17 @@ Supported command placeholders:
 Sculpture options:
 
 - `--sculpture-engine legacy|layered`: use the original direct occupancy path or the separated shell/base/support layered engine
-- `--sculpture-mode solid|shell|contour-shell|density`: keep a fully solid model, keep a 3D surface shell, keep per-layer contour walls, or keep shell/base plus deterministic lattice infill
+- `--sculpture-mode solid|shell|contour-shell|density|brickformer`: keep a fully solid model, keep a 3D surface shell, keep per-layer contour walls, keep shell/base plus deterministic lattice infill, or keep surface slice cells for BrickFormer-style partial-coverage placement
 - `--wall-thickness`: number of voxel/stud layers to keep from the surface in shell mode
 - `--base-thickness`: number of bottom layers to force solid
+- `--support-spacing`: set `0` to disable internal support columns, or use a positive spacing for sparse supports
 - `--infill-density`: target interior lattice density for `density` sculpture mode
 - `--infill-pattern lattice|ribs`: choose uniform lattice infill or staggered Studio-like internal support ribs
 - `--voxel-smoothing none|light|contour|studio|profile|polished`: optional cleanup for isolated protrusions, layer contours, Studio-like layer consistency, stricter profile cleanup, or polished contour cleanup that further reduces jagged surface noise
 - `--optimizer greedy|layered`: largest-first greedy optimizer or support/seam-aware optimizer. The layered sculpture engine uses the reward-based placement solver internally.
 - `--brick-palette full|studio|compact|plates`: choose the full experimental set, the Studio-reference sculpture set, a compact visual-debug set, or a plate-only set
 - `--height-unit brick|plate`: choose full-brick vertical layers or plate-height vertical layers. Before voxelization, Y is scaled by the real LDraw height ratio (`20/24` for bricks, `20/8` for plates), so base-size conversion uses LEGO-like vertical proportions instead of cubic voxels. `plate` requires `--optimize --brick-palette plates` because a plate is one third of a brick height.
-- `--color-strategy strict|majority`: preserve voxel color boundaries or assign each placed brick the majority color from its covered voxels
+- `--color-strategy strict|majority|layer`: preserve voxel color boundaries, assign each placed brick the majority color from its covered voxels, or cycle Studio-like colors by layer for visual debugging
 - `--steps-by-layer`: insert `0 STEP` markers between vertical layers in the LDR file
 
 ## Placement and Quality Fixtures
@@ -302,11 +304,12 @@ Backend job requests also accept:
 - `height_unit`: `brick` or `plate`
 - `base_size_studs`
 - `sculpture_engine`: `legacy` or `layered`
-- `sculpture_mode`: `solid`, `shell`, `contour-shell`, or `density`
+- `voxelizer`: `surface`, `ray`, `slice`, or `slice-surface`
+- `sculpture_mode`: `solid`, `shell`, `contour-shell`, `density`, or `brickformer`
 - `wall_thickness`
 - `base_thickness`
-- `support_spacing`
-- `color_strategy`: `strict` or `majority`
+- `support_spacing`: `0` disables internal support columns; positive values add sparse supports
+- `color_strategy`: `strict`, `majority`, or `layer`
 - `infill_density`
 - `infill_pattern`: `lattice` or `ribs`
 - `voxel_smoothing`: `none`, `light`, `contour`, `studio`, `profile`, or `polished`

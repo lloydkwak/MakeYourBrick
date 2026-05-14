@@ -16,6 +16,7 @@ from makeyourbrick.brickify.optimizer import (
     layered_brickify,
     layered_candidate_score,
     reward_candidate_score,
+    reward_layered_surface_brickify,
     reward_layered_brickify,
     seam_overlap_ratio,
     support_ratio_for_area,
@@ -103,6 +104,21 @@ def test_reward_layered_plate_palette_uses_wide_flat_parts() -> None:
     assert optimized[0].width == 4
     assert optimized[0].depth == 8
     np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)
+
+
+def test_reward_layered_surface_brickify_allows_partial_surface_coverage() -> None:
+    occupancy = np.zeros((4, 1, 8), dtype=bool)
+    occupancy[0, 0, ::2] = True
+    color_ids = np.zeros(occupancy.shape, dtype=np.int32)
+    color_ids[occupancy] = 7
+
+    optimized = reward_layered_surface_brickify(occupancy, color_ids, brick_specs=STUDIO_SCULPTURE_BRICKS)
+
+    assert len(optimized) <= 2
+    assert any(brick.part_id in {"3008.dat", "3007.dat"} for brick in optimized)
+    output = bricks_to_occupancy(optimized, occupancy.shape)
+    assert np.all(output[occupancy])
+    assert output.sum() > occupancy.sum()
 
 
 def test_brick_specs_for_palette_validates_names() -> None:

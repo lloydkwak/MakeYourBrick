@@ -4,8 +4,8 @@ from typing import Literal
 
 import numpy as np
 
-SCULPTURE_MODES = ("solid", "shell", "contour-shell", "density")
-SculptureMode = Literal["solid", "shell", "contour-shell", "density"]
+SCULPTURE_MODES = ("solid", "shell", "contour-shell", "density", "brickformer")
+SculptureMode = Literal["solid", "shell", "contour-shell", "density", "brickformer"]
 VOXEL_SMOOTHING_PRESETS = ("none", "light", "contour", "studio", "profile", "polished")
 VoxelSmoothing = Literal["none", "light", "contour", "studio", "profile", "polished"]
 INFILL_PATTERNS = ("lattice", "ribs")
@@ -234,8 +234,12 @@ def add_vertical_support_columns(
         raise ValueError("Masks must have the same shape.")
     supported = mask.astype(bool).copy()
     limit = occupancy.astype(bool)
+    if support_spacing < 0:
+        raise ValueError("support_spacing must be non-negative.")
+    if support_spacing == 0:
+        return supported & limit
     start_y = max(1, int(base_thickness))
-    spacing = max(1, int(support_spacing))
+    spacing = int(support_spacing)
     for y in range(start_y, supported.shape[1]):
         unsupported = supported[:, y, :] & ~supported[:, y - 1, :]
         for x, z in np.argwhere(unsupported):
@@ -659,6 +663,9 @@ def apply_sculpture_mode(
     solid_occupancy = apply_voxel_smoothing(preprocess_solid_occupancy(occupancy), voxel_smoothing)
     if mode == "solid":
         return solid_occupancy, repair_sculpture_colors(occupancy, solid_occupancy, color_ids)
+    if mode == "brickformer":
+        retained = apply_voxel_smoothing(occupancy, voxel_smoothing)
+        return retained, repair_sculpture_colors(occupancy, retained, color_ids)
 
     shell_occupancy = solid_occupancy
     if mode == "contour-shell":

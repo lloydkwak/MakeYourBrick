@@ -67,8 +67,10 @@ def plan_sparse_support_columns(
         raise ValueError("Support masks must have the same shape.")
     if base_thickness < 0:
         raise ValueError("base_thickness must be non-negative.")
-    if support_spacing < 1:
-        raise ValueError("support_spacing must be at least 1.")
+    if support_spacing < 0:
+        raise ValueError("support_spacing must be non-negative.")
+    if support_spacing == 0:
+        return np.zeros_like(target_mask, dtype=bool)
 
     planned = target_mask.astype(bool).copy()
     solid = solid_mask.astype(bool)

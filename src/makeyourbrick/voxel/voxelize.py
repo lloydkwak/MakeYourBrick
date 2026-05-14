@@ -13,7 +13,7 @@ from makeyourbrick.brickify.colors import quantize_voxel_rgb_to_ldraw
 from makeyourbrick.mesh.color_sampling import sample_mesh_rgb
 from makeyourbrick.types import VoxelArtifact
 
-VOXELIZERS = ("surface", "ray", "slice")
+VOXELIZERS = ("surface", "ray", "slice", "slice-surface")
 RAY_FILL_MODES = ("wide", "balanced")
 
 
@@ -259,6 +259,13 @@ def _points_inside_contours(
     return inside
 
 
+def _points_near_contours(points: np.ndarray, contours: list[np.ndarray], tolerance: float) -> np.ndarray:
+    near = np.zeros(len(points), dtype=bool)
+    for contour in contours:
+        near |= _points_on_polyline_boundary(points, contour, tolerance)
+    return near
+
+
 def voxelize_mesh_with_layer_slices(
     mesh,
     pitch: float,
@@ -300,6 +307,42 @@ def voxelize_mesh_with_layer_slices(
     return occupancy, origin, points_for_indices(occupancy, indices, points)
 
 
+def voxelize_mesh_with_surface_layer_slices(
+    mesh,
+    pitch: float,
+    contour_tolerance_ratio: float = 0.55,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    bounds = np.asarray(mesh.bounds, dtype=np.float64)
+    extents = np.asarray(mesh.extents, dtype=np.float64)
+    shape = np.maximum(1, np.ceil(extents / pitch).astype(int))
+    origin = bounds[0].astype(np.float32)
+    x_centers = bounds[0, 0] + (np.arange(shape[0], dtype=np.float64) + 0.5) * pitch
+    y_centers = bounds[0, 1] + (np.arange(shape[1], dtype=np.float64) + 0.5) * pitch
+    z_centers = bounds[0, 2] + (np.arange(shape[2], dtype=np.float64) + 0.5) * pitch
+    grid_x, grid_z = np.meshgrid(x_centers, z_centers, indexing="ij")
+    layer_points = np.column_stack([grid_x.ravel(), grid_z.ravel()])
+    occupancy = np.zeros(tuple(int(value) for value in shape), dtype=bool)
+    tolerance = max(float(pitch) * float(contour_tolerance_ratio), 1e-8)
+    for y_index, y_value in enumerate(y_centers):
+        section = mesh.section(
+            plane_origin=[0.0, float(y_value), 0.0],
+            plane_normal=[0.0, 1.0, 0.0],
+        )
+        if section is None:
+            continue
+        contours = [
+            np.asarray(path[:, [0, 2]], dtype=np.float64)
+            for path in section.discrete
+            if len(path) >= 2
+        ]
+        if not contours:
+            continue
+        near = _points_near_contours(layer_points, contours, tolerance=tolerance)
+        occupancy[:, y_index, :] = near.reshape(shape[0], shape[2])
+    indices, points = occupied_indices_to_center_points(occupancy, origin, pitch)
+    return occupancy, origin, points_for_indices(occupancy, indices, points)
+
+
 def voxelize_mesh(
     mesh,
     output_path: Path,
@@ -319,6 +362,8 @@ def voxelize_mesh(
         occupancy, origin, point_grid = voxelize_mesh_with_vertical_rays(mesh, pitch, ray_fill=ray_fill)
     elif voxelizer == "slice":
         occupancy, origin, point_grid = voxelize_mesh_with_layer_slices(mesh, pitch)
+    elif voxelizer == "slice-surface":
+        occupancy, origin, point_grid = voxelize_mesh_with_surface_layer_slices(mesh, pitch)
     else:
         occupancy, origin, point_grid = voxelize_mesh_with_surface(mesh, pitch, fill=fill)
     rgb = np.zeros((*occupancy.shape, 3), dtype=np.uint8)

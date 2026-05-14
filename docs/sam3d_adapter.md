@@ -107,9 +107,7 @@ python scripts/image_to_ldr.py \
   --sam-command "python scripts/adapters/run_sam3d_objects_export.py --repo {repo} --image {image} --mask {mask} --output {output} --metadata {output_dir}/sam3d_export.json" \
   --base-size-studs 32 \
   --sample-colors \
-  --optimize \
-  --sculpture-engine layered \
-  --sculpture-mode contour-shell \
+  --studio-import-preset \
   --repair-report outputs/reports/repair_report.json \
   --report outputs/reports/image_report.json \
   --output outputs/ldr/image_output.ldr

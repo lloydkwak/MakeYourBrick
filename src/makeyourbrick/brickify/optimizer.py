@@ -259,6 +259,25 @@ def _layer_candidate_color_id(layer_colors: np.ndarray, x: int, z: int, width: i
     return color_id
 
 
+def _layer_candidate_surface_color_id(
+    layer_occupancy: np.ndarray,
+    layer_colors: np.ndarray,
+    x: int,
+    z: int,
+    width: int,
+    depth: int,
+) -> int | None:
+    footprint = layer_occupancy[x : x + width, z : z + depth]
+    colors = layer_colors[x : x + width, z : z + depth][footprint]
+    colors = colors[colors > 0]
+    if not len(colors):
+        return None
+    color_id = int(colors[0])
+    if not np.all(colors == color_id):
+        return None
+    return color_id
+
+
 def _generate_layer_candidates(
     layer_occupancy: np.ndarray,
     layer_colors: np.ndarray,
@@ -296,6 +315,73 @@ def _generate_layer_candidates(
                         )
                     )
     return candidates
+
+
+def _generate_layer_surface_candidates(
+    layer_occupancy: np.ndarray,
+    layer_colors: np.ndarray,
+    brick_specs: tuple[BrickSpec, ...],
+    *,
+    allow_rotations: bool = True,
+    min_coverage_ratio: float = 0.2,
+) -> list[tuple[PlacementCandidate, int, float]]:
+    candidates: list[tuple[PlacementCandidate, int, float]] = []
+    width_limit, depth_limit = layer_occupancy.shape
+    min_coverage_ratio = float(min_coverage_ratio)
+    for spec_index, spec in enumerate(brick_specs):
+        if spec.height != 1:
+            continue
+        for width, depth, rotation_degrees in candidate_orientations(spec, allow_rotations):
+            if width > width_limit or depth > depth_limit:
+                continue
+            area = width * depth
+            for x in range(width_limit - width + 1):
+                for z in range(depth_limit - depth + 1):
+                    footprint = layer_occupancy[x : x + width, z : z + depth]
+                    covered_cells = int(footprint.sum())
+                    if covered_cells <= 0:
+                        continue
+                    coverage_ratio = covered_cells / area
+                    if coverage_ratio < min_coverage_ratio:
+                        continue
+                    color_id = _layer_candidate_surface_color_id(layer_occupancy, layer_colors, x, z, width, depth)
+                    if color_id is None:
+                        continue
+                    candidates.append(
+                        (
+                            PlacementCandidate(
+                                spec_index=spec_index,
+                                part_id=spec.part_id,
+                                color_id=color_id,
+                                x=int(x),
+                                z=int(z),
+                                width=int(width),
+                                depth=int(depth),
+                                height=int(spec.height),
+                                rotation_degrees=int(rotation_degrees),
+                            ),
+                            covered_cells,
+                            float(coverage_ratio),
+                        )
+                    )
+    return candidates
+
+
+def _index_surface_candidates_by_target_cell(
+    candidates: list[tuple[PlacementCandidate, int, float]],
+    layer_occupancy: np.ndarray,
+) -> dict[tuple[int, int], list[tuple[PlacementCandidate, int, float]]]:
+    indexed: dict[tuple[int, int], list[tuple[PlacementCandidate, int, float]]] = {}
+    for candidate_tuple in candidates:
+        candidate, _covered_cells, _coverage_ratio = candidate_tuple
+        footprint = layer_occupancy[
+            candidate.x : candidate.x + candidate.width,
+            candidate.z : candidate.z + candidate.depth,
+        ]
+        for local_x, local_z in np.argwhere(footprint):
+            cell = (candidate.x + int(local_x), candidate.z + int(local_z))
+            indexed.setdefault(cell, []).append(candidate_tuple)
+    return indexed
 
 
 def _candidate_overlaps_used(candidate: PlacementCandidate, used_layer: np.ndarray) -> bool:
@@ -359,6 +445,47 @@ def reward_candidate_score(
         + (neighbor_score * 0.7)
         - unsupported_penalty
         - long_axis_penalty
+    )
+
+
+def reward_surface_candidate_score(
+    candidate: PlacementCandidate,
+    *,
+    y: int,
+    max_area: int,
+    coverage_ratio: float,
+    current_placement_map: np.ndarray,
+    previous_placement_map: np.ndarray | None,
+    strict_coverage: bool = False,
+) -> float:
+    """Score a partial-coverage surface placement using BrickFormer-style reward terms."""
+
+    area_score = candidate.area / max(1, max_area)
+    neighbor_score = _same_layer_neighbor_ratio(candidate, current_placement_map)
+    support_ratio, connected_bricks = _previous_layer_connection(candidate, previous_placement_map)
+    connected_score = min(1.0, connected_bricks / max(1, candidate.area))
+    unsupported_penalty = (1.0 - support_ratio) * (1.4 if y > 0 else 0.0)
+    long_axis_penalty = max(0, max(candidate.width, candidate.depth) - 8) * 0.02
+    if not strict_coverage:
+        return (
+            (area_score * (2.0 + coverage_ratio))
+            + (coverage_ratio * 2.4)
+            + (support_ratio * 1.5)
+            + (connected_score * 0.8)
+            + (neighbor_score * 0.6)
+            - unsupported_penalty
+            - long_axis_penalty
+        )
+    overfill_penalty = (1.0 - coverage_ratio) * 4.0
+    return (
+        (area_score * 1.5)
+        + (coverage_ratio * 4.0)
+        + (support_ratio * 1.5)
+        + (connected_score * 0.8)
+        + (neighbor_score * 0.6)
+        - unsupported_penalty
+        - long_axis_penalty
+        - overfill_penalty
     )
 
 
@@ -446,6 +573,234 @@ def reward_layered_brickify(
             next_pid += 1
 
         previous_placement_map = current_placement_map
+
+    return bricks
+
+
+def reward_layered_surface_brickify(
+    occupancy: np.ndarray,
+    color_ids: np.ndarray,
+    brick_specs: tuple[BrickSpec, ...] = STUDIO_SCULPTURE_BRICKS,
+    allow_rotations: bool = True,
+    min_coverage_ratio: float = 0.2,
+    strict_coverage: bool = False,
+) -> list[Brick]:
+    _validate_voxel_inputs(occupancy, color_ids)
+    max_area = max((spec.width * spec.depth for spec in brick_specs if spec.height == 1), default=1)
+    bricks: list[Brick] = []
+    previous_placement_map: np.ndarray | None = None
+
+    for y in range(occupancy.shape[1]):
+        layer_occupancy = occupancy[:, y, :]
+        if not layer_occupancy.any():
+            previous_placement_map = None
+            continue
+        layer_colors = color_ids[:, y, :]
+        used_layer = np.zeros(layer_occupancy.shape, dtype=bool)
+        current_placement_map = np.full(layer_occupancy.shape, -1, dtype=np.int32)
+        candidates = _generate_layer_surface_candidates(
+            layer_occupancy,
+            layer_colors,
+            brick_specs,
+            allow_rotations=allow_rotations,
+            min_coverage_ratio=min_coverage_ratio,
+        )
+        candidates_by_cell = _index_surface_candidates_by_target_cell(candidates, layer_occupancy)
+        next_pid = 0
+
+        while True:
+            uncovered = layer_occupancy & ~used_layer
+            if not uncovered.any():
+                break
+
+            best: tuple[tuple[float, int, float, int, int, int, int], PlacementCandidate] | None = None
+            anchor_x, anchor_z = (int(value) for value in np.argwhere(uncovered)[0])
+            for candidate, covered_cells, coverage_ratio in candidates_by_cell.get((anchor_x, anchor_z), []):
+                if _candidate_overlaps_used(candidate, used_layer):
+                    continue
+                candidate_target = layer_occupancy[
+                    candidate.x : candidate.x + candidate.width,
+                    candidate.z : candidate.z + candidate.depth,
+                ]
+                candidate_uncovered = uncovered[
+                    candidate.x : candidate.x + candidate.width,
+                    candidate.z : candidate.z + candidate.depth,
+                ]
+                if not (candidate_target & candidate_uncovered).any():
+                    continue
+                score = reward_surface_candidate_score(
+                    candidate,
+                    y=y,
+                    max_area=max_area,
+                    coverage_ratio=coverage_ratio,
+                    current_placement_map=current_placement_map,
+                    previous_placement_map=previous_placement_map,
+                    strict_coverage=strict_coverage,
+                )
+                rank = (score, candidate.area, coverage_ratio, covered_cells, -candidate.spec_index, -candidate.x, -candidate.z)
+                if best is None or rank > best[0]:
+                    best = (rank, candidate)
+
+            if best is None:
+                x, z = (int(value) for value in np.argwhere(uncovered)[0])
+                candidate = PlacementCandidate(
+                    spec_index=len(brick_specs),
+                    part_id="3005.dat",
+                    color_id=int(color_ids[x, y, z]),
+                    x=x,
+                    z=z,
+                    width=1,
+                    depth=1,
+                    height=1,
+                    rotation_degrees=0,
+                )
+            else:
+                candidate = best[1]
+
+            brick = _candidate_to_brick(candidate, y)
+            bricks.append(brick)
+            used_layer[brick.x : brick.x + brick.width, brick.z : brick.z + brick.depth] = True
+            current_placement_map[brick.x : brick.x + brick.width, brick.z : brick.z + brick.depth] = next_pid
+            next_pid += 1
+
+        previous_placement_map = current_placement_map
+
+    return bricks
+
+
+def _run_specs_for_axis(
+    brick_specs: tuple[BrickSpec, ...],
+    *,
+    axis: str,
+    allow_rotations: bool = True,
+) -> list[tuple[int, str, int, int, int]]:
+    specs: list[tuple[int, str, int, int, int]] = []
+    for spec_index, spec in enumerate(brick_specs):
+        if spec.height != 1:
+            continue
+        for width, depth, rotation_degrees in candidate_orientations(spec, allow_rotations):
+            if axis == "x" and depth <= 2:
+                specs.append((width, spec.part_id, width, depth, rotation_degrees))
+            elif axis == "z" and width <= 2:
+                specs.append((depth, spec.part_id, width, depth, rotation_degrees))
+    if axis == "x":
+        specs.sort(key=lambda item: (item[3] != 1, -item[0], -(item[0] * item[3]), item[1]))
+    else:
+        specs.sort(key=lambda item: (item[2] != 1, -item[0], -(item[0] * item[2]), item[1]))
+    return specs
+
+
+def _place_run_brick(
+    *,
+    layer_occupancy: np.ndarray,
+    layer_colors: np.ndarray,
+    used_layer: np.ndarray,
+    y: int,
+    x: int,
+    z: int,
+    run_length: int,
+    specs: list[tuple[int, str, int, int, int]],
+) -> Brick:
+    for length, part_id, width, depth, rotation_degrees in specs:
+        if length > run_length:
+            continue
+        footprint = layer_occupancy[x : x + width, z : z + depth]
+        already_used = used_layer[x : x + width, z : z + depth]
+        if not footprint.all() or already_used.any():
+            continue
+        color_id = _layer_candidate_color_id(layer_colors, x, z, width, depth)
+        if color_id is None:
+            continue
+        return Brick(
+            part_id=part_id,
+            color_id=color_id,
+            x=int(x),
+            y=int(y),
+            z=int(z),
+            width=int(width),
+            depth=int(depth),
+            height=1,
+            rotation_degrees=int(rotation_degrees),
+        )
+    return Brick(
+        part_id="3005.dat",
+        color_id=int(layer_colors[x, z]),
+        x=int(x),
+        y=int(y),
+        z=int(z),
+        width=1,
+        depth=1,
+    )
+
+
+def run_length_layered_brickify(
+    occupancy: np.ndarray,
+    color_ids: np.ndarray,
+    brick_specs: tuple[BrickSpec, ...] = STUDIO_SCULPTURE_BRICKS,
+    allow_rotations: bool = True,
+) -> list[Brick]:
+    """Fill each layer by alternating X/Z runs for clean sculpture walls."""
+
+    _validate_voxel_inputs(occupancy, color_ids)
+    bricks: list[Brick] = []
+    x_specs = _run_specs_for_axis(brick_specs, axis="x", allow_rotations=allow_rotations)
+    z_specs = _run_specs_for_axis(brick_specs, axis="z", allow_rotations=allow_rotations)
+
+    for y in range(occupancy.shape[1]):
+        layer_occupancy = occupancy[:, y, :]
+        if not layer_occupancy.any():
+            continue
+        layer_colors = color_ids[:, y, :]
+        used_layer = np.zeros(layer_occupancy.shape, dtype=bool)
+        axis = "x" if y % 2 == 0 else "z"
+        specs = x_specs if axis == "x" else z_specs
+
+        if axis == "x":
+            for z in range(layer_occupancy.shape[1]):
+                x = 0
+                while x < layer_occupancy.shape[0]:
+                    if not layer_occupancy[x, z] or used_layer[x, z]:
+                        x += 1
+                        continue
+                    end = x
+                    while end < layer_occupancy.shape[0] and layer_occupancy[end, z] and not used_layer[end, z]:
+                        end += 1
+                    brick = _place_run_brick(
+                        layer_occupancy=layer_occupancy,
+                        layer_colors=layer_colors,
+                        used_layer=used_layer,
+                        y=y,
+                        x=x,
+                        z=z,
+                        run_length=end - x,
+                        specs=specs,
+                    )
+                    bricks.append(brick)
+                    used_layer[brick.x : brick.x + brick.width, brick.z : brick.z + brick.depth] = True
+                    x = brick.x + brick.width
+        else:
+            for x in range(layer_occupancy.shape[0]):
+                z = 0
+                while z < layer_occupancy.shape[1]:
+                    if not layer_occupancy[x, z] or used_layer[x, z]:
+                        z += 1
+                        continue
+                    end = z
+                    while end < layer_occupancy.shape[1] and layer_occupancy[x, end] and not used_layer[x, end]:
+                        end += 1
+                    brick = _place_run_brick(
+                        layer_occupancy=layer_occupancy,
+                        layer_colors=layer_colors,
+                        used_layer=used_layer,
+                        y=y,
+                        x=x,
+                        z=z,
+                        run_length=end - z,
+                        specs=specs,
+                    )
+                    bricks.append(brick)
+                    used_layer[brick.x : brick.x + brick.width, brick.z : brick.z + brick.depth] = True
+                    z = brick.z + brick.depth
 
     return bricks
 
