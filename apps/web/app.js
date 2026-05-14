@@ -16,6 +16,7 @@ const payloadPreview = document.querySelector("#payloadPreview");
 const targetStuds = document.querySelector("#targetStuds");
 const apiBaseUrl = document.querySelector("#apiBaseUrl");
 const defaultColor = document.querySelector("#defaultColor");
+const baseSizeStuds = document.querySelector("#baseSizeStuds");
 const repairMode = document.querySelector("#repairMode");
 const sampleColors = document.querySelector("#sampleColors");
 const optimizeBricks = document.querySelector("#optimizeBricks");
@@ -299,11 +300,23 @@ function buildPayload() {
     },
     lego: {
       target_studs: Number(targetStuds.value),
+      base_size_studs: baseSizeStuds.value ? Number(baseSizeStuds.value) : null,
       default_color_id: Number(defaultColor.value),
       repair_mode: repairMode.value,
       sample_colors: sampleColors.checked,
       optimize: optimizeBricks.checked,
       fill: true,
+      voxelizer: "slice",
+      optimizer: "layered",
+      brick_palette: "studio",
+      sculpture_engine: "layered",
+      sculpture_mode: "contour-shell",
+      wall_thickness: 1,
+      base_thickness: 1,
+      support_spacing: 3,
+      voxel_smoothing: "polished",
+      color_strategy: "majority",
+      steps_by_layer: true,
     },
     job: {
       job_id: state.backend.jobId,
@@ -506,7 +519,7 @@ dropZone.addEventListener("drop", (event) => {
   loadFile(event.dataTransfer.files[0]);
 });
 
-for (const input of [apiBaseUrl, targetStuds, defaultColor, repairMode, sampleColors, optimizeBricks]) {
+for (const input of [apiBaseUrl, targetStuds, baseSizeStuds, defaultColor, repairMode, sampleColors, optimizeBricks]) {
   input.addEventListener("change", updatePayload);
 }
 
@@ -685,11 +698,23 @@ runButton.addEventListener("click", async () => {
         image_id: state.backend.imageId,
         mask_id: state.backend.maskId,
         target_studs: payload.lego.target_studs,
+        base_size_studs: payload.lego.base_size_studs,
         sample_colors: payload.lego.sample_colors,
         optimize: payload.lego.optimize,
         fill: payload.lego.fill,
         default_color_id: payload.lego.default_color_id,
         repair_mode: payload.lego.repair_mode,
+        voxelizer: payload.lego.voxelizer,
+        optimizer: payload.lego.optimizer,
+        brick_palette: payload.lego.brick_palette,
+        sculpture_engine: payload.lego.sculpture_engine,
+        sculpture_mode: payload.lego.sculpture_mode,
+        wall_thickness: payload.lego.wall_thickness,
+        base_thickness: payload.lego.base_thickness,
+        support_spacing: payload.lego.support_spacing,
+        voxel_smoothing: payload.lego.voxel_smoothing,
+        color_strategy: payload.lego.color_strategy,
+        steps_by_layer: payload.lego.steps_by_layer,
       }),
     });
     if (!response.ok) throw new Error(`Job creation failed: ${response.status}`);

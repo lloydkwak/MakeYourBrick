@@ -12,6 +12,7 @@ from makeyourbrick.brickify.optimizer import BRICK_PALETTES
 from makeyourbrick.mesh.orient import UP_AXIS_OPTIONS
 from makeyourbrick.mesh.repair import REPAIR_MODES
 from makeyourbrick.pipeline import COLOR_STRATEGIES, HEIGHT_UNITS, SCULPTURE_ENGINES, run_from_image
+from makeyourbrick.presets import studio_import_preset_options
 from makeyourbrick.voxel.sculpture import INFILL_PATTERNS, SCULPTURE_MODES, VOXEL_SMOOTHING_PRESETS
 from makeyourbrick.voxel.voxelize import RAY_FILL_MODES, VOXELIZERS
 
@@ -34,6 +35,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sam-timeout", type=int, default=3600, help="SAM command timeout in seconds.")
     parser.add_argument("--target-studs", type=int, default=48, help="Longest model extent in studs.")
     parser.add_argument("--base-size-studs", type=int, help="Uniform Studio-style base footprint size in studs.")
+    parser.add_argument(
+        "--studio-import-preset",
+        action="store_true",
+        help="Use the Studio-like sculpture preset: slice voxelization, layered contour shell, Studio brick set, polished cleanup, and layer steps.",
+    )
     parser.add_argument("--target-width-studs", type=int, help="Optional Studio-style target X footprint in studs.")
     parser.add_argument("--target-depth-studs", type=int, help="Optional Studio-style target Z footprint in studs.")
     parser.add_argument("--min-pitch", type=float, default=0.005, help="Minimum voxel pitch.")
@@ -147,6 +153,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if args.studio_import_preset:
+        for option_name, option_value in studio_import_preset_options().items():
+            setattr(args, option_name, option_value)
     runner = Sam3DRunner(
         repo_path=args.sam_repo,
         command_template=args.sam_command,

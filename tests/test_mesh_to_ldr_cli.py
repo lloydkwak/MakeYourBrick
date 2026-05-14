@@ -467,6 +467,58 @@ def test_mesh_to_ldr_cli_supports_layered_sculpture_engine() -> None:
         report_path.unlink(missing_ok=True)
 
 
+def test_mesh_to_ldr_cli_supports_studio_import_preset() -> None:
+    input_mesh = Path("outputs/meshes/test_cli_studio_preset_box.stl")
+    cleaned_mesh = Path("outputs/meshes/test_cli_studio_preset_cleaned.obj")
+    voxel_path = Path("outputs/voxels/test_cli_studio_preset_voxels.npz")
+    ldr_path = Path("outputs/ldr/test_cli_studio_preset.ldr")
+    report_path = Path("outputs/reports/test_cli_studio_preset_report.json")
+    try:
+        input_mesh.parent.mkdir(parents=True, exist_ok=True)
+        trimesh.creation.box(extents=(1, 1, 1)).export(input_mesh)
+
+        subprocess.run(
+            [
+                sys.executable,
+                "scripts/mesh_to_ldr.py",
+                "--mesh",
+                str(input_mesh),
+                "--target-studs",
+                "6",
+                "--studio-import-preset",
+                "--cleaned-mesh",
+                str(cleaned_mesh),
+                "--voxels",
+                str(voxel_path),
+                "--output",
+                str(ldr_path),
+                "--report",
+                str(report_path),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        assert "0 STEP" in ldr_path.read_text(encoding="utf-8")
+        assert report["optimized"] is True
+        assert report["optimizer"] == "layered-sculpture"
+        assert report["brick_palette"] == "studio"
+        assert report["sculpture"]["engine"] == "layered"
+        assert report["sculpture"]["mode"] == "contour-shell"
+        assert report["sculpture"]["wall_thickness"] == 1
+        assert report["sculpture"]["base_thickness"] == 1
+        assert report["sculpture"]["voxel_smoothing"] == "polished"
+        assert report["sculpture"]["color_strategy"] == "majority"
+    finally:
+        input_mesh.unlink(missing_ok=True)
+        cleaned_mesh.unlink(missing_ok=True)
+        voxel_path.unlink(missing_ok=True)
+        ldr_path.unlink(missing_ok=True)
+        report_path.unlink(missing_ok=True)
+
+
 def test_mesh_to_ldr_cli_can_sample_mesh_colors_and_write_report() -> None:
     input_mesh = Path("outputs/meshes/test_cli_sampled_color.ply")
     cleaned_mesh = Path("outputs/meshes/test_cli_sampled_color_cleaned.obj")

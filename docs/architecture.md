@@ -117,6 +117,8 @@ Sculpture conversion post-processes the voxel occupancy before brick placement:
 
 The `layered` sculpture engine separates `solid`, `shell`, `base`, `support`, and final `target` masks before brick placement. That mirrors the useful parts of Brickalize/Studio/BrickFormer-style sculpture conversion while keeping the implementation small and testable.
 
+The CLI `--studio-import-preset` selects the recommended OBJ sculpture path for visual checks: slice voxelization, layered contour-shell targets, wall/base thickness of one layer, sparse supports, polished layer cleanup, Studio brick palette, majority color assignment, and LDraw steps by layer.
+
 ### LDraw Output
 
 Location:

@@ -33,7 +33,7 @@ python -m compileall src scripts tests/fake_sam3d_command.py
 python -m pytest
 ```
 
-Latest local result: `194 passed`.
+Latest local result: `195 passed`.
 
 ## Installation
 
@@ -55,7 +55,7 @@ python scripts/make_synthetic_ldr.py --shape box --size 4 1 2 --color 16 --optim
 OBJ mesh to optimized LDraw:
 
 ```bash
-python scripts/mesh_to_ldr.py --mesh data/examples/sample.obj --base-size-studs 32 --optimize --output outputs/ldr/mesh_optimized.ldr
+python scripts/mesh_to_ldr.py --mesh data/examples/sample.obj --base-size-studs 32 --studio-import-preset --output outputs/ldr/mesh_optimized.ldr
 ```
 
 Colored mesh to optimized LDraw with report:
@@ -67,7 +67,7 @@ python scripts/mesh_to_ldr.py --mesh data/examples/sample_colored.ply --target-s
 Image to LDraw through a SAM command template:
 
 ```bash
-python scripts/image_to_ldr.py --image data/input_images/sample.png --mask data/masks/sample.png --sam-repo third_party/sam-3d-objects --sam-command "python scripts/adapters/run_sam3d_objects_export.py --repo {repo} --image {image} --mask {mask} --output {output}" --base-size-studs 32 --sample-colors --optimize --sculpture-engine layered --sculpture-mode contour-shell --report outputs/reports/image_report.json --output outputs/ldr/image_output.ldr
+python scripts/image_to_ldr.py --image data/input_images/sample.png --mask data/masks/sample.png --sam-repo third_party/sam-3d-objects --sam-command "python scripts/adapters/run_sam3d_objects_export.py --repo {repo} --image {image} --mask {mask} --output {output}" --base-size-studs 32 --studio-import-preset --sample-colors --report outputs/reports/image_report.json --output outputs/ldr/image_output.ldr
 ```
 
 ## Documentation

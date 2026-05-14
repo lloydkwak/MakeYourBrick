@@ -34,13 +34,8 @@ def test_image_to_ldr_cli_runs_fake_sam_command_to_ldr() -> None:
                 command,
                 "--target-studs",
                 "8",
+                "--studio-import-preset",
                 "--sample-colors",
-                "--optimize",
-                "--optimizer",
-                "layered",
-                "--brick-palette",
-                "studio",
-                "--steps-by-layer",
                 "--raw-mesh",
                 str(raw_mesh),
                 "--cleaned-mesh",
@@ -68,8 +63,11 @@ def test_image_to_ldr_cli_runs_fake_sam_command_to_ldr() -> None:
         assert brick_lines
         assert all(line.split()[1] == "14" for line in brick_lines)
         assert report["optimized"] is True
-        assert report["optimizer"] == "layered"
+        assert report["optimizer"] == "layered-sculpture"
         assert report["brick_palette"] == "studio"
+        assert report["sculpture"]["engine"] == "layered"
+        assert report["sculpture"]["mode"] == "contour-shell"
+        assert report["sculpture"]["voxel_smoothing"] == "polished"
         assert report["stability"]["layer_count"] > 0
         assert "0 STEP" in ldr_path.read_text(encoding="utf-8")
         assert repair_report["mode_requested"] == "basic"

@@ -57,6 +57,17 @@ Convert with Studio-like sculpture options:
 python scripts/mesh_to_ldr.py \
   --mesh data/examples/sample.stl \
   --base-size-studs 32 \
+  --studio-import-preset \
+  --report outputs/reports/sculpture_report.json \
+  --output outputs/ldr/sculpture_output.ldr
+```
+
+The preset expands to the current recommended Studio-like path:
+
+```bash
+python scripts/mesh_to_ldr.py \
+  --mesh data/examples/sample.stl \
+  --base-size-studs 32 \
   --up-axis auto \
   --voxelizer slice \
   --ray-fill wide \
@@ -107,6 +118,7 @@ Voxelization:
 - `--voxelizer slice`: slice the mesh layer by layer, project section contours to X/Z, and fill each layer; closest to Studio's sculpture import model. The slice path unions same-layer contours to avoid false holes from open OBJ contour fragments.
 - `--ray-fill wide|balanced`: choose how odd ray-hit columns are filled; `wide` preserves the original broad fill behavior, while `balanced` drops one outlier hit to reduce overfilled columns
 - `--base-size-studs`: Studio-style uniform base footprint size. This changes voxel pitch from the X/Z footprint and preserves model proportions.
+- `--studio-import-preset`: recommended OBJ-to-sculpture preset. It enables slice voxelization, layered contour-shell targets, the Studio brick palette, polished contour cleanup, majority color assignment, and per-layer LDraw steps.
 - `--target-width-studs` / `--target-depth-studs`: optional non-uniform X/Z fitting. Do not use this as Studio base size.
 
 ## Mesh Inspection
@@ -130,16 +142,8 @@ python scripts/image_to_ldr.py \
   --sam-repo third_party/sam-3d-objects \
   --sam-command "<command that reads {image} and {mask}, then writes {output}>" \
   --base-size-studs 32 \
+  --studio-import-preset \
   --sample-colors \
-  --optimize \
-  --optimizer layered \
-  --sculpture-engine layered \
-  --sculpture-mode contour-shell \
-  --wall-thickness 2 \
-  --base-thickness 2 \
-  --support-spacing 3 \
-  --color-strategy majority \
-  --steps-by-layer \
   --report outputs/reports/image_report.json \
   --output outputs/ldr/image_output.ldr
 ```

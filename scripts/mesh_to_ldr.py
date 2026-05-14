@@ -11,6 +11,7 @@ from makeyourbrick.brickify.optimizer import BRICK_PALETTES
 from makeyourbrick.pipeline import COLOR_STRATEGIES, HEIGHT_UNITS, SCULPTURE_ENGINES, convert_mesh_to_ldr
 from makeyourbrick.mesh.repair import REPAIR_MODES
 from makeyourbrick.mesh.orient import UP_AXIS_OPTIONS
+from makeyourbrick.presets import studio_import_preset_options
 from makeyourbrick.voxel.voxelize import RAY_FILL_MODES, VOXELIZERS
 from makeyourbrick.voxel.sculpture import INFILL_PATTERNS, SCULPTURE_MODES, VOXEL_SMOOTHING_PRESETS
 
@@ -20,6 +21,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--mesh", type=Path, required=True, help="Input mesh path: .obj, .stl, .ply, .glb, etc.")
     parser.add_argument("--target-studs", type=int, default=24, help="Longest model extent in studs.")
     parser.add_argument("--base-size-studs", type=int, help="Uniform Studio-style base footprint size in studs.")
+    parser.add_argument(
+        "--studio-import-preset",
+        action="store_true",
+        help="Use the Studio-like sculpture preset: slice voxelization, layered contour shell, Studio brick set, polished cleanup, and layer steps.",
+    )
     parser.add_argument("--target-width-studs", type=int, help="Optional Studio-style target X footprint in studs.")
     parser.add_argument("--target-depth-studs", type=int, help="Optional Studio-style target Z footprint in studs.")
     parser.add_argument("--min-pitch", type=float, default=0.005, help="Minimum voxel pitch.")
@@ -151,6 +157,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if args.studio_import_preset:
+        for option_name, option_value in studio_import_preset_options().items():
+            setattr(args, option_name, option_value)
     output_path = convert_mesh_to_ldr(
         mesh_path=args.mesh,
         ldr_output_path=args.output,
