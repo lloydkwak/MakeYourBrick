@@ -454,7 +454,7 @@ def test_mesh_to_ldr_cli_supports_layered_sculpture_engine() -> None:
         report = json.loads(report_path.read_text(encoding="utf-8"))
         brick_lines = [line for line in ldr_path.read_text(encoding="utf-8").splitlines() if line.startswith("1 ")]
         assert brick_lines
-        assert report["optimizer"] == "layered-sculpture"
+        assert report["optimizer"] == "reward-sculpture"
         assert report["sculpture"]["engine"] == "layered"
         assert report["sculpture"]["mode"] == "contour-shell"
         assert report["sculpture"]["support_spacing"] == 2
@@ -503,7 +503,7 @@ def test_mesh_to_ldr_cli_supports_studio_import_preset() -> None:
         report = json.loads(report_path.read_text(encoding="utf-8"))
         assert "0 STEP" in ldr_path.read_text(encoding="utf-8")
         assert report["optimized"] is True
-        assert report["optimizer"] == "layered-sculpture"
+        assert report["optimizer"] == "reward-sculpture"
         assert report["brick_palette"] == "studio"
         assert report["sculpture"]["engine"] == "layered"
         assert report["sculpture"]["mode"] == "contour-shell"

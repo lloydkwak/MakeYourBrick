@@ -5,6 +5,7 @@ import numpy as np
 from makeyourbrick.brickify.optimizer import (
     COMPACT_SCULPTURE_BRICKS,
     PLATE_SCULPTURE_BRICKS,
+    PlacementCandidate,
     STUDIO_SCULPTURE_BRICKS,
     brick_specs_for_palette,
     brickify_1x1,
@@ -14,6 +15,8 @@ from makeyourbrick.brickify.optimizer import (
     horizontal_boundary_ratio,
     layered_brickify,
     layered_candidate_score,
+    reward_candidate_score,
+    reward_layered_brickify,
     seam_overlap_ratio,
     support_ratio_for_area,
 )
@@ -160,6 +163,38 @@ def test_layered_brickify_preserves_occupancy_and_color_boundaries() -> None:
 
     assert {brick.color_id for brick in optimized} == {14, 16}
     np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)
+
+
+def test_reward_layered_brickify_preserves_occupancy_and_color_boundaries() -> None:
+    occupancy, color_ids = make_solid_box((4, 2, 2), color_id=16)
+    color_ids[2:, :, :] = 14
+
+    optimized = reward_layered_brickify(occupancy, color_ids, brick_specs=STUDIO_SCULPTURE_BRICKS)
+
+    assert {brick.color_id for brick in optimized} == {14, 16}
+    np.testing.assert_array_equal(bricks_to_occupancy(optimized, occupancy.shape), occupancy)
+
+
+def test_reward_candidate_score_prefers_previous_layer_connection() -> None:
+    previous = np.full((4, 2), -1, dtype=np.int32)
+    previous[0:2, :] = 1
+    current = np.full((4, 2), -1, dtype=np.int32)
+    supported = PlacementCandidate(0, "3003.dat", 16, 0, 0, 2, 2, 1)
+    floating = PlacementCandidate(0, "3003.dat", 16, 2, 0, 2, 2, 1)
+
+    assert reward_candidate_score(
+        supported,
+        y=1,
+        max_area=4,
+        current_placement_map=current,
+        previous_placement_map=previous,
+    ) > reward_candidate_score(
+        floating,
+        y=1,
+        max_area=4,
+        current_placement_map=current,
+        previous_placement_map=previous,
+    )
 
 
 def test_layered_candidate_score_prefers_supported_smaller_brick_over_overhang() -> None:

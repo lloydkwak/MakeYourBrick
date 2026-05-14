@@ -5,7 +5,7 @@ from typing import Literal
 
 import numpy as np
 
-from makeyourbrick.brickify.optimizer import bricks_to_occupancy, layered_brickify
+from makeyourbrick.brickify.optimizer import bricks_to_occupancy, reward_layered_brickify
 from makeyourbrick.sculpture.catalog import BrickCatalog
 from makeyourbrick.sculpture.model import LayeredBrickModel, VoxelModel
 from makeyourbrick.types import Brick
@@ -49,7 +49,7 @@ def place_layered_bricks(
     placement_colors = target.color_ids
     if color_strategy == "majority":
         placement_colors = np.where(target.occupancy, int(default_color_id), 0).astype(np.int32)
-    bricks = layered_brickify(
+    bricks = reward_layered_brickify(
         target.occupancy,
         placement_colors,
         brick_specs=catalog.specs,

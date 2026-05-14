@@ -47,13 +47,21 @@ Repository: https://github.com/loryruta/brickformer
 
 BrickFormer is a GPU/CUDA tool for converting GLB/GLTF models into LEGO constructions. Its public
 guide exposes model orientation, XZ resolution, color constraints, conversion, construction slices,
-and export to LXF. The implementation is GPLv3 and CUDA-oriented.
+and export to LXF. The source shows a slice-first converter: scale the model by X/Z resolution,
+apply a brick-height Y correction, slice the mesh into 2D color maps, enumerate all possible
+placements for each slice, score each placement with size/color/connectivity/support terms, choose
+the best placement repeatedly, assign nearest available colors, and export a construction format.
+The implementation is GPLv3 and CUDA-oriented.
 
 Use in MakeYourBrick:
 
 - Treat XZ resolution/base size as the primary sculpture scale control.
+- Use LEGO height scaling before voxelization.
+- Replace local scan-order placement with a reward-based per-slice placement solver.
+- Score candidate bricks by area, same-layer neighbors, previous-layer support/connectivity, and
+  color-compatible coverage.
 - Preserve bottom-to-top construction slices through LDraw `0 STEP`.
-- Keep CPU Python implementation small and testable.
+- Keep CPU Python implementation small and testable; do not copy BrickFormer GPL source.
 
 ### LPub3D
 
@@ -95,7 +103,7 @@ image + mask
   -> base-size or longest-axis pitch
   -> voxel target
   -> contour shell + base + sparse support
-  -> layered brick placement
+  -> reward-based layered brick placement
   -> strict or majority color assignment
   -> output.ldr with 0 STEP markers
   -> JSON reports

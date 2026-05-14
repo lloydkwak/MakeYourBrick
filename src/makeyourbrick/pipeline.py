@@ -313,7 +313,7 @@ def convert_mesh_to_ldr(
             )
     else:
         bricks = input_bricks
-    optimizer_name = "layered-sculpture" if optimize and sculpture_engine == "layered" else optimizer
+    optimizer_name = "reward-sculpture" if optimize and sculpture_engine == "layered" else optimizer
     if report_path is not None:
         write_brick_report(
             build_brick_report(

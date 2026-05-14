@@ -63,7 +63,7 @@ def test_image_to_ldr_cli_runs_fake_sam_command_to_ldr() -> None:
         assert brick_lines
         assert all(line.split()[1] == "14" for line in brick_lines)
         assert report["optimized"] is True
-        assert report["optimizer"] == "layered-sculpture"
+        assert report["optimizer"] == "reward-sculpture"
         assert report["brick_palette"] == "studio"
         assert report["sculpture"]["engine"] == "layered"
         assert report["sculpture"]["mode"] == "contour-shell"

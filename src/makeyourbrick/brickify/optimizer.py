@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 
 from makeyourbrick.types import Brick, BrickSpec
@@ -157,6 +159,23 @@ def mark_used(used: np.ndarray, brick: Brick) -> None:
     ] = True
 
 
+@dataclass(frozen=True)
+class PlacementCandidate:
+    spec_index: int
+    part_id: str
+    color_id: int
+    x: int
+    z: int
+    width: int
+    depth: int
+    height: int
+    rotation_degrees: int = 0
+
+    @property
+    def area(self) -> int:
+        return int(self.width * self.depth)
+
+
 def support_ratio_for_area(
     occupied_or_used: np.ndarray,
     x: int,
@@ -220,6 +239,208 @@ def seam_overlap_ratio(bricks: list[Brick], y: int, x: int, z: int, width: int, 
     if not current_edges:
         return 0.0
     return len(current_edges.intersection(lower_edges)) / len(current_edges)
+
+
+def _layer_candidate_color_id(layer_colors: np.ndarray, x: int, z: int, width: int, depth: int) -> int | None:
+    colors = layer_colors[x : x + width, z : z + depth]
+    colors = colors[colors > 0]
+    if not len(colors):
+        return None
+    color_id = int(colors[0])
+    if not np.all(colors == color_id):
+        return None
+    return color_id
+
+
+def _generate_layer_candidates(
+    layer_occupancy: np.ndarray,
+    layer_colors: np.ndarray,
+    brick_specs: tuple[BrickSpec, ...],
+    *,
+    allow_rotations: bool = True,
+) -> list[PlacementCandidate]:
+    candidates: list[PlacementCandidate] = []
+    width_limit, depth_limit = layer_occupancy.shape
+    for spec_index, spec in enumerate(brick_specs):
+        if spec.height != 1:
+            continue
+        for width, depth, rotation_degrees in candidate_orientations(spec, allow_rotations):
+            if width > width_limit or depth > depth_limit:
+                continue
+            for x in range(width_limit - width + 1):
+                for z in range(depth_limit - depth + 1):
+                    footprint = layer_occupancy[x : x + width, z : z + depth]
+                    if not footprint.all():
+                        continue
+                    color_id = _layer_candidate_color_id(layer_colors, x, z, width, depth)
+                    if color_id is None:
+                        continue
+                    candidates.append(
+                        PlacementCandidate(
+                            spec_index=spec_index,
+                            part_id=spec.part_id,
+                            color_id=color_id,
+                            x=int(x),
+                            z=int(z),
+                            width=int(width),
+                            depth=int(depth),
+                            height=int(spec.height),
+                            rotation_degrees=int(rotation_degrees),
+                        )
+                    )
+    return candidates
+
+
+def _candidate_overlaps_used(candidate: PlacementCandidate, used_layer: np.ndarray) -> bool:
+    return bool(used_layer[candidate.x : candidate.x + candidate.width, candidate.z : candidate.z + candidate.depth].any())
+
+
+def _connectible_side_count(width: int, depth: int) -> int:
+    return int((width * 2) + (depth * 2))
+
+
+def _same_layer_neighbor_ratio(candidate: PlacementCandidate, placement_map: np.ndarray) -> float:
+    touched = 0
+    total = _connectible_side_count(candidate.width, candidate.depth)
+    for x in range(candidate.x, candidate.x + candidate.width):
+        for z in (candidate.z - 1, candidate.z + candidate.depth):
+            if 0 <= z < placement_map.shape[1] and placement_map[x, z] >= 0:
+                touched += 1
+    for z in range(candidate.z, candidate.z + candidate.depth):
+        for x in (candidate.x - 1, candidate.x + candidate.width):
+            if 0 <= x < placement_map.shape[0] and placement_map[x, z] >= 0:
+                touched += 1
+    return float(touched / total) if total else 0.0
+
+
+def _previous_layer_connection(
+    candidate: PlacementCandidate,
+    previous_placement_map: np.ndarray | None,
+) -> tuple[float, int]:
+    if previous_placement_map is None:
+        return 1.0, candidate.area
+    previous = previous_placement_map[
+        candidate.x : candidate.x + candidate.width,
+        candidate.z : candidate.z + candidate.depth,
+    ]
+    supported = previous >= 0
+    support_ratio = float(supported.sum() / candidate.area) if candidate.area else 0.0
+    connected_ids = set(int(value) for value in previous[supported])
+    return support_ratio, len(connected_ids)
+
+
+def reward_candidate_score(
+    candidate: PlacementCandidate,
+    *,
+    y: int,
+    max_area: int,
+    current_placement_map: np.ndarray,
+    previous_placement_map: np.ndarray | None,
+) -> float:
+    """Score one slice placement using BrickFormer-style reward terms."""
+
+    area_score = candidate.area / max(1, max_area)
+    neighbor_score = _same_layer_neighbor_ratio(candidate, current_placement_map)
+    support_ratio, connected_bricks = _previous_layer_connection(candidate, previous_placement_map)
+    connected_score = min(1.0, connected_bricks / max(1, candidate.area))
+    unsupported_penalty = (1.0 - support_ratio) * (1.8 if y > 0 else 0.0)
+    long_axis_penalty = max(0, max(candidate.width, candidate.depth) - 6) * 0.04
+    return (
+        (area_score * 2.8)
+        + (support_ratio * 2.2)
+        + (connected_score * 1.1)
+        + (neighbor_score * 0.7)
+        - unsupported_penalty
+        - long_axis_penalty
+    )
+
+
+def _candidate_to_brick(candidate: PlacementCandidate, y: int) -> Brick:
+    return Brick(
+        part_id=candidate.part_id,
+        color_id=candidate.color_id,
+        x=candidate.x,
+        y=int(y),
+        z=candidate.z,
+        width=candidate.width,
+        depth=candidate.depth,
+        height=candidate.height,
+        rotation_degrees=candidate.rotation_degrees,
+    )
+
+
+def reward_layered_brickify(
+    occupancy: np.ndarray,
+    color_ids: np.ndarray,
+    brick_specs: tuple[BrickSpec, ...] = DEFAULT_BRICKS,
+    allow_rotations: bool = True,
+) -> list[Brick]:
+    _validate_voxel_inputs(occupancy, color_ids)
+    max_area = max((spec.width * spec.depth for spec in brick_specs if spec.height == 1), default=1)
+    bricks: list[Brick] = []
+    previous_placement_map: np.ndarray | None = None
+
+    for y in range(occupancy.shape[1]):
+        layer_occupancy = occupancy[:, y, :]
+        if not layer_occupancy.any():
+            previous_placement_map = None
+            continue
+        layer_colors = color_ids[:, y, :]
+        used_layer = np.zeros(layer_occupancy.shape, dtype=bool)
+        current_placement_map = np.full(layer_occupancy.shape, -1, dtype=np.int32)
+        candidates = _generate_layer_candidates(
+            layer_occupancy,
+            layer_colors,
+            brick_specs,
+            allow_rotations=allow_rotations,
+        )
+        next_pid = 0
+
+        while True:
+            uncovered = layer_occupancy & ~used_layer
+            if not uncovered.any():
+                break
+
+            best: tuple[tuple[float, int, int, int, int], PlacementCandidate] | None = None
+            for candidate in candidates:
+                if _candidate_overlaps_used(candidate, used_layer):
+                    continue
+                score = reward_candidate_score(
+                    candidate,
+                    y=y,
+                    max_area=max_area,
+                    current_placement_map=current_placement_map,
+                    previous_placement_map=previous_placement_map,
+                )
+                rank = (score, candidate.area, -candidate.spec_index, -candidate.x, -candidate.z)
+                if best is None or rank > best[0]:
+                    best = (rank, candidate)
+
+            if best is None:
+                x, z = (int(value) for value in np.argwhere(uncovered)[0])
+                candidate = PlacementCandidate(
+                    spec_index=len(brick_specs),
+                    part_id="3005.dat",
+                    color_id=int(color_ids[x, y, z]),
+                    x=x,
+                    z=z,
+                    width=1,
+                    depth=1,
+                    height=1,
+                    rotation_degrees=0,
+                )
+            else:
+                candidate = best[1]
+
+            brick = _candidate_to_brick(candidate, y)
+            bricks.append(brick)
+            used_layer[brick.x : brick.x + brick.width, brick.z : brick.z + brick.depth] = True
+            current_placement_map[brick.x : brick.x + brick.width, brick.z : brick.z + brick.depth] = next_pid
+            next_pid += 1
+
+        previous_placement_map = current_placement_map
+
+    return bricks
 
 
 def greedy_brickify(

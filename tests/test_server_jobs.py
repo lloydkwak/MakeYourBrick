@@ -126,7 +126,7 @@ def test_job_stub_can_use_layered_sculpture_engine() -> None:
     assert response.status_code == 200
     job = response.json()
     report = client.get(f"/api/jobs/{job['job_id']}/files/report").json()
-    assert report["optimizer"] == "layered-sculpture"
+    assert report["optimizer"] == "reward-sculpture"
     assert report["sculpture"]["engine"] == "layered"
     assert report["sculpture"]["support_spacing"] == 2
     assert report["sculpture"]["color_strategy"] == "majority"
