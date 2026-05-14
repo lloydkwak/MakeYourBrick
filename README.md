@@ -24,6 +24,7 @@ Implemented:
 - SAM 3D Objects OBJ mesh export wrapper
 - backend `sam3d` mode mask validation and config endpoint
 - Studio-like sculpture mode, layer steps, layered optimizer, and stability report metrics
+- LDraw height-unit scaling so base-size OBJ imports use LEGO brick/plate proportions instead of cubic voxel height
 
 Current verification:
 
@@ -32,7 +33,7 @@ python -m compileall src scripts tests/fake_sam3d_command.py
 python -m pytest
 ```
 
-Latest local result: `193 passed`.
+Latest local result: `194 passed`.
 
 ## Installation
 

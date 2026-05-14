@@ -185,7 +185,9 @@ def test_mesh_to_ldr_cli_can_write_optimizer_report() -> None:
         assert report["stability"]["layer_count"] > 0
         assert repair_report["mode_requested"] == "basic"
         assert repair_report["after"]["is_watertight"] is True
-        assert report["input_brick_count"] == 729
+        assert report["footprint_scale"]["height_unit_voxel_scale"] == pytest.approx(20 / 24)
+        assert report["input_brick_count"] > 0
+        assert report["input_brick_count"] < 729
         assert report["output_brick_count"] < report["input_brick_count"]
         assert report["part_counts"]
     finally:
@@ -331,8 +333,13 @@ def test_mesh_to_ldr_cli_base_size_uses_uniform_footprint_pitch() -> None:
 
         report = json.loads(report_path.read_text(encoding="utf-8"))
         occupancy = np.load(voxel_path)["occupancy"]
+        cleaned = trimesh.load(cleaned_mesh, force="mesh")
         assert report["footprint_scale"]["mode"] == "uniform_base_size"
         assert report["footprint_scale"]["base_size_studs"] == 8
+        assert report["footprint_scale"]["height_unit"] == "brick"
+        assert report["footprint_scale"]["height_unit_ldu"] == 24
+        assert report["footprint_scale"]["height_unit_voxel_scale"] == pytest.approx(20 / 24)
+        assert cleaned.extents[1] == pytest.approx(5.0, rel=0.05)
         assert occupancy.shape[2] <= 9
         assert occupancy.shape[1] > occupancy.shape[2]
     finally:

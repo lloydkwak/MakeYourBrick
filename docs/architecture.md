@@ -69,6 +69,8 @@ Meshes are voxelized with Trimesh. Voxel artifacts are saved as compressed `.npz
 - `origin`
 - `pitch`
 
+The horizontal pitch is defined in studs from the selected longest-axis or base-size target. Before voxelization, the mesh Y dimension is scaled to the selected LDraw layer height: `20/24` for normal bricks and `20/8` for plates. This keeps Studio-like base-size imports from becoming too tall or too thin when LEGO's non-cubic brick proportions are written back to LDraw.
+
 Two voxelizers are available:
 
 - `surface`: Trimesh surface voxelization with optional fill, useful for watertight meshes.

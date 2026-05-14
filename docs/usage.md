@@ -106,7 +106,7 @@ Voxelization:
 - `--voxelizer ray`: cast vertical rays through each stud column; better for Studio-like sculpture imports from open OBJ/STL assets
 - `--voxelizer slice`: slice the mesh layer by layer, project section contours to X/Z, and fill each layer; closest to Studio's sculpture import model. The slice path unions same-layer contours to avoid false holes from open OBJ contour fragments.
 - `--ray-fill wide|balanced`: choose how odd ray-hit columns are filled; `wide` preserves the original broad fill behavior, while `balanced` drops one outlier hit to reduce overfilled columns
-- `--base-size-studs`: Studio-style uniform base footprint size. This changes voxel pitch and preserves model proportions.
+- `--base-size-studs`: Studio-style uniform base footprint size. This changes voxel pitch from the X/Z footprint and preserves model proportions.
 - `--target-width-studs` / `--target-depth-studs`: optional non-uniform X/Z fitting. Do not use this as Studio base size.
 
 ## Mesh Inspection
@@ -163,7 +163,7 @@ Sculpture options:
 - `--voxel-smoothing none|light|contour|studio|profile|polished`: optional cleanup for isolated protrusions, layer contours, Studio-like layer consistency, stricter profile cleanup, or polished contour cleanup that further reduces jagged surface noise
 - `--optimizer greedy|layered`: largest-first greedy optimizer or support/seam-aware optimizer
 - `--brick-palette full|studio|compact|plates`: choose the full experimental set, the Studio-reference sculpture set, a compact visual-debug set, or a plate-only set
-- `--height-unit brick|plate`: choose full-brick vertical layers or plate-height vertical layers. `plate` requires `--optimize --brick-palette plates` because a plate is one third of a brick height.
+- `--height-unit brick|plate`: choose full-brick vertical layers or plate-height vertical layers. Before voxelization, Y is scaled by the real LDraw height ratio (`20/24` for bricks, `20/8` for plates), so base-size conversion uses LEGO-like vertical proportions instead of cubic voxels. `plate` requires `--optimize --brick-palette plates` because a plate is one third of a brick height.
 - `--color-strategy strict|majority`: preserve voxel color boundaries or assign each placed brick the majority color from its covered voxels
 - `--steps-by-layer`: insert `0 STEP` markers between vertical layers in the LDR file
 

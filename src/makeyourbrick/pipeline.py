@@ -7,7 +7,7 @@ from makeyourbrick.brickify.colors import load_ldraw_palette
 from makeyourbrick.config import PipelineConfig
 from makeyourbrick.brickify.optimizer import brick_specs_for_palette, brickify_1x1, greedy_brickify, layered_brickify
 from makeyourbrick.brickify.report import build_brick_report, build_stability_report, write_brick_report
-from makeyourbrick.io.ldr_writer import BRICK_HEIGHT_LDU, PLATE_HEIGHT_LDU, write_ldr
+from makeyourbrick.io.ldr_writer import BRICK_HEIGHT_LDU, PLATE_HEIGHT_LDU, STUD_LDU, write_ldr
 from makeyourbrick.mesh.inspect import inspect_mesh_to_file
 from makeyourbrick.mesh.orient import orient_mesh_to_y_up
 from makeyourbrick.mesh.repair import repair_mesh, write_repair_report
@@ -38,6 +38,18 @@ def scale_mesh_y(mesh, scale_y: float):
     scaled = mesh.copy()
     scaled.apply_scale([1.0, float(scale_y), 1.0])
     return scaled
+
+
+def height_unit_ldu(height_unit: str) -> int:
+    if height_unit == "brick":
+        return BRICK_HEIGHT_LDU
+    if height_unit == "plate":
+        return PLATE_HEIGHT_LDU
+    raise ValueError(f"Unsupported height unit: {height_unit}")
+
+
+def height_unit_voxel_scale(height_unit: str) -> float:
+    return STUD_LDU / height_unit_ldu(height_unit)
 
 
 def run_from_image(
@@ -216,8 +228,13 @@ def convert_mesh_to_ldr(
             target_width_studs=target_width_studs,
             target_depth_studs=target_depth_studs,
         )
-    if height_unit == "plate":
-        mesh = scale_mesh_y(mesh, BRICK_HEIGHT_LDU / PLATE_HEIGHT_LDU)
+    output_height_unit_ldu = height_unit_ldu(height_unit)
+    voxel_height_scale = height_unit_voxel_scale(height_unit)
+    footprint_scale_report["height_unit"] = height_unit
+    footprint_scale_report["height_unit_ldu"] = output_height_unit_ldu
+    footprint_scale_report["height_unit_voxel_scale"] = float(voxel_height_scale)
+    if voxel_height_scale != 1.0:
+        mesh = scale_mesh_y(mesh, voxel_height_scale)
     cleaned_mesh_path.parent.mkdir(parents=True, exist_ok=True)
     mesh.export(cleaned_mesh_path)
 
@@ -335,5 +352,5 @@ def convert_mesh_to_ldr(
         ldr_output_path,
         title=f"Mesh conversion: {mesh_path.name}",
         step_by_layer=steps_by_layer,
-        height_unit_ldu=PLATE_HEIGHT_LDU if height_unit == "plate" else BRICK_HEIGHT_LDU,
+        height_unit_ldu=output_height_unit_ldu,
     )

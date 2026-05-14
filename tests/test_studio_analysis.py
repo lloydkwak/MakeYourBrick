@@ -10,6 +10,7 @@ from makeyourbrick.studio.analysis import (
     extract_model_ldr,
     find_best_xz_alignment,
     footprint_cells,
+    load_studio_brick_footprints,
     parse_ldr_parts,
     summarize_layer_diffs,
     summarize_layer_profiles,
@@ -66,6 +67,32 @@ def test_footprint_cells_can_use_plate_dimensions() -> None:
 
     assert len(cells) == 8
     assert {cell[1] for cell in cells} == {0}
+
+
+def test_load_studio_brick_footprints_adds_required_fallback_parts() -> None:
+    studio_dir = Path("outputs/reports/test_studio_catalog")
+    csv_path = studio_dir / "data" / "SplitMerge" / "brick.csv"
+    try:
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+        csv_path.write_text(
+            "LDrawModelName,X,Y,Z\n"
+            "3001.dat,4,1,2\n",
+            encoding="utf-8",
+        )
+
+        footprints = load_studio_brick_footprints(studio_dir)
+
+        assert footprints["3001.dat"] == StudioPartFootprint("3001.dat", width=2, depth=4)
+        assert footprints["3005.dat"] == StudioPartFootprint("3005.dat", width=1, depth=1)
+        assert footprints["3020.dat"] == StudioPartFootprint("3020.dat", width=2, depth=4)
+    finally:
+        csv_path.unlink(missing_ok=True)
+        for path in [
+            studio_dir / "data" / "SplitMerge",
+            studio_dir / "data",
+            studio_dir,
+        ]:
+            path.rmdir()
 
 
 def test_compare_ldr_footprints_reports_iou() -> None:
