@@ -18,7 +18,11 @@ from makeyourbrick.pipeline import (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Convert an OBJ/STL mesh to a Studio-like LDraw sculpture.")
     parser.add_argument("--mesh", type=Path, required=True, help="Input OBJ/STL mesh path.")
-    parser.add_argument("--base-size-studs", type=int, default=DEFAULT_BASE_SIZE_STUDS)
+    parser.add_argument(
+        "--base-size-studs",
+        default=str(DEFAULT_BASE_SIZE_STUDS),
+        help="Maximum horizontal footprint in studs, or 'auto' to choose from 16/24/32/48/64.",
+    )
     parser.add_argument("--wall-thickness", type=int, default=DEFAULT_WALL_THICKNESS)
     parser.add_argument("--base-thickness", type=int, default=DEFAULT_BASE_THICKNESS)
     parser.add_argument("--up-axis", choices=("auto", "none", "x", "y", "z"), default="auto")
@@ -36,13 +40,14 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    base_size_studs = args.base_size_studs if args.base_size_studs == "auto" else int(args.base_size_studs)
     output_path = convert_mesh_to_ldr(
         mesh_path=args.mesh,
         ldr_output_path=args.output,
         voxel_output_path=args.voxels,
         report_path=args.report,
         debug_target_ldr_path=args.debug_target_output,
-        base_size_studs=args.base_size_studs,
+        base_size_studs=base_size_studs,
         wall_thickness=args.wall_thickness,
         base_thickness=args.base_thickness,
         up_axis=args.up_axis,

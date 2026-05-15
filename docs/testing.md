@@ -20,6 +20,7 @@ python -m pytest
 - mesh-to-LDR CLI smoke conversion
 - all-1x1 target debug output
 - open mesh surface voxel fallback
+- automatic base-size selection
 - conversion report output
 
 ## Manual Studio Check

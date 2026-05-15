@@ -15,7 +15,7 @@ python scripts/mesh_to_ldr.py \
 Options:
 
 - `--mesh`: input OBJ/STL or any Trimesh-loadable triangle mesh
-- `--base-size-studs`: maximum horizontal footprint in studs
+- `--base-size-studs`: maximum horizontal footprint in studs, or `auto` to choose from 16/24/32/48/64 using mesh proportions and complexity
 - `--wall-thickness`: shell wall width in studs
 - `--base-thickness`: number of bottom layers to fill completely
 - `--up-axis`: `auto`, `none`, `x`, `y`, or `z`

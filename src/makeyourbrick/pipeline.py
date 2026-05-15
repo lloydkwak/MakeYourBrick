@@ -18,7 +18,7 @@ from makeyourbrick.sculpture import (
     place_layered_bricks,
 )
 from makeyourbrick.voxel.sculpture import apply_voxel_smoothing, preprocess_solid_occupancy, repair_sculpture_colors
-from makeyourbrick.voxel.voxelize import compute_footprint_pitch, load_voxel_artifact, voxelize_mesh
+from makeyourbrick.voxel.voxelize import compute_footprint_pitch, load_voxel_artifact, recommend_base_size_studs, voxelize_mesh
 
 DEFAULT_BASE_SIZE_STUDS = 32
 DEFAULT_WALL_THICKNESS = 2
@@ -41,7 +41,7 @@ def run_from_image(
     voxel_output_path: Path | None = None,
     report_path: Path | None = None,
     raw_mesh_report_path: Path | None = None,
-    base_size_studs: int = DEFAULT_BASE_SIZE_STUDS,
+    base_size_studs: int | str = DEFAULT_BASE_SIZE_STUDS,
     wall_thickness: int = DEFAULT_WALL_THICKNESS,
     base_thickness: int = DEFAULT_BASE_THICKNESS,
     up_axis: str = "auto",
@@ -75,7 +75,7 @@ def convert_mesh_to_ldr(
     voxel_output_path: Path,
     report_path: Path | None = None,
     debug_target_ldr_path: Path | None = None,
-    base_size_studs: int = DEFAULT_BASE_SIZE_STUDS,
+    base_size_studs: int | str = DEFAULT_BASE_SIZE_STUDS,
     wall_thickness: int = DEFAULT_WALL_THICKNESS,
     base_thickness: int = DEFAULT_BASE_THICKNESS,
     up_axis: str = "auto",
@@ -84,10 +84,15 @@ def convert_mesh_to_ldr(
 ) -> Path:
     mesh = load_mesh(mesh_path)
     mesh, orientation_report = orient_mesh_to_y_up(mesh, up_axis=up_axis)
+    requested_base_size = base_size_studs
+    if base_size_studs == "auto":
+        base_size_studs = recommend_base_size_studs(mesh)
+    base_size_studs = int(base_size_studs)
     pitch = compute_footprint_pitch(mesh, base_size_studs=base_size_studs, min_pitch=min_pitch)
     mesh = _scale_mesh_y_for_brick_height(mesh)
     footprint_report = {
         "mode": "uniform_base_size",
+        "requested_base_size_studs": requested_base_size,
         "base_size_studs": int(base_size_studs),
         "pitch": float(pitch),
         "height_unit": "brick",

@@ -7,6 +7,7 @@ import numpy as np
 from makeyourbrick.types import VoxelArtifact
 
 VOXELIZERS = ("slice", "surface")
+AUTO_BASE_SIZE_OPTIONS = (16, 24, 32, 48, 64)
 
 
 def compute_footprint_pitch(mesh, base_size_studs: int, min_pitch: float = 0.005) -> float:
@@ -16,6 +17,34 @@ def compute_footprint_pitch(mesh, base_size_studs: int, min_pitch: float = 0.005
     if footprint <= 0:
         raise ValueError("Mesh has zero-sized X/Z footprint.")
     return max(footprint / base_size_studs, min_pitch)
+
+
+def recommend_base_size_studs(mesh, *, max_base_size: int = 64) -> int:
+    extents = np.asarray(mesh.extents, dtype=np.float64)
+    footprint = float(max(extents[0], extents[2]))
+    if footprint <= 0:
+        raise ValueError("Mesh has zero-sized X/Z footprint.")
+    thinness = footprint / max(float(extents[1]), 1e-9)
+    complexity = float(len(getattr(mesh, "faces", []))) / 50000.0
+    component_count = 1
+    if not bool(getattr(mesh, "is_watertight", False)):
+        try:
+            component_count = len(mesh.split(only_watertight=False))
+        except Exception:
+            component_count = 2
+    fragmentation = min(component_count / 250.0, 4.0)
+    score = thinness + complexity + fragmentation
+    if score >= 10.0:
+        recommended = 64
+    elif score >= 6.0:
+        recommended = 48
+    elif score >= 3.5:
+        recommended = 32
+    elif score >= 2.0:
+        recommended = 24
+    else:
+        recommended = 16
+    return min(recommended, max_base_size)
 
 
 def save_voxel_artifact(

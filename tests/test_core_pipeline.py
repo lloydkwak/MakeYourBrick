@@ -12,6 +12,7 @@ import pytest
 from makeyourbrick.brickify.optimizer import bricks_to_occupancy
 from makeyourbrick.brickify.report import build_stability_report
 from makeyourbrick.io.ldr_writer import brick_to_ldr_line
+from makeyourbrick.pipeline import convert_mesh_to_ldr
 from makeyourbrick.sculpture import (
     SculptureSettings,
     VoxelModel,
@@ -171,3 +172,24 @@ def test_stability_report_counts_top_attached_bricks() -> None:
     assert report["floating_brick_count"] == 1
     assert report["top_attached_only_brick_count"] == 1
     assert report["bidirectional_unattached_brick_count"] == 0
+
+
+def test_auto_base_size_records_selected_size(tmp_path: Path) -> None:
+    mesh_path = tmp_path / "wide.obj"
+    voxel_path = tmp_path / "wide.npz"
+    ldr_path = tmp_path / "wide.ldr"
+    report_path = tmp_path / "wide_report.json"
+    trimesh.creation.box(extents=(8.0, 1.0, 2.0)).export(mesh_path)
+
+    convert_mesh_to_ldr(
+        mesh_path=mesh_path,
+        ldr_output_path=ldr_path,
+        voxel_output_path=voxel_path,
+        report_path=report_path,
+        base_size_studs="auto",
+        up_axis="y",
+    )
+
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["footprint_scale"]["requested_base_size_studs"] == "auto"
+    assert report["footprint_scale"]["base_size_studs"] in {16, 24, 32, 48, 64}

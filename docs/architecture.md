@@ -13,7 +13,7 @@ image path
 mesh path
   -> load_mesh()
   -> orient_mesh_to_y_up()
-  -> compute footprint pitch from base_size_studs
+  -> compute footprint pitch from base_size_studs, optionally auto-selected from mesh complexity
   -> scale Y by 20/24 for brick-height LDraw proportions
   -> slice mesh into filled X/Z layer footprints
   -> fall back to surface voxel fill for open or highly fragmented meshes
@@ -38,7 +38,7 @@ mesh path
 
 ## Current Algorithm
 
-1. Base size defines the maximum X/Z footprint in studs.
+1. Base size defines the maximum X/Z footprint in studs. It can be set explicitly or auto-selected from mesh proportions, face count, and fragmentation.
 2. The mesh is oriented to Y-up.
 3. The Y axis is scaled by the LEGO brick ratio `20/24` before slicing.
 4. Each horizontal layer is filled from mesh cross-section contours.
