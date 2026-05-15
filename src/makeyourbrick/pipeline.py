@@ -134,7 +134,6 @@ def convert_mesh_to_ldr(
                     "mode": "contour-shell",
                     "wall_thickness": int(wall_thickness),
                     "base_thickness": int(base_thickness),
-                    "support_voxel_count": int(targets.supports.occupied_count),
                     "color_strategy": "layer",
                     "voxelizer": "slice",
                 },

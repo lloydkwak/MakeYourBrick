@@ -18,7 +18,6 @@ mesh path
   -> slice mesh into filled X/Z layer footprints
   -> polish voxel layers
   -> derive a Studio-style shell target from wall/base thickness
-  -> add vertical support columns for buildable overhangs
   -> tile each layer with Studio brick combinations
   -> write .ldr and report.json
 ```
@@ -43,10 +42,9 @@ mesh path
 3. The Y axis is scaled by the LEGO brick ratio `20/24` before slicing.
 4. Each horizontal layer is filled from mesh cross-section contours.
 5. The target keeps the outer contour shell for each layer, then fully fills the configured bottom layers.
-6. Vertical support columns are added where shell overhangs would otherwise create floating bricks.
-7. Wall thickness and base thickness directly control the active target, matching Studio's sculpture import settings.
-8. Each layer is tiled exactly with the selected Studio sculpture brick set, preferring candidates with physical support from the previous layer.
-9. `0 STEP` is inserted between layers.
+6. Wall thickness and base thickness directly control the active target, matching Studio's sculpture import settings.
+7. Each layer is tiled exactly with the selected Studio sculpture brick set.
+8. `0 STEP` is inserted between layers.
 
 The active default is equivalent to Studio-like settings:
 
