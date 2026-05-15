@@ -1,31 +1,18 @@
 # References
 
-## Primary Repositories
+## Primary
 
+- BrickLink Studio sculpture tool: https://studiohelp.bricklink.com/hc/en-us/articles/6508264220183-Sculpture
 - SAM 3D Objects: https://github.com/facebookresearch/sam-3d-objects
-- Manifold: https://github.com/elalish/manifold
 - Trimesh: https://github.com/mikedh/trimesh
+- LDraw file format: https://www.ldraw.org/article/218.html
+- LDraw color definitions: https://www.ldraw.org/article/547.html
+
+## Algorithm References
+
 - Brickalize: https://github.com/CreativeMindstorms/brickalize
 - 3DToLD: https://github.com/Nexusnui/3DToLD
 - BrickFormer: https://github.com/loryruta/brickformer
 - LPub3D: https://github.com/trevorsandy/lpub3d
-- StableLego: https://github.com/intelligent-control-lab/StableLego
-- Brick Optimization Builder: https://github.com/dzungpng/brick-optimization-builder
 
-## File Formats and Standards
-
-- LDraw file format specification: https://www.ldraw.org/article/218.html
-- LDraw color definitions: https://www.ldraw.org/article/547.html
-- LDraw third-party software directory: https://www.ldraw.org/downloads-2/third-party-software.html
-
-## Academic and Technical Background
-
-- SAM 3D: 3Dfy Anything in Images, arXiv:2511.16624. Paper page: https://huggingface.co/papers/2511.16624
-- ManifoldPlus: A Robust and Scalable Watertight Manifold Surface Generation Method for Triangle Soups, arXiv:2005.11621. Project page: https://yichaozhou.com/publication/2005manifold/
-- Robust Watertight Manifold Surface Generation Method for ShapeNet Models, arXiv:1802.01698. Semantic Scholar page: https://www.semanticscholar.org/paper/Robust-Watertight-Manifold-Surface-Generation-for-Huang-Su/9324c5239d358b9cc28811588be8e2d0b85d65e9
-- Voxelization and mesh processing: Trimesh documentation and source examples guide mesh loading, scene concatenation, and voxelization.
-- LEGO stability and optimization: StableLego and Brick Optimization Builder are used as design references for future stability scoring and brick placement improvements.
-
-## How References Are Used
-
-The current implementation does not vendor code from these repositories. It uses them as architecture and algorithm references, while keeping MakeYourBrick's own implementation small and testable.
+These are references only. The current repository keeps its own compact Studio-like implementation and does not vendor their source code.

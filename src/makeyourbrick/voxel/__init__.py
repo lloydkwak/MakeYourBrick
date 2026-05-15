@@ -1,2 +1,1 @@
-"""Voxelization and voxel color sampling."""
-
+"""Layer-slice voxelization helpers."""

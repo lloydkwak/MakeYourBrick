@@ -1,2 +1,1 @@
-"""Color quantization and brick placement."""
-
+"""Brick placement and reporting helpers."""

@@ -2,44 +2,36 @@
 
 ## Python
 
-Recommended:
-
 - Python 3.10+
+- The local workspace has also been verified with Python 3.12.
 
-The current local development environment has also been verified with Python 3.12.
-
-## Local Pipeline Dependencies
-
-Install:
+## Install
 
 ```bash
 python -m pip install -r requirements.txt
 python -m pip install -e .
 ```
 
-Core packages:
+## Core Dependencies
 
 - `numpy`
-- `scipy`
 - `trimesh`
-- `scikit-image`
 - `Pillow`
-- `PyYAML`
+- `fastapi`
+- `uvicorn`
 - `pytest`
 
-## SAM 3D Dependencies
+## SAM 3D
 
-SAM 3D Objects is intentionally treated as an external dependency under:
+SAM 3D Objects remains external:
 
 ```text
 third_party/sam-3d-objects
 ```
 
-Do not commit that external checkout.
+Do not commit that checkout. The MakeYourBrick runner only requires a command template that writes a triangle mesh to `{output}`.
 
-The upstream SAM 3D setup currently targets Linux 64-bit with an NVIDIA GPU and significant VRAM. See `docs/sam3d_manual_setup.md` for details.
-
-## Generated Artifacts
+## Generated Files
 
 Generated artifacts belong under:
 
@@ -47,9 +39,4 @@ Generated artifacts belong under:
 outputs/
 ```
 
-They are ignored by Git. Keep only `.gitkeep` placeholders in version control.
-
-## Notes on PyTorch
-
-`requirements.txt` includes PyTorch-related packages because real SAM 3D inference needs them. CUDA-specific PyTorch wheels may need to be installed manually depending on the target GPU machine.
-
+Only `.gitkeep` placeholders should be versioned there.

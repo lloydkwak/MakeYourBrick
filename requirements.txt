@@ -1,30 +1,12 @@
-# Core geometry and numeric stack
+# Core geometry stack
 numpy>=1.26
-scipy>=1.11
 trimesh>=4.6
-manifold3d>=3.0
 
-# Image and color handling
+# Web backend and placeholder mask previews
 Pillow>=10.0
-opencv-python>=4.9
-scikit-image>=0.22
-
-# Config and CLI helpers
-PyYAML>=6.0
-tqdm>=4.66
-
-# Web backend
 fastapi>=0.136
 uvicorn>=0.46
 python-multipart>=0.0.20
-httpx>=0.27
-
-# AI inference stack for SAM 3D Objects.
-# Install CUDA-specific PyTorch wheels as needed for the local GPU.
-torch>=2.5
-torchvision>=0.20
-huggingface-hub>=0.24
-transformers>=4.45
 
 # Development and tests
 pytest>=8.0

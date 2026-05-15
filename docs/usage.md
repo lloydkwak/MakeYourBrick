@@ -1,150 +1,41 @@
 # Usage
 
-Run commands from the repository root.
-
-## Install
-
-```bash
-python -m pip install -r requirements.txt
-python -m pip install -e .
-```
-
-For lightweight local mesh tests, `torch` and SAM 3D are not required. For real SAM 3D inference, see `docs/sam3d_manual_setup.md`.
-
-## Synthetic Voxel to LDraw
-
-Generate a 1x1-brick synthetic box:
-
-```bash
-python scripts/make_synthetic_ldr.py --shape box --size 4 3 2 --color 16 --output outputs/ldr/synthetic_box.ldr
-```
-
-Generate an optimized synthetic model:
-
-```bash
-python scripts/make_synthetic_ldr.py --shape box --size 4 1 2 --color 16 --optimize --output outputs/ldr/optimized_box.ldr
-```
-
-## Mesh to LDraw
-
-Convert a mesh with default LDraw color:
-
-```bash
-python scripts/mesh_to_ldr.py --mesh data/examples/sample.stl --target-studs 24 --output outputs/ldr/mesh_output.ldr
-```
-
-Convert a mesh with a constant RGB color quantized to LDraw:
-
-```bash
-python scripts/mesh_to_ldr.py --mesh data/examples/sample.stl --target-studs 24 --rgb 242 205 55 --output outputs/ldr/yellow_mesh_output.ldr
-```
-
-Convert a colored mesh using nearest vertex/face color sampling:
-
-```bash
-python scripts/mesh_to_ldr.py --mesh data/examples/sample_colored.ply --target-studs 8 --sample-colors --output outputs/ldr/sampled_color_mesh.ldr
-```
-
-Convert with greedy brick optimization and write a report:
-
-```bash
-python scripts/mesh_to_ldr.py --mesh data/examples/sample_colored.ply --target-studs 8 --sample-colors --optimize --report outputs/reports/mesh_report.json --output outputs/ldr/sampled_color_mesh.ldr
-```
-
-Convert with Studio-like sculpture options:
+## Mesh Conversion
 
 ```bash
 python scripts/mesh_to_ldr.py \
-  --mesh data/examples/sample.stl \
+  --mesh queen.obj \
   --base-size-studs 32 \
-  --studio-import-preset \
-  --report outputs/reports/sculpture_report.json \
-  --output outputs/ldr/sculpture_output.ldr
+  --wall-thickness 2 \
+  --base-thickness 3 \
+  --report outputs/reports/queen_report.json \
+  --output outputs/ldr/queen.ldr
 ```
 
-The preset expands to the current recommended Studio-style sculpture path. It uses filled layer slices, a thick wall target, normal brick-height output, the Studio brick palette, polished layer cleanup, no internal support columns, and alternating run placement for Studio bricks:
+Options:
 
-```bash
-python scripts/mesh_to_ldr.py \
-  --mesh data/examples/sample.stl \
-  --base-size-studs 32 \
-  --up-axis auto \
-  --voxelizer slice \
-  --optimize \
-  --optimizer layered \
-  --brick-palette studio \
-  --height-unit brick \
-  --sculpture-engine layered \
-  --sculpture-mode contour-shell \
-  --wall-thickness 3 \
-  --base-thickness 0 \
-  --support-spacing 0 \
-  --voxel-smoothing polished \
-  --color-strategy majority \
-  --steps-by-layer \
-  --report outputs/reports/sculpture_report.json \
-  --output outputs/ldr/sculpture_output.ldr
-```
+- `--mesh`: input OBJ/STL or any Trimesh-loadable triangle mesh
+- `--base-size-studs`: maximum horizontal footprint in studs
+- `--wall-thickness`: contour wall thickness in studs
+- `--base-thickness`: number of bottom layers to fill completely
+- `--up-axis`: `auto`, `none`, `x`, `y`, or `z`
+- `--voxels`: optional `.npz` voxel artifact path
+- `--report`: JSON report path
+- `--output`: LDraw output path
 
-Convert with an explicit mesh repair mode and repair report:
+## Image Conversion
 
-```bash
-python scripts/mesh_to_ldr.py \
-  --mesh data/examples/sample.stl \
-  --repair-mode basic \
-  --repair-report outputs/reports/repair_report.json \
-  --target-studs 24 \
-  --output outputs/ldr/mesh_output.ldr
-```
-
-Supported repair modes:
-
-- `none`: preserve loaded mesh geometry apart from export processing
-- `basic`: Trimesh cleanup, duplicate/degenerate face removal, hole filling, and normal fixing
-- `manifold`: use `manifold3d` when available; falls back to `basic` with a report warning if unavailable or unsuccessful
-- `convex-hull`: replace the model with a watertight convex outer approximation
-
-Mesh orientation:
-
-- `--up-axis auto`: detect a clearly dominant source axis and rotate it to pipeline Y-up
-- `--up-axis z`: use this for known Z-up OBJ/STL sculpture assets
-- `--up-axis y`: keep Y-up assets upright
-- `--up-axis none`: disable orientation changes
-
-Voxelization:
-
-- `--voxelizer surface`: use Trimesh surface voxelization and fill; best for watertight meshes
-- `--voxelizer ray`: cast vertical rays through each stud column; better for Studio-like sculpture imports from open OBJ/STL assets
-- `--voxelizer slice`: slice the mesh layer by layer, project section contours to X/Z, and fill each layer. This is the default Studio-import preset path because Studio's sculpture tool builds the model layer by layer from the source OBJ/STL footprint.
-- `--voxelizer slice-surface`: experimental BrickFormer-inspired path that keeps only cells near section contours. It is useful for lightweight surface tests but can leave large visible gaps on sculptures.
-- `--ray-fill wide|balanced`: choose how odd ray-hit columns are filled; `wide` preserves the original broad fill behavior, while `balanced` drops one outlier hit to reduce overfilled columns
-- `--base-size-studs`: Studio-style uniform base footprint size. This changes voxel pitch from the X/Z footprint and preserves model proportions.
-- `--studio-import-preset`: recommended OBJ-to-sculpture preset. It loads the source mesh directly without default repair/mesh rewriting, then enables filled layer-slice voxelization, a thick contour wall target, normal brick-height output, the Studio brick palette, polished layer cleanup, majority color assignment, alternating run placement, and per-layer LDraw steps.
-- `--target-width-studs` / `--target-depth-studs`: optional non-uniform X/Z fitting. Do not use this as Studio base size.
-
-## Mesh Inspection
-
-Inspect a mesh before conversion:
-
-```bash
-python scripts/inspect_mesh.py --mesh outputs/meshes/raw_model.obj --report outputs/reports/mesh_inspect.json
-```
-
-The report records asset type, geometry count, vertices, faces, bounds, watertightness, color availability, warnings, and whether the artifact is ready for voxelization.
-
-## Image to LDraw
-
-The image pipeline requires a SAM-compatible command template that writes a triangle mesh to `{output}`. If an object mask is available, pass it with `--mask` and use the `{mask}` command placeholder.
+`image_to_ldr.py` runs an external SAM command first. The command must create a triangle mesh at `{output}`.
 
 ```bash
 python scripts/image_to_ldr.py \
   --image data/input_images/sample.png \
-  --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
+  --mask data/masks/sample.png \
   --sam-repo third_party/sam-3d-objects \
-  --sam-command "<command that reads {image} and {mask}, then writes {output}>" \
+  --sam-command "python your_sam_export.py --image {image} --mask {mask} --output {output}" \
   --base-size-studs 32 \
-  --studio-import-preset \
-  --sample-colors \
+  --wall-thickness 2 \
+  --base-thickness 3 \
   --report outputs/reports/image_report.json \
   --output outputs/ldr/image_output.ldr
 ```
@@ -157,169 +48,45 @@ Supported command placeholders:
 - `{output_dir}`
 - `{repo}`
 
-Sculpture options:
+## Local Web Shell
 
-- `--sculpture-engine legacy|layered`: use the original direct occupancy path or the separated shell/base/support layered engine
-- `--sculpture-mode solid|shell|contour-shell|density|brickformer`: keep a fully solid model, keep a 3D surface shell, keep per-layer contour walls, keep shell/base plus deterministic lattice infill, or keep surface slice cells for BrickFormer-style partial-coverage placement
-- `--wall-thickness`: number of voxel/stud layers to keep from the surface in shell mode
-- `--base-thickness`: number of bottom layers to force solid
-- `--support-spacing`: set `0` to disable internal support columns, or use a positive spacing for sparse supports
-- `--infill-density`: target interior lattice density for `density` sculpture mode
-- `--infill-pattern lattice|ribs`: choose uniform lattice infill or staggered Studio-like internal support ribs
-- `--voxel-smoothing none|light|contour|studio|profile|polished`: optional cleanup for isolated protrusions, layer contours, Studio-like layer consistency, stricter profile cleanup, or polished contour cleanup that further reduces jagged surface noise
-- `--optimizer greedy|layered`: largest-first greedy optimizer or support/seam-aware optimizer. The layered sculpture engine uses the reward-based placement solver internally.
-- `--brick-palette full|studio|compact|plates`: choose the full experimental set, the Studio-reference sculpture set, a compact visual-debug set, or a plate-only set
-- `--height-unit brick|plate`: choose full-brick vertical layers or plate-height vertical layers. Before voxelization, Y is scaled by the real LDraw height ratio (`20/24` for bricks, `20/8` for plates), so base-size conversion uses LEGO-like vertical proportions instead of cubic voxels. `plate` requires `--optimize --brick-palette plates` because a plate is one third of a brick height.
-- `--color-strategy strict|majority|layer`: preserve voxel color boundaries, assign each placed brick the majority color from its covered voxels, or cycle Studio-like colors by layer for visual debugging
-- `--steps-by-layer`: insert `0 STEP` markers between vertical layers in the LDR file
-
-## Placement and Quality Fixtures
-
-Generate an LDraw placement fixture for Stud.io visual inspection:
+Start the backend:
 
 ```bash
-python scripts/make_ldraw_placement_fixture.py --steps-by-layer
+python -m uvicorn makeyourbrick.server.main:app --app-dir src --host 127.0.0.1 --port 8000 --reload
 ```
 
-Generate repeatable mesh quality samples and reports:
-
-```bash
-python scripts/compare_mesh_samples.py --target-studs 8
-```
-
-The comparison script creates sphere, bust-like, and object-like meshes, converts them with shell sculpture mode and the layered optimizer, and writes a JSON summary under `outputs/quality/mesh_samples`.
-
-Compare a Studio `.io` reference against a MakeYourBrick LDR output:
-
-```bash
-python scripts/compare_studio_ldr.py \
-  --reference queen.io \
-  --candidate outputs/ldr/queen_ray_solid_60.ldr \
-  --studio-dir "Studio 2.0" \
-  --alignment best-xz \
-  --output outputs/reports/queen_studio_vs_ray_comparison.json
-```
-
-The Studio comparison script uses `.io`/LDraw output as black-box reference data. It reports total footprint IoU, missing/extra cells, selected X/Z alignment, and layer-by-layer missing/extra diagnostics.
-
-## SAM 3D Adapter
-
-Adapt an existing SAM output candidate into a MakeYourBrick mesh:
-
-```bash
-python scripts/adapters/sam3d_to_mesh.py \
-  --repo third_party/sam-3d-objects \
-  --image data/input_images/sample.png \
-  --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
-  --candidate path/to/sam/output.obj \
-  --output outputs/meshes/raw_model.obj \
-  --report outputs/reports/sam3d_adapter.json
-```
-
-Or wrap an upstream SAM command:
-
-```bash
-python scripts/adapters/sam3d_to_mesh.py \
-  --repo third_party/sam-3d-objects \
-  --image data/input_images/sample.png \
-  --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
-  --output outputs/meshes/raw_model.obj \
-  --sam-command "<command that reads {image} and {mask}, then writes {output} or files under {work_dir}>"
-```
-
-Run the prepared SAM 3D Objects OBJ export wrapper directly:
-
-```bash
-python scripts/adapters/run_sam3d_objects_export.py \
-  --repo third_party/sam-3d-objects \
-  --image data/input_images/sample.png \
-  --mask outputs/ui_sessions/<image_id>/masks/<mask_id>.png \
-  --output outputs/meshes/raw_model.obj \
-  --splat-output outputs/meshes/raw_splat.ply \
-  --metadata outputs/reports/sam3d_export.json
-```
-
-The adapter validates that the selected artifact is a triangle mesh before handing it to voxelization. See `docs/sam3d_adapter.md`.
-
-SAM 3D Objects commonly saves Gaussian splat PLY files. Those files are raw visualization/debug artifacts, not the default LEGO conversion input. If the adapter detects a Gaussian splat PLY or point cloud PLY, it writes a clear failure report and stops before voxelization.
-
-## Outputs
-
-Generated files are ignored by Git:
-
-- `outputs/meshes/`
-- `outputs/voxels/`
-- `outputs/ldr/`
-- `outputs/reports/`
-
-## Local Backend
-
-Run the FastAPI backend:
-
-```bash
-python -m uvicorn makeyourbrick.server.main:app --app-dir src --reload
-```
-
-Backend endpoints:
-
-- `GET /api/health`
-- `GET /api/config`
-- `POST /api/images`
-- `GET /api/images/{image_id}/file`
-- `POST /api/images/{image_id}/selection`
-- `GET /api/masks/{mask_id}/file?image_id={image_id}`
-- `POST /api/jobs`
-- `GET /api/jobs/{job_id}`
-- `GET /api/jobs/{job_id}/result`
-- `GET /api/jobs/{job_id}/files/{kind}`
-
-The job endpoint defaults to a deterministic fake SAM mesh and then runs the real MakeYourBrick conversion pipeline, producing LDR, voxel, mesh, mesh inspection, mesh repair, and optimizer report artifacts under `outputs/ui_sessions/<image_id>/jobs/<job_id>/`.
-
-Backend runner configuration:
-
-- `MAKEYOURBRICK_RUNNER_MODE=fake`: default local integration runner
-- `MAKEYOURBRICK_RUNNER_MODE=command`: run a command template through `Sam3DRunner`
-- `MAKEYOURBRICK_RUNNER_MODE=sam3d`: alias for command mode when wiring the real SAM adapter
-- `MAKEYOURBRICK_SAM_REPO=third_party/sam-3d-objects`: external repository path
-- `MAKEYOURBRICK_SAM_COMMAND="<command that reads {image} and {mask}, then writes {output}>"`
-- SAM command placeholders include `{image}`, `{mask}`, `{output}`, `{output_dir}`, and `{repo}`. The default output is OBJ.
-- `MAKEYOURBRICK_SAM_TIMEOUT_SECONDS=3600`
-
-Example real SAM 3D backend configuration:
-
-```powershell
-$env:MAKEYOURBRICK_RUNNER_MODE = "sam3d"
-$env:MAKEYOURBRICK_SAM_REPO = "third_party/sam-3d-objects"
-$env:MAKEYOURBRICK_SAM_COMMAND = "python scripts/adapters/run_sam3d_objects_export.py --repo {repo} --image {image} --mask {mask} --output {output} --metadata {output_dir}/sam3d_export.json"
-$env:MAKEYOURBRICK_SAM_TIMEOUT_SECONDS = "3600"
-python -m uvicorn makeyourbrick.server.main:app --app-dir src --reload
-```
-
-In `sam3d` mode, `POST /api/jobs` requires a `mask_id`. The UI flow should upload an image, submit a selection, then start the conversion job with the returned mask id.
-
-Backend job requests also accept:
-
-- `optimizer`: `greedy` or `layered`
-- `brick_palette`: `full`, `studio`, `compact`, or `plates`
-- `height_unit`: `brick` or `plate`
-- `base_size_studs`
-- `sculpture_engine`: `legacy` or `layered`
-- `voxelizer`: `surface`, `ray`, `slice`, or `slice-surface`
-- `sculpture_mode`: `solid`, `shell`, `contour-shell`, `density`, or `brickformer`
-- `wall_thickness`
-- `base_thickness`
-- `support_spacing`: `0` disables internal support columns; positive values add sparse supports
-- `color_strategy`: `strict`, `majority`, or `layer`
-- `infill_density`
-- `infill_pattern`: `lattice` or `ribs`
-- `voxel_smoothing`: `none`, `light`, `contour`, `studio`, `profile`, or `polished`
-- `ray_fill`: `wide` or `balanced`
-- `steps_by_layer`
-
-Start a browser workflow by opening:
+Open:
 
 ```text
 apps/web/index.html
 ```
 
-Then upload an image, select a target object, and press `Run Conversion`.
+The backend defaults to a fake local mesh runner unless configured with:
+
+```text
+MAKEYOURBRICK_RUNNER_MODE=command
+MAKEYOURBRICK_SAM_REPO=third_party/sam-3d-objects
+MAKEYOURBRICK_SAM_COMMAND=<command template>
+```
+
+Use `MAKEYOURBRICK_RUNNER_MODE=sam3d` when the command requires a user mask.
+
+## Output
+
+The converter writes:
+
+- `.ldr`: LDraw model with per-layer `0 STEP`
+- `.npz`: voxel occupancy artifact
+- `.json`: conversion report
+
+The report includes:
+
+- voxel shape
+- target voxel count
+- output brick count
+- part counts
+- color counts
+- orientation report
+- footprint/base-size report
+- stability summary

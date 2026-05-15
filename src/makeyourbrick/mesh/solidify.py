@@ -4,18 +4,13 @@ from pathlib import Path
 
 try:
     import trimesh
-except ModuleNotFoundError:  # pragma: no cover - exercised only when optional deps are absent.
+except ModuleNotFoundError:  # pragma: no cover
     trimesh = None
-
-from makeyourbrick.types import MeshArtifact
-from makeyourbrick.mesh.repair import repair_mesh
 
 
 def _require_trimesh():
     if trimesh is None:
-        raise ModuleNotFoundError(
-            "trimesh is required for mesh loading. Install project dependencies first."
-        )
+        raise ModuleNotFoundError("trimesh is required for mesh loading.")
     return trimesh
 
 
@@ -35,18 +30,4 @@ def load_mesh(mesh_path: Path):
     tm = _require_trimesh()
     if not mesh_path.exists():
         raise FileNotFoundError(f"Mesh file not found: {mesh_path}")
-    loaded = tm.load(mesh_path)
-    return scene_to_mesh(loaded)
-
-
-def clean_mesh(mesh):
-    repaired, _report = repair_mesh(mesh, mode="basic")
-    return repaired
-
-
-def solidify_mesh(input_path: Path, output_path: Path) -> MeshArtifact:
-    mesh = load_mesh(input_path)
-    mesh = clean_mesh(mesh)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    mesh.export(output_path)
-    return MeshArtifact(path=output_path, source=str(input_path), is_watertight=bool(mesh.is_watertight))
+    return scene_to_mesh(tm.load(mesh_path))

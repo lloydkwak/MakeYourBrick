@@ -148,12 +148,10 @@ def run_pipeline_job(
             if not mask_path.exists():
                 raise FileNotFoundError(f"Mask not found: {request.mask_id}")
         raw_mesh_path = storage.job_mesh_dir(request.image_id, job_id) / "raw_model.obj"
-        cleaned_mesh_path = storage.job_mesh_dir(request.image_id, job_id) / "cleaned_model.obj"
         voxel_path = storage.job_voxel_dir(request.image_id, job_id) / "model_voxels.npz"
         ldr_path = storage.job_ldr_dir(request.image_id, job_id) / "output.ldr"
         report_path = storage.job_report_dir(request.image_id, job_id) / "report.json"
         mesh_inspect_path = storage.job_report_dir(request.image_id, job_id) / "mesh_inspect.json"
-        repair_report_path = storage.job_report_dir(request.image_id, job_id) / "repair_report.json"
         registry.update(
             job_id,
             status="running",
@@ -162,12 +160,10 @@ def run_pipeline_job(
             message=f"Generating mesh with {runner_config.mode} runner",
             paths={
                 "raw_mesh": raw_mesh_path,
-                "cleaned_mesh": cleaned_mesh_path,
                 "voxels": voxel_path,
                 "ldr": ldr_path,
                 "report": report_path,
                 "mesh_inspect": mesh_inspect_path,
-                "repair_report": repair_report_path,
             },
         )
         registry.update(
@@ -181,37 +177,14 @@ def run_pipeline_job(
             runner=runner,
             mask_path=mask_path,
             raw_mesh_path=raw_mesh_path,
-            cleaned_mesh_path=cleaned_mesh_path,
             voxel_output_path=voxel_path,
             ldr_output_path=ldr_path,
-            target_longest_studs=request.target_studs,
             base_size_studs=request.base_size_studs,
-            target_width_studs=request.target_width_studs,
-            target_depth_studs=request.target_depth_studs,
-            fill=request.fill,
-            voxelizer=request.voxelizer,
-            ray_fill=request.ray_fill,
-            default_color_id=request.default_color_id,
-            sample_colors=request.sample_colors,
-            optimize=request.optimize,
-            optimizer=request.optimizer,
-            brick_palette=request.brick_palette,
-            height_unit=request.height_unit,
             report_path=report_path,
             raw_mesh_report_path=mesh_inspect_path,
-            repair_mode=request.repair_mode,
-            repair_report_path=repair_report_path,
             up_axis=request.up_axis,
-            sculpture_mode=request.sculpture_mode,
-            sculpture_engine=request.sculpture_engine,
             wall_thickness=request.wall_thickness,
             base_thickness=request.base_thickness,
-            support_spacing=request.support_spacing,
-            voxel_smoothing=request.voxel_smoothing,
-            infill_density=request.infill_density,
-            infill_pattern=request.infill_pattern,
-            color_strategy=request.color_strategy,
-            steps_by_layer=request.steps_by_layer,
         )
         report = json.loads(report_path.read_text(encoding="utf-8"))
         mesh_inspect = json.loads(mesh_inspect_path.read_text(encoding="utf-8"))
@@ -221,10 +194,8 @@ def run_pipeline_job(
             status="completed",
             ldr_url=f"/api/jobs/{job_id}/files/ldr",
             report_url=f"/api/jobs/{job_id}/files/report",
-            raw_mesh_url=f"/api/jobs/{job_id}/files/raw_mesh",
-            cleaned_mesh_url=f"/api/jobs/{job_id}/files/cleaned_mesh",
             mesh_inspect_url=f"/api/jobs/{job_id}/files/mesh_inspect",
-            repair_report_url=f"/api/jobs/{job_id}/files/repair_report",
+            raw_mesh_url=f"/api/jobs/{job_id}/files/raw_mesh",
             voxel_url=f"/api/jobs/{job_id}/files/voxels",
             brick_count=report.get("output_brick_count"),
             reduction_percent=report.get("reduction_percent"),

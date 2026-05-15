@@ -63,33 +63,16 @@
             <input id="apiBaseUrl" type="text" value="http://127.0.0.1:8000" />
           </label>
           <label>
-            Target studs
-            <input id="targetStuds" type="number" min="8" max="128" step="1" value="48" />
-          </label>
-          <label>
             Base size studs
             <input id="baseSizeStuds" type="number" min="1" max="256" step="1" value="32" />
           </label>
           <label>
-            Default color ID
-            <input id="defaultColor" type="number" min="0" max="999" step="1" value="16" />
+            Wall thickness
+            <input id="wallThickness" type="number" min="1" max="16" step="1" value="2" />
           </label>
           <label>
-            Repair mode
-            <select id="repairMode">
-              <option value="none" selected>none</option>
-              <option value="basic">basic</option>
-              <option value="manifold">manifold</option>
-              <option value="convex-hull">convex-hull</option>
-            </select>
-          </label>
-          <label class="toggle">
-            <input id="sampleColors" type="checkbox" checked />
-            Sample mesh colors
-          </label>
-          <label class="toggle">
-            <input id="optimizeBricks" type="checkbox" checked />
-            Optimize bricks
+            Bottom thickness
+            <input id="baseThickness" type="number" min="0" max="64" step="1" value="3" />
           </label>
         </section>
 
@@ -145,7 +128,6 @@
             <a id="ldrLink" href="#" target="_blank" rel="noreferrer">LDR</a>
             <a id="reportLink" href="#" target="_blank" rel="noreferrer">Report</a>
             <a id="meshInspectLink" href="#" target="_blank" rel="noreferrer">Mesh inspect</a>
-            <a id="repairReportLink" href="#" target="_blank" rel="noreferrer">Repair</a>
             <a id="rawMeshLink" href="#" target="_blank" rel="noreferrer">Raw mesh</a>
           </div>
         </section>

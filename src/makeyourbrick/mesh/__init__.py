@@ -1,2 +1,1 @@
-"""Mesh loading, repair, and solidification."""
-
+"""Mesh loading, inspection, and orientation helpers."""

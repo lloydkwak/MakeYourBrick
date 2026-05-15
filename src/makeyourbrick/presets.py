@@ -1,20 +1,13 @@
 from __future__ import annotations
 
+from makeyourbrick.pipeline import DEFAULT_BASE_SIZE_STUDS, DEFAULT_BASE_THICKNESS, DEFAULT_WALL_THICKNESS
+
 STUDIO_IMPORT_PRESET_OPTIONS = {
-    "voxelizer": "slice",
-    "optimize": True,
-    "optimizer": "layered",
-    "brick_palette": "studio",
-    "height_unit": "brick",
-    "sculpture_engine": "layered",
-    "sculpture_mode": "contour-shell",
-    "wall_thickness": 3,
-    "base_thickness": 0,
-    "support_spacing": 0,
-    "voxel_smoothing": "polished",
-    "color_strategy": "majority",
+    "base_size_studs": DEFAULT_BASE_SIZE_STUDS,
+    "wall_thickness": DEFAULT_WALL_THICKNESS,
+    "base_thickness": DEFAULT_BASE_THICKNESS,
+    "up_axis": "auto",
     "steps_by_layer": True,
-    "repair_mode": "none",
 }
 
 
