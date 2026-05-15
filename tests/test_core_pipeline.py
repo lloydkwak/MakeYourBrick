@@ -9,6 +9,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from makeyourbrick.brickify.attachments import add_attachment_plates
+from makeyourbrick.brickify.colors import quantize_rgb_to_ldraw
 from makeyourbrick.brickify.optimizer import bricks_to_occupancy
 from makeyourbrick.brickify.report import build_stability_report
 from makeyourbrick.io.ldr_writer import brick_to_ldr_line
@@ -79,6 +81,24 @@ def test_filled_layer_target_keeps_the_complete_mesh_footprint() -> None:
     assert targets.shell.occupancy.sum() < targets.target.occupancy.sum()
 
 
+def test_ldraw_lab_color_matching_uses_solid_palette() -> None:
+    rgb = np.array([[[178, 4, 8], [246, 246, 246], [32, 91, 165]]], dtype=np.uint8)
+
+    color_ids = quantize_rgb_to_ldraw(rgb)
+
+    assert color_ids.tolist() == [[4, 15, 1]]
+
+
+def test_mesh_color_strategy_preserves_target_color_ids() -> None:
+    occupancy = np.ones((4, 1, 1), dtype=bool)
+    colors = np.array([[[4]], [[4]], [[1]], [[1]]], dtype=np.int32)
+    solid = VoxelModel(occupancy, colors, pitch=1.0, origin=(0.0, 0.0, 0.0))
+
+    model = place_layered_bricks(solid, catalog_for_palette("studio"), color_strategy="mesh")
+
+    assert [brick.color_id for brick in model.bricks()] == [4, 1]
+
+
 def test_surface_detail_target_preserves_internal_open_mesh_features() -> None:
     occupancy = np.ones((9, 6, 9), dtype=bool)
     occupancy[3:6, 3:5, 3:6] = False
@@ -131,9 +151,11 @@ def test_mesh_to_ldr_cli_writes_studio_sculpture(tmp_path: Path) -> None:
 
     report = json.loads(report_path.read_text(encoding="utf-8"))
     brick_lines = [line for line in ldr_path.read_text(encoding="utf-8").splitlines() if line.startswith("1 ")]
+    attachment_parts = {"3024.dat", "3023.dat", "3623.dat", "3710.dat", "3666.dat", "3460.dat", "3022.dat", "3021.dat", "3020.dat", "3795.dat", "3034.dat"}
+    main_lines = [line for line in brick_lines if line.split()[-1] not in attachment_parts]
     debug_lines = [line for line in debug_target_path.read_text(encoding="utf-8").splitlines() if line.startswith("1 ")]
-    parts = Counter(line.split()[-1] for line in brick_lines)
-    colors = {line.split()[1] for line in brick_lines}
+    parts = Counter(line.split()[-1] for line in main_lines)
+    colors = {line.split()[1] for line in main_lines}
 
     assert voxel_path.exists()
     assert debug_target_path.exists()
@@ -146,7 +168,8 @@ def test_mesh_to_ldr_cli_writes_studio_sculpture(tmp_path: Path) -> None:
     assert report["exact_cover"] is True
     assert report["missed_voxel_count"] == 0
     assert report["overflow_voxel_count"] == 0
-    assert report["output_brick_count"] == len(brick_lines)
+    assert report["output_brick_count"] == len(main_lines)
+    assert report["attachment_overlay"]["attachment_plate_count"] + report["output_brick_count"] == len(brick_lines)
     assert report["input_brick_count"] == len(debug_lines)
     assert {line.split()[-1] for line in debug_lines} == {"3005.dat"}
     assert colors <= {"1", "2", "3", "13", "15", "19", "20", "27"}
@@ -164,6 +187,23 @@ def test_mesh_to_ldr_cli_writes_studio_sculpture(tmp_path: Path) -> None:
         "3005.dat",
     }
     assert "0 STEP" in ldr_path.read_text(encoding="utf-8")
+
+
+def test_attachment_plates_bridge_fully_unattached_bricks() -> None:
+    bricks = [
+        Brick(part_id="3005.dat", color_id=16, x=1, y=0, z=0, width=1, depth=1),
+        Brick(part_id="3005.dat", color_id=16, x=1, y=1, z=0, width=1, depth=1),
+        Brick(part_id="3005.dat", color_id=16, x=0, y=1, z=0, width=1, depth=1),
+    ]
+
+    plates, report = add_attachment_plates(bricks, (2, 3, 1))
+
+    assert report["bidirectional_unattached_before_plates"] == 1
+    assert report["resolved_bidirectional_unattached_count"] == 1
+    assert report["remaining_bidirectional_unattached_count"] == 0
+    assert len(plates) == 1
+    assert plates[0].part_id == "3023.dat"
+    assert plates[0].y == pytest.approx(1 + 1 / 3)
 
 
 def test_ldr_part_dimensions_are_known_for_core_palette() -> None:

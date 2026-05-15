@@ -32,7 +32,7 @@ class Brick:
     part_id: str
     color_id: int
     x: int
-    y: int
+    y: int | float
     z: int
     width: int
     depth: int

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 
 from makeyourbrick.ai.sam3d_runner import Sam3DRunner
+from makeyourbrick.brickify.attachments import add_attachment_plates
 from makeyourbrick.brickify.optimizer import brickify_1x1
 from makeyourbrick.brickify.report import build_brick_report, build_stability_report, write_brick_report
 from makeyourbrick.config import PipelineConfig
@@ -47,6 +49,7 @@ def run_from_image(
     base_thickness: int = DEFAULT_BASE_THICKNESS,
     up_axis: str = "auto",
     min_pitch: float = 0.005,
+    color_strategy: str = "layer",
 ) -> Path:
     config = PipelineConfig()
     raw_mesh_path = raw_mesh_path or config.paths.raw_mesh
@@ -66,6 +69,7 @@ def run_from_image(
         base_thickness=base_thickness,
         up_axis=up_axis,
         min_pitch=min_pitch,
+        color_strategy=color_strategy,
     )
 
 
@@ -82,7 +86,10 @@ def convert_mesh_to_ldr(
     up_axis: str = "auto",
     min_pitch: float = 0.005,
     steps_by_layer: bool = True,
+    color_strategy: str = "layer",
 ) -> Path:
+    if color_strategy not in {"layer", "mesh"}:
+        raise ValueError("color_strategy must be 'layer' or 'mesh'.")
     mesh = load_mesh(mesh_path)
     mesh, orientation_report = orient_mesh_to_y_up(mesh, up_axis=up_axis)
     requested_base_size = base_size_studs
@@ -130,39 +137,47 @@ def convert_mesh_to_ldr(
             step_by_layer=steps_by_layer,
             height_unit_ldu=BRICK_HEIGHT_LDU,
         )
-    placed_model = place_layered_bricks(target_model, catalog_for_palette("studio"))
+    placed_model = place_layered_bricks(target_model, catalog_for_palette("studio"), color_strategy=color_strategy)
     bricks = placed_model.bricks()
+    attachment_bricks, attachment_report = add_attachment_plates(bricks, target_model.shape)
+    output_bricks = sorted([*bricks, *attachment_bricks], key=lambda brick: (float(brick.y), brick.z, brick.x, brick.part_id))
 
     if report_path is not None:
-        write_brick_report(
-            build_brick_report(
-                target_model.occupancy,
-                input_bricks,
+        report = build_brick_report(
+            target_model.occupancy,
+            input_bricks,
+            bricks,
+            optimized=True,
+            optimizer="studio-layered",
+            brick_palette="studio",
+            sculpture={
+                "mode": sculpture_mode,
+                "wall_thickness": int(wall_thickness),
+                "base_thickness": int(base_thickness),
+                "color_strategy": color_strategy,
+                "voxelizer": voxel_artifact.voxelizer,
+            },
+            mesh_orientation=orientation_report,
+            footprint_scale=footprint_report,
+            stability=build_stability_report(
                 bricks,
-                optimized=True,
-                optimizer="studio-layered",
-                brick_palette="studio",
-                sculpture={
-                    "mode": sculpture_mode,
-                    "wall_thickness": int(wall_thickness),
-                    "base_thickness": int(base_thickness),
-                    "color_strategy": "layer",
-                    "voxelizer": voxel_artifact.voxelizer,
-                },
-                mesh_orientation=orientation_report,
-                footprint_scale=footprint_report,
-                stability=build_stability_report(
-                    bricks,
-                    target_model.shape,
-                    sculpture_mode=sculpture_mode,
-                    wall_thickness=wall_thickness,
-                    base_thickness=base_thickness,
-                ),
+                target_model.shape,
+                sculpture_mode=sculpture_mode,
+                wall_thickness=wall_thickness,
+                base_thickness=base_thickness,
             ),
-            report_path,
         )
+        report["attachment_overlay"] = {
+            **attachment_report,
+            "attachment_overlay_count": int(len(attachment_bricks)),
+            "overlay_part_counts": {
+                str(part_id): int(count)
+                for part_id, count in sorted(Counter(brick.part_id for brick in attachment_bricks).items())
+            },
+        }
+        write_brick_report(report, report_path)
     return write_ldr(
-        bricks,
+        output_bricks,
         ldr_output_path,
         title=f"Mesh conversion: {mesh_path.name}",
         step_by_layer=steps_by_layer,

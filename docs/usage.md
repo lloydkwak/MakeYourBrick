@@ -19,6 +19,7 @@ Options:
 - `--wall-thickness`: shell wall width in studs
 - `--base-thickness`: number of bottom layers to fill completely
 - `--up-axis`: `auto`, `none`, `x`, `y`, or `z`
+- `--color-strategy`: `layer` for Studio-like layer colors, or `mesh` for mesh-sampled LDraw color matching
 - `--voxels`: optional `.npz` voxel artifact path
 - `--debug-target-output`: optional all-1x1 LDraw target preview for separating voxelization issues from brick placement issues
 - `--report`: JSON report path
@@ -92,8 +93,14 @@ The report includes:
 - footprint/base-size report
 - stability summary
 - lower/upper attachment counts
+- attachment-only plate overlay counts
 - selected voxelizer (`slice` or `surface`)
 - selected sculpture mode (`contour-shell` for closed slice output or `surface-detail` for fragmented open OBJ output)
+
+Mesh color matching samples vertex or face colors when they are available,
+quantizes RGB to the solid LDraw palette in CIELAB space, and stores the chosen
+LDraw color IDs in the voxel artifact. Textured OBJ files need baked vertex or
+face colors for best results.
 
 For vehicle-style OBJ files made from many open sub-meshes, start with:
 
@@ -104,6 +111,7 @@ python scripts/mesh_to_ldr.py \
   --wall-thickness 2 \
   --base-thickness 3 \
   --up-axis y \
+  --color-strategy mesh \
   --report outputs/reports/car_report.json \
   --output outputs/ldr/car.ldr
 ```

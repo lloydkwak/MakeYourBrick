@@ -26,6 +26,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--wall-thickness", type=int, default=DEFAULT_WALL_THICKNESS)
     parser.add_argument("--base-thickness", type=int, default=DEFAULT_BASE_THICKNESS)
     parser.add_argument("--up-axis", choices=("auto", "none", "x", "y", "z"), default="auto")
+    parser.add_argument(
+        "--color-strategy",
+        choices=("layer", "mesh"),
+        default="layer",
+        help="Use Studio-like layer colors or mesh-sampled LDraw color matching.",
+    )
     parser.add_argument("--min-pitch", type=float, default=0.005)
     parser.add_argument("--voxels", type=Path, default=Path("outputs/voxels/model_voxels.npz"))
     parser.add_argument("--report", type=Path, default=Path("outputs/reports/model_report.json"))
@@ -52,6 +58,7 @@ def main() -> None:
         base_thickness=args.base_thickness,
         up_axis=args.up_axis,
         min_pitch=args.min_pitch,
+        color_strategy=args.color_strategy,
     )
     print(f"Wrote LDraw model to {output_path}")
 

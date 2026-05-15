@@ -389,6 +389,23 @@ def _future_upper_possible(bricks: list[Brick], next_candidates: list[list[Brick
     return possible
 
 
+def _unattached_count(
+    bricks: list[Brick],
+    support_from_lower: list[bool],
+    upper: list[Brick],
+) -> int:
+    support_from_upper = _support_flags_from_upper(bricks, upper)
+    return sum(
+        1
+        for lower_ok, upper_ok in zip(support_from_lower, support_from_upper)
+        if not lower_ok and not upper_ok
+    )
+
+
+def _score_add(left: tuple[int, int, int, int, int], right: tuple[int, int, int, int, int]) -> tuple[int, int, int, int, int]:
+    return tuple(a + b for a, b in zip(left, right))
+
+
 def run_length_layered_brickify(
     occupancy: np.ndarray,
     color_ids: np.ndarray,
@@ -398,19 +415,15 @@ def run_length_layered_brickify(
     """Tile each occupied layer exactly with Studio sculpture brick combinations."""
 
     _validate_voxel_inputs(occupancy, color_ids)
-    bricks: list[Brick] = []
-    previous_bricks: list[Brick] = []
-    previous_support_from_lower: list[bool] = []
-    previous_y: int | None = None
-    for y in range(occupancy.shape[1]):
+    occupied_layers = [int(y) for y in range(occupancy.shape[1]) if occupancy[:, y, :].any()]
+    if not occupied_layers:
+        return []
+
+    layer_candidates: dict[int, list[tuple[tuple[int, int, int], list[Brick]]]] = {}
+    for y in occupied_layers:
         layer = occupancy[:, y, :]
-        if not layer.any():
-            previous_bricks = []
-            previous_support_from_lower = []
-            previous_y = None
-            continue
         preferred_axis = "x" if y % 2 == 0 else "z"
-        candidates = _layer_tiling_candidates(
+        layer_candidates[y] = _layer_tiling_candidates(
             layer,
             color_ids[:, y, :],
             brick_specs,
@@ -418,57 +431,64 @@ def run_length_layered_brickify(
             preferred_axis=preferred_axis,
             allow_rotations=allow_rotations,
         )
-        next_candidates: list[list[Brick]] = []
-        if y + 1 < occupancy.shape[1] and occupancy[:, y + 1, :].any():
-            next_preferred_axis = "x" if (y + 1) % 2 == 0 else "z"
-            next_candidates = [
-                candidate
-                for _score, candidate in _layer_tiling_candidates(
-                    occupancy[:, y + 1, :],
-                    color_ids[:, y + 1, :],
-                    brick_specs,
-                    y=y + 1,
-                    preferred_axis=next_preferred_axis,
-                    allow_rotations=allow_rotations,
-                )
-            ]
+        if not layer_candidates[y]:
+            raise ValueError(f"No tiling candidates generated for occupied layer {y}.")
 
-        scored_candidates: list[tuple[tuple[int, int, int, int, int, int], list[Brick], list[bool]]] = []
-        lower = previous_bricks if previous_y == y - 1 else []
-        for base_score, candidate in candidates:
-            support_from_lower = _support_flags_from_lower(candidate, lower, y=y)
-            support_from_upper = _future_upper_possible(candidate, next_candidates)
-            previous_support_from_upper = (
-                _support_flags_from_upper(previous_bricks, candidate) if previous_y == y - 1 else []
-            )
-            previous_unattached = sum(
-                1
-                for lower_ok, upper_ok in zip(previous_support_from_lower, previous_support_from_upper)
-                if not lower_ok and not upper_ok
-            )
-            current_no_neighbor_possible = sum(
-                1 for lower_ok, upper_ok in zip(support_from_lower, support_from_upper) if not lower_ok and not upper_ok
-            )
-            current_no_lower = sum(1 for value in support_from_lower if not value)
-            scored_candidates.append(
-                (
-                    (
-                        previous_unattached,
-                        current_no_neighbor_possible,
-                        current_no_lower,
-                        base_score[0],
-                        base_score[1],
-                        base_score[2],
-                    ),
-                    candidate,
-                    support_from_lower,
-                )
-            )
+    # Dynamic programming over layer-level tiling candidates. A local one-step
+    # lookahead can believe a brick will attach to some future candidate and
+    # then choose a different upper layer later. The DP finalizes each layer only
+    # after the actual next layer candidate is known.
+    first_y = occupied_layers[0]
+    states: list[tuple[tuple[int, int, int, int, int], list[int], list[bool]]] = []
+    for index, (base_score, candidate) in enumerate(layer_candidates[first_y]):
+        lower_flags = _support_flags_from_lower(candidate, [], y=first_y)
+        no_lower = sum(1 for value in lower_flags if not value)
+        states.append(((0, no_lower, base_score[0], base_score[1], base_score[2]), [index], lower_flags))
 
-        _score, selected, previous_support_from_lower = min(scored_candidates, key=lambda item: item[0])
-        bricks.extend(selected)
-        previous_bricks = selected
-        previous_y = y
+    for layer_position in range(1, len(occupied_layers)):
+        previous_y = occupied_layers[layer_position - 1]
+        y = occupied_layers[layer_position]
+        adjacent = y == previous_y + 1
+        previous_candidates = layer_candidates[previous_y]
+        current_candidates = layer_candidates[y]
+        next_states: list[tuple[tuple[int, int, int, int, int], list[int], list[bool]]] = []
+
+        for state_score, path, previous_lower_flags in states:
+            previous_bricks = previous_candidates[path[-1]][1]
+            for current_index, (base_score, current_bricks) in enumerate(current_candidates):
+                lower = previous_bricks if adjacent else []
+                current_lower_flags = _support_flags_from_lower(current_bricks, lower, y=y)
+                upper = current_bricks if adjacent else []
+                finalized_unattached = _unattached_count(previous_bricks, previous_lower_flags, upper)
+                no_lower = sum(1 for value in current_lower_flags if not value)
+                transition_score = (
+                    finalized_unattached,
+                    no_lower,
+                    base_score[0],
+                    base_score[1],
+                    base_score[2],
+                )
+                next_states.append((_score_add(state_score, transition_score), [*path, current_index], current_lower_flags))
+
+        best_by_current: dict[int, tuple[tuple[int, int, int, int, int], list[int], list[bool]]] = {}
+        for score, path, lower_flags in next_states:
+            current_index = path[-1]
+            if current_index not in best_by_current or score < best_by_current[current_index][0]:
+                best_by_current[current_index] = (score, path, lower_flags)
+        states = list(best_by_current.values())
+
+    last_y = occupied_layers[-1]
+    last_candidates = layer_candidates[last_y]
+    finalized_states: list[tuple[tuple[int, int, int, int, int], list[int]]] = []
+    for score, path, lower_flags in states:
+        last_bricks = last_candidates[path[-1]][1]
+        final_unattached = _unattached_count(last_bricks, lower_flags, [])
+        finalized_states.append((_score_add(score, (final_unattached, 0, 0, 0, 0)), path))
+
+    _best_score, best_path = min(finalized_states, key=lambda item: item[0])
+    bricks: list[Brick] = []
+    for y, candidate_index in zip(occupied_layers, best_path):
+        bricks.extend(layer_candidates[y][candidate_index][1])
     return bricks
 
 

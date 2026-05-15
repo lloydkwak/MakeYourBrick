@@ -22,15 +22,22 @@ def assign_brick_colors_by_layer(
     return [replace(brick, color_id=int(layer_color_ids[brick.y % len(layer_color_ids)])) for brick in bricks]
 
 
-def place_layered_bricks(target: VoxelModel, catalog: BrickCatalog) -> LayeredBrickModel:
-    placement_colors = np.where(target.occupancy, 16, 0).astype(np.int32)
+def place_layered_bricks(target: VoxelModel, catalog: BrickCatalog, color_strategy: str = "layer") -> LayeredBrickModel:
+    if color_strategy == "layer":
+        placement_colors = np.where(target.occupancy, 16, 0).astype(np.int32)
+    elif color_strategy == "mesh":
+        placement_colors = target.color_ids
+    else:
+        raise ValueError("color_strategy must be 'layer' or 'mesh'.")
     bricks = run_length_layered_brickify(
         target.occupancy,
         placement_colors,
         brick_specs=catalog.specs,
         allow_rotations=True,
     )
-    return LayeredBrickModel.from_bricks(assign_brick_colors_by_layer(bricks))
+    if color_strategy == "layer":
+        bricks = assign_brick_colors_by_layer(bricks)
+    return LayeredBrickModel.from_bricks(bricks)
 
 
 def layered_model_occupancy(model: LayeredBrickModel, shape: tuple[int, int, int]) -> np.ndarray:

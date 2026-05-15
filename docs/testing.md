@@ -16,7 +16,10 @@ python -m pytest
 - bottom layer filling
 - Studio brick-combination tiling
 - lower/upper attachment-aware stability reporting
+- attachment-only plate overlay reporting
 - layer color sequence
+- CIELAB LDraw colour quantization
+- mesh colour strategy brick placement
 - mesh-to-LDR CLI smoke conversion
 - all-1x1 target debug output
 - open mesh surface voxel fallback

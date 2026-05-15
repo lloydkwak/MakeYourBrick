@@ -217,7 +217,11 @@ def volume_shell_mask(occupancy: np.ndarray, wall_thickness: int) -> np.ndarray:
 
 def base_fill_mask(occupancy: np.ndarray, base_thickness: int) -> np.ndarray:
     base = np.zeros_like(occupancy, dtype=bool)
-    base[:, : min(base_thickness, occupancy.shape[1]), :] = occupancy[:, : min(base_thickness, occupancy.shape[1]), :]
+    thickness = min(base_thickness, occupancy.shape[1])
+    if thickness <= 0:
+        return base
+    footprint = occupancy[:, :thickness, :].any(axis=1)
+    base[:, :thickness, :] = footprint[:, None, :]
     return base
 
 

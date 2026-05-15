@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
+from makeyourbrick.brickify.colors import quantize_rgb_to_ldraw, sample_mesh_rgb
 from makeyourbrick.types import VoxelArtifact
 
 VOXELIZERS = ("slice", "surface")
@@ -187,17 +188,19 @@ def voxelize_mesh(
     pitch: float,
     default_color_id: int = 16,
 ) -> VoxelArtifact:
-    slice_occupancy, slice_origin, _slice_point_grid = voxelize_mesh_with_layer_slices(mesh, pitch)
+    slice_occupancy, slice_origin, slice_point_grid = voxelize_mesh_with_layer_slices(mesh, pitch)
     occupancy = slice_occupancy
     origin = slice_origin
+    point_grid = slice_point_grid
     voxelizer = "slice"
     if not mesh.is_watertight:
-        surface_occupancy, surface_origin, _surface_point_grid = voxelize_mesh_with_surface_fill(mesh, pitch)
+        surface_occupancy, surface_origin, surface_point_grid = voxelize_mesh_with_surface_fill(mesh, pitch)
         if int(surface_occupancy.sum()) > int(slice_occupancy.sum()) * 2:
             occupancy = surface_occupancy
             origin = surface_origin
+            point_grid = surface_point_grid
             voxelizer = "surface"
-    rgb = np.zeros((*occupancy.shape, 3), dtype=np.uint8)
-    rgb[occupancy] = (160, 165, 169)
-    color_ids = np.where(occupancy, int(default_color_id), 0).astype(np.int32)
+    rgb = sample_mesh_rgb(mesh, point_grid, occupancy)
+    color_ids = quantize_rgb_to_ldraw(rgb, default_color_id=default_color_id)
+    color_ids[~occupancy] = 0
     return save_voxel_artifact(output_path, occupancy, color_ids, rgb, origin, pitch, voxelizer=voxelizer)

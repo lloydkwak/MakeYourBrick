@@ -1,5 +1,6 @@
 # Core geometry stack
 numpy>=1.26
+scipy>=1.11
 trimesh>=4.6
 
 # Web backend and placeholder mask previews
