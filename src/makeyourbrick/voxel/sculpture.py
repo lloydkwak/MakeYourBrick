@@ -190,6 +190,31 @@ def contour_shell_mask(occupancy: np.ndarray, wall_thickness: int) -> np.ndarray
     return shell
 
 
+def erode_volume_26(occupancy: np.ndarray, iterations: int) -> np.ndarray:
+    eroded = occupancy.astype(bool).copy()
+    for _ in range(max(0, iterations)):
+        padded = np.pad(eroded, 1, mode="constant", constant_values=False)
+        retained = eroded.copy()
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for dz in (-1, 0, 1):
+                    retained &= padded[
+                        1 + dx : 1 + dx + eroded.shape[0],
+                        1 + dy : 1 + dy + eroded.shape[1],
+                        1 + dz : 1 + dz + eroded.shape[2],
+                    ]
+        eroded = retained
+    return eroded
+
+
+def volume_shell_mask(occupancy: np.ndarray, wall_thickness: int) -> np.ndarray:
+    occupancy = occupancy.astype(bool)
+    if wall_thickness <= 0:
+        return np.zeros_like(occupancy, dtype=bool)
+    interior = erode_volume_26(occupancy, wall_thickness)
+    return occupancy & ~interior
+
+
 def base_fill_mask(occupancy: np.ndarray, base_thickness: int) -> np.ndarray:
     base = np.zeros_like(occupancy, dtype=bool)
     base[:, : min(base_thickness, occupancy.shape[1]), :] = occupancy[:, : min(base_thickness, occupancy.shape[1]), :]

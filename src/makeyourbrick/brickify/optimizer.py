@@ -7,20 +7,28 @@ import numpy as np
 from makeyourbrick.types import Brick, BrickSpec
 
 STUDIO_SCULPTURE_BRICKS = (
-    BrickSpec("3008.dat", 1, 8),
-    BrickSpec("3007.dat", 2, 8),
-    BrickSpec("3009.dat", 1, 6),
-    BrickSpec("2456.dat", 2, 6),
     BrickSpec("3010.dat", 1, 4),
     BrickSpec("3001.dat", 2, 4),
+    BrickSpec("3008.dat", 1, 8),
+    BrickSpec("3009.dat", 1, 6),
     BrickSpec("3622.dat", 1, 3),
-    BrickSpec("3002.dat", 2, 3),
     BrickSpec("3004.dat", 1, 2),
+    BrickSpec("3002.dat", 2, 3),
+    BrickSpec("3007.dat", 2, 8),
+    BrickSpec("2456.dat", 2, 6),
     BrickSpec("3003.dat", 2, 2),
     BrickSpec("3005.dat", 1, 1),
 )
 
 BRICK_PALETTES = ("studio",)
+STUDIO_SPAN_1_LENGTH_PRIORITY = {8: 0, 6: 1, 4: 2, 3: 3, 2: 4, 1: 5}
+STUDIO_SPAN_2_PART_PRIORITY = {
+    "3001.dat": 0,
+    "3002.dat": 1,
+    "3007.dat": 2,
+    "2456.dat": 3,
+    "3003.dat": 4,
+}
 
 
 def brick_specs_for_palette(palette: str) -> tuple[BrickSpec, ...]:
@@ -74,8 +82,13 @@ def _run_specs_for_axis(
                 specs_by_span[depth].append((width, spec.part_id, width, depth, rotation))
             elif axis == "z" and width <= 2:
                 specs_by_span[width].append((depth, spec.part_id, width, depth, rotation))
-    for specs in specs_by_span.values():
-        specs.sort(key=lambda item: (-item[0], item[1]))
+    for span, specs in specs_by_span.items():
+        if span == 1:
+            specs.sort(key=lambda item: (STUDIO_SPAN_1_LENGTH_PRIORITY.get(item[0], 999), item[1]))
+        elif span == 2:
+            specs.sort(key=lambda item: (STUDIO_SPAN_2_PART_PRIORITY.get(item[1], 999), item[0], item[1]))
+        else:
+            specs.sort(key=lambda item: (-item[0], item[1]))
     return dict(specs_by_span)
 
 
@@ -238,7 +251,6 @@ def _fill_stripe(
         primary = run_end
     return bricks
 
-
 def _tile_layer(
     layer_occupancy: np.ndarray,
     layer_colors: np.ndarray,
@@ -314,7 +326,7 @@ def run_length_layered_brickify(
         layer = occupancy[:, y, :]
         if not layer.any():
             continue
-        candidates: list[tuple[tuple[int, int], list[Brick]]] = []
+        candidates: list[tuple[tuple[int, int, int], list[Brick]]] = []
         preferred_axis = "x" if y % 2 == 0 else "z"
         for axis in ("x", "z"):
             for pair_offset in (0, 1):
@@ -328,7 +340,7 @@ def run_length_layered_brickify(
                     allow_rotations=allow_rotations,
                 )
                 axis_penalty = 0 if axis == preferred_axis else 1
-                candidates.append(((axis_penalty, pair_offset), layer_bricks))
+                candidates.append(((len(layer_bricks), axis_penalty, pair_offset), layer_bricks))
         bricks.extend(min(candidates, key=lambda item: item[0])[1])
     return bricks
 

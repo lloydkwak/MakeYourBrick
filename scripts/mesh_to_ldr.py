@@ -25,6 +25,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-pitch", type=float, default=0.005)
     parser.add_argument("--voxels", type=Path, default=Path("outputs/voxels/model_voxels.npz"))
     parser.add_argument("--report", type=Path, default=Path("outputs/reports/model_report.json"))
+    parser.add_argument(
+        "--debug-target-output",
+        type=Path,
+        help="Optional LDraw output where every target voxel is emitted as a 1x1 brick.",
+    )
     parser.add_argument("--output", type=Path, default=Path("outputs/ldr/model_output.ldr"))
     return parser.parse_args()
 
@@ -36,6 +41,7 @@ def main() -> None:
         ldr_output_path=args.output,
         voxel_output_path=args.voxels,
         report_path=args.report,
+        debug_target_ldr_path=args.debug_target_output,
         base_size_studs=args.base_size_studs,
         wall_thickness=args.wall_thickness,
         base_thickness=args.base_thickness,

@@ -104,8 +104,12 @@ def voxelize_mesh_with_layer_slices(mesh, pitch: float) -> tuple[np.ndarray, np.
     x_centers = bounds[0, 0] + (np.arange(shape[0], dtype=np.float64) + 0.5) * pitch
     y_centers = bounds[0, 1] + (np.arange(shape[1], dtype=np.float64) + 0.5) * pitch
     z_centers = bounds[0, 2] + (np.arange(shape[2], dtype=np.float64) + 0.5) * pitch
-    grid_x, grid_z = np.meshgrid(x_centers, z_centers, indexing="ij")
-    layer_points = np.column_stack([grid_x.ravel(), grid_z.ravel()])
+    sample_offsets = np.array((-0.375, 0.0, 0.375), dtype=np.float64) * pitch
+    sample_grids = []
+    for x_offset in sample_offsets:
+        for z_offset in sample_offsets:
+            grid_x, grid_z = np.meshgrid(x_centers + x_offset, z_centers + z_offset, indexing="ij")
+            sample_grids.append(np.column_stack([grid_x.ravel(), grid_z.ravel()]))
     occupancy = np.zeros(tuple(int(value) for value in shape), dtype=bool)
     tolerance = max(float(pitch) * 0.05, 1e-8)
     for y_index, y_value in enumerate(y_centers):
@@ -114,7 +118,10 @@ def voxelize_mesh_with_layer_slices(mesh, pitch: float) -> tuple[np.ndarray, np.
             continue
         contours = [np.asarray(path[:, [0, 2]], dtype=np.float64) for path in section.discrete if len(path) >= 3]
         if contours:
-            occupancy[:, y_index, :] = _points_inside_contours(layer_points, contours, tolerance).reshape(shape[0], shape[2])
+            coverage = np.zeros(shape[0] * shape[2], dtype=np.int16)
+            for layer_points in sample_grids:
+                coverage += _points_inside_contours(layer_points, contours, tolerance)
+            occupancy[:, y_index, :] = (coverage >= 2).reshape(shape[0], shape[2])
     point_grid = np.zeros((*occupancy.shape, 3), dtype=np.float32)
     indices = np.argwhere(occupancy)
     if len(indices):

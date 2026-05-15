@@ -13,7 +13,7 @@ from makeyourbrick.mesh.solidify import load_mesh
 from makeyourbrick.sculpture import (
     SculptureSettings,
     VoxelModel,
-    build_filled_layer_targets,
+    build_contour_shell_targets,
     catalog_for_palette,
     place_layered_bricks,
 )
@@ -74,6 +74,7 @@ def convert_mesh_to_ldr(
     ldr_output_path: Path,
     voxel_output_path: Path,
     report_path: Path | None = None,
+    debug_target_ldr_path: Path | None = None,
     base_size_studs: int = DEFAULT_BASE_SIZE_STUDS,
     wall_thickness: int = DEFAULT_WALL_THICKNESS,
     base_thickness: int = DEFAULT_BASE_THICKNESS,
@@ -103,12 +104,20 @@ def convert_mesh_to_ldr(
         pitch=float(loaded_pitch),
         origin=tuple(float(value) for value in origin),
     )
-    targets = build_filled_layer_targets(
+    targets = build_contour_shell_targets(
         solid_model,
         SculptureSettings(wall_thickness=wall_thickness, base_thickness=base_thickness),
     )
     target_model = targets.target
     input_bricks = brickify_1x1(target_model.occupancy, target_model.color_ids)
+    if debug_target_ldr_path is not None:
+        write_ldr(
+            input_bricks,
+            debug_target_ldr_path,
+            title=f"1x1 target debug: {mesh_path.name}",
+            step_by_layer=steps_by_layer,
+            height_unit_ldu=BRICK_HEIGHT_LDU,
+        )
     placed_model = place_layered_bricks(target_model, catalog_for_palette("studio"))
     bricks = placed_model.bricks()
 
@@ -122,7 +131,7 @@ def convert_mesh_to_ldr(
                 optimizer="studio-layered",
                 brick_palette="studio",
                 sculpture={
-                    "mode": "filled-layer",
+                    "mode": "contour-shell",
                     "wall_thickness": int(wall_thickness),
                     "base_thickness": int(base_thickness),
                     "color_strategy": "layer",
@@ -133,7 +142,7 @@ def convert_mesh_to_ldr(
                 stability=build_stability_report(
                     bricks,
                     target_model.shape,
-                    sculpture_mode="filled-layer",
+                    sculpture_mode="contour-shell",
                     wall_thickness=wall_thickness,
                     base_thickness=base_thickness,
                 ),

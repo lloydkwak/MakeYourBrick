@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from makeyourbrick.sculpture.model import SculptureSettings, VoxelModel
-from makeyourbrick.voxel.sculpture import base_fill_mask, contour_shell_mask, repair_sculpture_colors
+from makeyourbrick.voxel.sculpture import base_fill_mask, contour_shell_mask, repair_sculpture_colors, volume_shell_mask
 
 
 @dataclass(frozen=True)
@@ -25,7 +25,7 @@ def _mask_model(source: VoxelModel, mask: np.ndarray) -> VoxelModel:
 
 def build_contour_shell_targets(model: VoxelModel, settings: SculptureSettings) -> SculptureTargets:
     solid_mask = model.occupancy.astype(bool)
-    shell_mask = contour_shell_mask(solid_mask, settings.wall_thickness)
+    shell_mask = volume_shell_mask(solid_mask, settings.wall_thickness)
     base_mask = base_fill_mask(solid_mask, settings.base_thickness)
     target_mask = (shell_mask | base_mask) & solid_mask
     return SculptureTargets(

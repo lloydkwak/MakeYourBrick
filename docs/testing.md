@@ -11,12 +11,13 @@ python -m pytest
 
 ## Covered
 
-- filled layer target creation
+- contour-shell target creation
 - contour-shell helper mask creation
 - bottom layer filling
 - Studio brick-combination tiling
 - layer color sequence
 - mesh-to-LDR CLI smoke conversion
+- all-1x1 target debug output
 - conversion report output
 
 ## Manual Studio Check

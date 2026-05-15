@@ -17,7 +17,7 @@ mesh path
   -> scale Y by 20/24 for brick-height LDraw proportions
   -> slice mesh into filled X/Z layer footprints
   -> polish voxel layers
-  -> keep the complete filled layer footprint as the target
+  -> derive a Studio-style shell target from wall/base thickness
   -> tile each layer with Studio brick combinations
   -> write .ldr and report.json
 ```
@@ -41,8 +41,8 @@ mesh path
 2. The mesh is oriented to Y-up.
 3. The Y axis is scaled by the LEGO brick ratio `20/24` before slicing.
 4. Each horizontal layer is filled from mesh cross-section contours.
-5. The target keeps the complete filled footprint for every layer.
-6. Wall thickness and base thickness are still reported and available for hollow-mode work, but the active default prioritizes matching the mesh volume without artificial holes.
+5. The target keeps the outer contour shell for each layer, then fully fills the configured bottom layers.
+6. Wall thickness and base thickness directly control the active target, matching Studio's sculpture import settings.
 7. Each layer is tiled exactly with the selected Studio sculpture brick set.
 8. `0 STEP` is inserted between layers.
 

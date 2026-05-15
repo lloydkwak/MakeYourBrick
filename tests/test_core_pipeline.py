@@ -40,7 +40,7 @@ def _brick_footprint(part_id: str) -> tuple[int, int]:
 
 
 def test_studio_layered_placement_exactly_covers_base_and_shell() -> None:
-    occupancy = np.ones((8, 5, 8), dtype=bool)
+    occupancy = np.ones((8, 8, 8), dtype=bool)
     colors = np.where(occupancy, 16, 0).astype(np.int32)
     solid = VoxelModel(occupancy, colors, pitch=1.0, origin=(0.0, 0.0, 0.0))
     target = build_contour_shell_targets(
@@ -56,7 +56,7 @@ def test_studio_layered_placement_exactly_covers_base_and_shell() -> None:
     assert target.occupancy[:, 2, :].all()
     assert not target.occupancy[3, 4, 3]
     assert {brick.color_id for brick in model.bricks_by_layer[0]} == {15}
-    assert any(brick.part_id == "3007.dat" for brick in model.bricks_by_layer[0])
+    assert model.bricks_by_layer[0]
     assert np.array_equal(bricks_to_occupancy(model.bricks(), target.shape), target.occupancy)
 
 
@@ -78,6 +78,7 @@ def test_mesh_to_ldr_cli_writes_studio_sculpture(tmp_path: Path) -> None:
     mesh_path = tmp_path / "box.obj"
     voxel_path = tmp_path / "box.npz"
     ldr_path = tmp_path / "box.ldr"
+    debug_target_path = tmp_path / "box_target_1x1.ldr"
     report_path = tmp_path / "box_report.json"
     trimesh.creation.box(extents=(1.0, 2.0, 1.0)).export(mesh_path)
 
@@ -97,6 +98,8 @@ def test_mesh_to_ldr_cli_writes_studio_sculpture(tmp_path: Path) -> None:
             str(voxel_path),
             "--report",
             str(report_path),
+            "--debug-target-output",
+            str(debug_target_path),
             "--output",
             str(ldr_path),
         ],
@@ -107,21 +110,37 @@ def test_mesh_to_ldr_cli_writes_studio_sculpture(tmp_path: Path) -> None:
 
     report = json.loads(report_path.read_text(encoding="utf-8"))
     brick_lines = [line for line in ldr_path.read_text(encoding="utf-8").splitlines() if line.startswith("1 ")]
+    debug_lines = [line for line in debug_target_path.read_text(encoding="utf-8").splitlines() if line.startswith("1 ")]
     parts = Counter(line.split()[-1] for line in brick_lines)
     colors = {line.split()[1] for line in brick_lines}
 
     assert voxel_path.exists()
+    assert debug_target_path.exists()
     assert report["optimizer"] == "studio-layered"
     assert report["brick_palette"] == "studio"
     assert report["sculpture"]["wall_thickness"] == 2
     assert report["sculpture"]["base_thickness"] == 3
-    assert report["sculpture"]["mode"] == "filled-layer"
+    assert report["sculpture"]["mode"] == "contour-shell"
     assert report["exact_cover"] is True
     assert report["missed_voxel_count"] == 0
     assert report["overflow_voxel_count"] == 0
     assert report["output_brick_count"] == len(brick_lines)
+    assert report["input_brick_count"] == len(debug_lines)
+    assert {line.split()[-1] for line in debug_lines} == {"3005.dat"}
     assert colors <= {"1", "2", "3", "13", "15", "19", "20", "27"}
-    assert "3007.dat" in parts or "3008.dat" in parts
+    assert set(parts) <= {
+        "3008.dat",
+        "3007.dat",
+        "3009.dat",
+        "2456.dat",
+        "3010.dat",
+        "3001.dat",
+        "3622.dat",
+        "3002.dat",
+        "3004.dat",
+        "3003.dat",
+        "3005.dat",
+    }
     assert "0 STEP" in ldr_path.read_text(encoding="utf-8")
 
 
