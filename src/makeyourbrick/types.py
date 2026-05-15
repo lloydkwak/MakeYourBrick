@@ -16,6 +16,7 @@ class VoxelArtifact:
     path: Path
     pitch: float
     origin: tuple[float, float, float]
+    voxelizer: str = "slice"
 
 
 @dataclass(frozen=True)
@@ -37,4 +38,3 @@ class Brick:
     depth: int
     height: int = 1
     rotation_degrees: int = 0
-

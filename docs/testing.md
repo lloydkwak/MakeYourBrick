@@ -19,6 +19,7 @@ python -m pytest
 - layer color sequence
 - mesh-to-LDR CLI smoke conversion
 - all-1x1 target debug output
+- open mesh surface voxel fallback
 - conversion report output
 
 ## Manual Studio Check

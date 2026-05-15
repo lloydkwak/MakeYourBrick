@@ -124,6 +124,7 @@ def test_mesh_to_ldr_cli_writes_studio_sculpture(tmp_path: Path) -> None:
     assert report["sculpture"]["wall_thickness"] == 2
     assert report["sculpture"]["base_thickness"] == 3
     assert report["sculpture"]["mode"] == "contour-shell"
+    assert report["sculpture"]["voxelizer"] in {"slice", "surface"}
     assert report["exact_cover"] is True
     assert report["missed_voxel_count"] == 0
     assert report["overflow_voxel_count"] == 0

@@ -94,7 +94,7 @@ def convert_mesh_to_ldr(
         "height_unit_ldu": BRICK_HEIGHT_LDU,
         "height_unit_voxel_scale": STUD_LDU / BRICK_HEIGHT_LDU,
     }
-    voxelize_mesh(mesh, voxel_output_path, pitch=pitch)
+    voxel_artifact = voxelize_mesh(mesh, voxel_output_path, pitch=pitch)
     occupancy, color_ids, _rgb, origin, loaded_pitch = load_voxel_artifact(voxel_output_path)
     solid_occupancy = apply_voxel_smoothing(preprocess_solid_occupancy(occupancy), "polished")
     solid_colors = repair_sculpture_colors(occupancy, solid_occupancy, color_ids)
@@ -135,7 +135,7 @@ def convert_mesh_to_ldr(
                     "wall_thickness": int(wall_thickness),
                     "base_thickness": int(base_thickness),
                     "color_strategy": "layer",
-                    "voxelizer": "slice",
+                    "voxelizer": voxel_artifact.voxelizer,
                 },
                 mesh_orientation=orientation_report,
                 footprint_scale=footprint_report,

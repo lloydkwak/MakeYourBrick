@@ -6,7 +6,7 @@ import numpy as np
 
 from makeyourbrick.types import VoxelArtifact
 
-VOXELIZERS = ("slice",)
+VOXELIZERS = ("slice", "surface")
 
 
 def compute_footprint_pitch(mesh, base_size_studs: int, min_pitch: float = 0.005) -> float:
@@ -25,6 +25,7 @@ def save_voxel_artifact(
     rgb: np.ndarray,
     origin: np.ndarray,
     pitch: float,
+    voxelizer: str = "slice",
 ) -> VoxelArtifact:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(
@@ -34,11 +35,13 @@ def save_voxel_artifact(
         rgb=rgb.astype(np.uint8),
         origin=np.asarray(origin, dtype=np.float32),
         pitch=np.float32(pitch),
+        voxelizer=np.asarray(voxelizer),
     )
     return VoxelArtifact(
         path=output_path,
         pitch=float(pitch),
         origin=tuple(float(v) for v in np.asarray(origin, dtype=np.float32)),
+        voxelizer=voxelizer,
     )
 
 
@@ -129,14 +132,43 @@ def voxelize_mesh_with_layer_slices(mesh, pitch: float) -> tuple[np.ndarray, np.
     return occupancy, origin, point_grid
 
 
+def voxelize_mesh_with_surface_fill(mesh, pitch: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    bounds = np.asarray(mesh.bounds, dtype=np.float64)
+    extents = np.asarray(mesh.extents, dtype=np.float64)
+    shape = np.maximum(1, np.ceil(extents / pitch).astype(int))
+    origin = bounds[0].astype(np.float32)
+    occupancy = np.zeros(tuple(int(value) for value in shape), dtype=bool)
+
+    voxel_grid = mesh.voxelized(pitch=pitch).fill()
+    if len(voxel_grid.points):
+        indices = np.floor((np.asarray(voxel_grid.points, dtype=np.float64) - bounds[0]) / pitch).astype(int)
+        indices = np.clip(indices, 0, shape - 1)
+        occupancy[indices[:, 0], indices[:, 1], indices[:, 2]] = True
+
+    point_grid = np.zeros((*occupancy.shape, 3), dtype=np.float32)
+    occupied_indices = np.argwhere(occupancy)
+    if len(occupied_indices):
+        point_grid[occupancy] = origin + (occupied_indices.astype(np.float32) + 0.5) * float(pitch)
+    return occupancy, origin, point_grid
+
+
 def voxelize_mesh(
     mesh,
     output_path: Path,
     pitch: float,
     default_color_id: int = 16,
 ) -> VoxelArtifact:
-    occupancy, origin, _point_grid = voxelize_mesh_with_layer_slices(mesh, pitch)
+    slice_occupancy, slice_origin, _slice_point_grid = voxelize_mesh_with_layer_slices(mesh, pitch)
+    occupancy = slice_occupancy
+    origin = slice_origin
+    voxelizer = "slice"
+    if not mesh.is_watertight:
+        surface_occupancy, surface_origin, _surface_point_grid = voxelize_mesh_with_surface_fill(mesh, pitch)
+        if int(surface_occupancy.sum()) > int(slice_occupancy.sum()) * 2:
+            occupancy = surface_occupancy
+            origin = surface_origin
+            voxelizer = "surface"
     rgb = np.zeros((*occupancy.shape, 3), dtype=np.uint8)
     rgb[occupancy] = (160, 165, 169)
     color_ids = np.where(occupancy, int(default_color_id), 0).astype(np.int32)
-    return save_voxel_artifact(output_path, occupancy, color_ids, rgb, origin, pitch)
+    return save_voxel_artifact(output_path, occupancy, color_ids, rgb, origin, pitch, voxelizer=voxelizer)

@@ -16,6 +16,7 @@ mesh path
   -> compute footprint pitch from base_size_studs
   -> scale Y by 20/24 for brick-height LDraw proportions
   -> slice mesh into filled X/Z layer footprints
+  -> fall back to surface voxel fill for open or highly fragmented meshes
   -> polish voxel layers
   -> derive a Studio-style shell target from wall/base thickness
   -> tile each layer with Studio brick combinations using lower/upper attachment awareness
@@ -41,10 +42,11 @@ mesh path
 2. The mesh is oriented to Y-up.
 3. The Y axis is scaled by the LEGO brick ratio `20/24` before slicing.
 4. Each horizontal layer is filled from mesh cross-section contours.
-5. The target keeps the outer contour shell for each layer, then fully fills the configured bottom layers.
-6. Wall thickness and base thickness directly control the active target, matching Studio's sculpture import settings.
-7. Each layer is tiled exactly with the selected Studio sculpture brick set. Candidate layouts are selected with a lower/upper attachment check so a brick may be considered buildable when it connects to the layer below or to a later upper subassembly.
-8. `0 STEP` is inserted between layers.
+5. If the mesh is open and the slice result is sparse, surface voxelization with fill is used as a fallback.
+6. The target keeps the outer contour shell for each layer, then fully fills the configured bottom layers.
+7. Wall thickness and base thickness directly control the active target, matching Studio's sculpture import settings.
+8. Each layer is tiled exactly with the selected Studio sculpture brick set. Candidate layouts are selected with a lower/upper attachment check so a brick may be considered buildable when it connects to the layer below or to a later upper subassembly.
+9. `0 STEP` is inserted between layers.
 
 The active default is equivalent to Studio-like settings:
 

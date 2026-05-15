@@ -92,3 +92,4 @@ The report includes:
 - footprint/base-size report
 - stability summary
 - lower/upper attachment counts
+- selected voxelizer (`slice` or `surface`)
