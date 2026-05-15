@@ -93,3 +93,17 @@ The report includes:
 - stability summary
 - lower/upper attachment counts
 - selected voxelizer (`slice` or `surface`)
+- selected sculpture mode (`contour-shell` for closed slice output or `surface-detail` for fragmented open OBJ output)
+
+For vehicle-style OBJ files made from many open sub-meshes, start with:
+
+```bash
+python scripts/mesh_to_ldr.py \
+  --mesh car.obj \
+  --base-size-studs auto \
+  --wall-thickness 2 \
+  --base-thickness 3 \
+  --up-axis y \
+  --report outputs/reports/car_report.json \
+  --output outputs/ldr/car.ldr
+```

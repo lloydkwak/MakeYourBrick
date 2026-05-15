@@ -14,6 +14,7 @@ from makeyourbrick.sculpture import (
     SculptureSettings,
     VoxelModel,
     build_contour_shell_targets,
+    build_surface_detail_targets,
     catalog_for_palette,
     place_layered_bricks,
 )
@@ -101,7 +102,10 @@ def convert_mesh_to_ldr(
     }
     voxel_artifact = voxelize_mesh(mesh, voxel_output_path, pitch=pitch)
     occupancy, color_ids, _rgb, origin, loaded_pitch = load_voxel_artifact(voxel_output_path)
-    solid_occupancy = apply_voxel_smoothing(preprocess_solid_occupancy(occupancy), "polished")
+    if voxel_artifact.voxelizer == "surface":
+        solid_occupancy = occupancy.astype(bool)
+    else:
+        solid_occupancy = apply_voxel_smoothing(preprocess_solid_occupancy(occupancy), "polished")
     solid_colors = repair_sculpture_colors(occupancy, solid_occupancy, color_ids)
     solid_model = VoxelModel(
         solid_occupancy,
@@ -109,10 +113,13 @@ def convert_mesh_to_ldr(
         pitch=float(loaded_pitch),
         origin=tuple(float(value) for value in origin),
     )
-    targets = build_contour_shell_targets(
-        solid_model,
-        SculptureSettings(wall_thickness=wall_thickness, base_thickness=base_thickness),
-    )
+    sculpture_settings = SculptureSettings(wall_thickness=wall_thickness, base_thickness=base_thickness)
+    if voxel_artifact.voxelizer == "surface":
+        sculpture_mode = "surface-detail"
+        targets = build_surface_detail_targets(solid_model, sculpture_settings)
+    else:
+        sculpture_mode = "contour-shell"
+        targets = build_contour_shell_targets(solid_model, sculpture_settings)
     target_model = targets.target
     input_bricks = brickify_1x1(target_model.occupancy, target_model.color_ids)
     if debug_target_ldr_path is not None:
@@ -136,7 +143,7 @@ def convert_mesh_to_ldr(
                 optimizer="studio-layered",
                 brick_palette="studio",
                 sculpture={
-                    "mode": "contour-shell",
+                    "mode": sculpture_mode,
                     "wall_thickness": int(wall_thickness),
                     "base_thickness": int(base_thickness),
                     "color_strategy": "layer",
@@ -147,7 +154,7 @@ def convert_mesh_to_ldr(
                 stability=build_stability_report(
                     bricks,
                     target_model.shape,
-                    sculpture_mode="contour-shell",
+                    sculpture_mode=sculpture_mode,
                     wall_thickness=wall_thickness,
                     base_thickness=base_thickness,
                 ),

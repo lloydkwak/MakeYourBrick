@@ -17,8 +17,8 @@ mesh path
   -> scale Y by 20/24 for brick-height LDraw proportions
   -> slice mesh into filled X/Z layer footprints
   -> fall back to surface voxel fill for open or highly fragmented meshes
-  -> polish voxel layers
-  -> derive a Studio-style shell target from wall/base thickness
+  -> polish closed slice voxels, or preserve open surface voxels
+  -> derive a Studio-style shell target or an open-mesh detail target
   -> tile each layer with Studio brick combinations using lower/upper attachment awareness
   -> write .ldr and report.json
 ```
@@ -43,10 +43,11 @@ mesh path
 3. The Y axis is scaled by the LEGO brick ratio `20/24` before slicing.
 4. Each horizontal layer is filled from mesh cross-section contours.
 5. If the mesh is open and the slice result is sparse, surface voxelization with fill is used as a fallback.
-6. The target keeps the outer contour shell for each layer, then fully fills the configured bottom layers.
-7. Wall thickness and base thickness directly control the active target, matching Studio's sculpture import settings.
-8. Each layer is tiled exactly with the selected Studio sculpture brick set. Candidate layouts are selected with a lower/upper attachment check so a brick may be considered buildable when it connects to the layer below or to a later upper subassembly.
-9. `0 STEP` is inserted between layers.
+6. Closed slice output uses a contour-shell target: outer shell plus fully filled bottom layers.
+7. Open surface fallback output uses a surface-detail target: the recovered occupancy is preserved so seats, wheels, trims, and separated OBJ components are not erased by shell extraction.
+8. Wall thickness and base thickness directly control the closed sculpture target, matching Studio's sculpture import settings. For open surface-detail mode, the base mask is still reported, but the full recovered target is kept for detail.
+9. Each layer is tiled exactly with the selected Studio sculpture brick set. Candidate layouts are selected with a lower/upper attachment check so a brick may be considered buildable when it connects to the layer below or to a later upper subassembly.
+10. `0 STEP` is inserted between layers.
 
 The active default is equivalent to Studio-like settings:
 

@@ -54,3 +54,23 @@ def build_filled_layer_targets(model: VoxelModel, settings: SculptureSettings) -
         base=_mask_model(model, base_mask),
         target=_mask_model(model, solid_mask),
     )
+
+
+def build_surface_detail_targets(model: VoxelModel, settings: SculptureSettings) -> SculptureTargets:
+    """Preserve open-mesh surface voxel detail for vehicle-like assets.
+
+    The surface fallback is used when contour slicing is too sparse, which is
+    common for OBJ files made from many open sub-meshes. Running the normal
+    sculpture shell extraction after that removes small wheels, seats, trims,
+    and other interior components. This target keeps the complete recovered
+    surface occupancy while still reporting the configured base mask.
+    """
+
+    solid_mask = model.occupancy.astype(bool)
+    base_mask = base_fill_mask(solid_mask, settings.base_thickness)
+    return SculptureTargets(
+        solid=_mask_model(model, solid_mask),
+        shell=_mask_model(model, solid_mask),
+        base=_mask_model(model, base_mask),
+        target=_mask_model(model, solid_mask),
+    )

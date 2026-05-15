@@ -4,6 +4,7 @@ from makeyourbrick.sculpture.builder import (
     SculptureTargets,
     build_contour_shell_targets,
     build_filled_layer_targets,
+    build_surface_detail_targets,
 )
 from makeyourbrick.sculpture.catalog import BrickCatalog, catalog_for_palette
 from makeyourbrick.sculpture.model import LayeredBrickModel, SculptureSettings, VoxelModel
@@ -25,6 +26,7 @@ __all__ = [
     "assign_brick_colors_by_layer",
     "build_contour_shell_targets",
     "build_filled_layer_targets",
+    "build_surface_detail_targets",
     "catalog_for_palette",
     "layered_model_matches_target",
     "layered_model_occupancy",

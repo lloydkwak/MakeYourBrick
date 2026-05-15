@@ -18,6 +18,7 @@ from makeyourbrick.sculpture import (
     VoxelModel,
     build_contour_shell_targets,
     build_filled_layer_targets,
+    build_surface_detail_targets,
     catalog_for_palette,
     layered_model_matches_target,
     place_layered_bricks,
@@ -78,6 +79,22 @@ def test_filled_layer_target_keeps_the_complete_mesh_footprint() -> None:
     assert targets.shell.occupancy.sum() < targets.target.occupancy.sum()
 
 
+def test_surface_detail_target_preserves_internal_open_mesh_features() -> None:
+    occupancy = np.ones((9, 6, 9), dtype=bool)
+    occupancy[3:6, 3:5, 3:6] = False
+    occupancy[4, 4, 4] = True
+    colors = np.where(occupancy, 16, 0).astype(np.int32)
+    solid = VoxelModel(occupancy, colors, pitch=1.0, origin=(0.0, 0.0, 0.0))
+    targets = build_surface_detail_targets(
+        solid,
+        SculptureSettings(wall_thickness=2, base_thickness=3),
+    )
+
+    assert np.array_equal(targets.target.occupancy, occupancy)
+    assert targets.target.occupancy[4, 4, 4]
+    assert targets.base.occupancy[:, :3, :].sum() == occupancy[:, :3, :].sum()
+
+
 def test_mesh_to_ldr_cli_writes_studio_sculpture(tmp_path: Path) -> None:
     mesh_path = tmp_path / "box.obj"
     voxel_path = tmp_path / "box.npz"
@@ -124,7 +141,7 @@ def test_mesh_to_ldr_cli_writes_studio_sculpture(tmp_path: Path) -> None:
     assert report["brick_palette"] == "studio"
     assert report["sculpture"]["wall_thickness"] == 2
     assert report["sculpture"]["base_thickness"] == 3
-    assert report["sculpture"]["mode"] == "contour-shell"
+    assert report["sculpture"]["mode"] in {"contour-shell", "surface-detail"}
     assert report["sculpture"]["voxelizer"] in {"slice", "surface"}
     assert report["exact_cover"] is True
     assert report["missed_voxel_count"] == 0
