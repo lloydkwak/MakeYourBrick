@@ -312,6 +312,27 @@ def _tile_layer(
     return bricks
 
 
+def _candidate_support_score(bricks: list[Brick], support_occupancy: np.ndarray) -> tuple[int, int, float]:
+    floating = 0
+    unsupported = 0
+    support_area = 0
+    total_area = 0
+    for brick in bricks:
+        area = brick.width * brick.depth
+        total_area += area
+        if brick.y <= 0:
+            support_area += area
+            continue
+        support = int(support_occupancy[brick.x : brick.x + brick.width, brick.z : brick.z + brick.depth].sum())
+        support_area += support
+        if support == 0:
+            floating += 1
+        if support < area:
+            unsupported += 1
+    support_ratio = support_area / total_area if total_area else 1.0
+    return floating, unsupported, -support_ratio
+
+
 def run_length_layered_brickify(
     occupancy: np.ndarray,
     color_ids: np.ndarray,
@@ -322,11 +343,12 @@ def run_length_layered_brickify(
 
     _validate_voxel_inputs(occupancy, color_ids)
     bricks: list[Brick] = []
+    support_occupancy = np.zeros((occupancy.shape[0], occupancy.shape[2]), dtype=bool)
     for y in range(occupancy.shape[1]):
         layer = occupancy[:, y, :]
         if not layer.any():
             continue
-        candidates: list[tuple[tuple[int, int, int], list[Brick]]] = []
+        candidates: list[tuple[tuple[int, int, float, int, int], list[Brick]]] = []
         preferred_axis = "x" if y % 2 == 0 else "z"
         for axis in ("x", "z"):
             for pair_offset in (0, 1):
@@ -340,8 +362,11 @@ def run_length_layered_brickify(
                     allow_rotations=allow_rotations,
                 )
                 axis_penalty = 0 if axis == preferred_axis else 1
-                candidates.append(((len(layer_bricks), axis_penalty, pair_offset), layer_bricks))
-        bricks.extend(min(candidates, key=lambda item: item[0])[1])
+                floating, unsupported, support_score = _candidate_support_score(layer_bricks, support_occupancy)
+                candidates.append(((floating, unsupported, support_score, len(layer_bricks), axis_penalty), layer_bricks))
+        selected = min(candidates, key=lambda item: item[0])[1]
+        bricks.extend(selected)
+        support_occupancy = layer.copy()
     return bricks
 
 

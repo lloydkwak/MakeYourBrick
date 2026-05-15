@@ -215,6 +215,33 @@ def volume_shell_mask(occupancy: np.ndarray, wall_thickness: int) -> np.ndarray:
     return occupancy & ~interior
 
 
+def vertical_support_mask(
+    occupancy: np.ndarray,
+    target: np.ndarray,
+    *,
+    allow_external_supports: bool = False,
+) -> np.ndarray:
+    occupancy = occupancy.astype(bool)
+    supported = target.astype(bool) & (occupancy | bool(allow_external_supports))
+    supports = np.zeros_like(target, dtype=bool)
+    if occupancy.shape[1] < 2:
+        return supports
+
+    for y in range(1, occupancy.shape[1]):
+        unsupported = supported[:, y, :] & ~supported[:, y - 1, :]
+        for x, z in np.argwhere(unsupported):
+            sx = int(x)
+            sz = int(z)
+            for sy in range(y - 1, -1, -1):
+                if supported[sx, sy, sz]:
+                    break
+                if not occupancy[sx, sy, sz] and not allow_external_supports:
+                    break
+                supported[sx, sy, sz] = True
+                supports[sx, sy, sz] = True
+    return supports
+
+
 def base_fill_mask(occupancy: np.ndarray, base_thickness: int) -> np.ndarray:
     base = np.zeros_like(occupancy, dtype=bool)
     base[:, : min(base_thickness, occupancy.shape[1]), :] = occupancy[:, : min(base_thickness, occupancy.shape[1]), :]

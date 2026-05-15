@@ -21,6 +21,7 @@ from makeyourbrick.sculpture import (
     place_layered_bricks,
 )
 from makeyourbrick.types import Brick
+from makeyourbrick.voxel.sculpture import vertical_support_mask
 
 trimesh = pytest.importorskip("trimesh")
 
@@ -45,10 +46,11 @@ def test_studio_layered_placement_exactly_covers_base_and_shell() -> None:
     occupancy = np.ones((8, 8, 8), dtype=bool)
     colors = np.where(occupancy, 16, 0).astype(np.int32)
     solid = VoxelModel(occupancy, colors, pitch=1.0, origin=(0.0, 0.0, 0.0))
-    target = build_contour_shell_targets(
+    targets = build_contour_shell_targets(
         solid,
         SculptureSettings(wall_thickness=2, base_thickness=3),
-    ).target
+    )
+    target = targets.target
 
     model = place_layered_bricks(target, catalog_for_palette("studio"))
 
@@ -56,7 +58,7 @@ def test_studio_layered_placement_exactly_covers_base_and_shell() -> None:
     assert target.occupancy[:, 0, :].all()
     assert target.occupancy[:, 1, :].all()
     assert target.occupancy[:, 2, :].all()
-    assert not target.occupancy[3, 4, 3]
+    assert targets.supports.occupancy[3, 4, 3]
     assert {brick.color_id for brick in model.bricks_by_layer[0]} == {15}
     assert model.bricks_by_layer[0]
     assert np.array_equal(bricks_to_occupancy(model.bricks(), target.shape), target.occupancy)
@@ -74,6 +76,32 @@ def test_filled_layer_target_keeps_the_complete_mesh_footprint() -> None:
 
     assert np.array_equal(targets.target.occupancy, occupancy)
     assert targets.shell.occupancy.sum() < targets.target.occupancy.sum()
+
+
+def test_vertical_supports_are_added_inside_the_solid_volume() -> None:
+    solid = np.zeros((3, 4, 3), dtype=bool)
+    solid[1, :, 1] = True
+    target = np.zeros_like(solid)
+    target[1, 3, 1] = True
+
+    supports = vertical_support_mask(solid, target)
+
+    assert supports[1, 0, 1]
+    assert supports[1, 1, 1]
+    assert supports[1, 2, 1]
+    assert not supports[0, 2, 1]
+
+
+def test_external_vertical_supports_can_close_overhangs() -> None:
+    solid = np.zeros((3, 4, 3), dtype=bool)
+    target = np.zeros_like(solid)
+    target[1, 3, 1] = True
+
+    supports = vertical_support_mask(solid, target, allow_external_supports=True)
+
+    assert supports[1, 0, 1]
+    assert supports[1, 1, 1]
+    assert supports[1, 2, 1]
 
 
 def test_mesh_to_ldr_cli_writes_studio_sculpture(tmp_path: Path) -> None:
@@ -122,6 +150,7 @@ def test_mesh_to_ldr_cli_writes_studio_sculpture(tmp_path: Path) -> None:
     assert report["brick_palette"] == "studio"
     assert report["sculpture"]["wall_thickness"] == 2
     assert report["sculpture"]["base_thickness"] == 3
+    assert report["sculpture"]["support_voxel_count"] >= 0
     assert report["sculpture"]["mode"] == "contour-shell"
     assert report["exact_cover"] is True
     assert report["missed_voxel_count"] == 0

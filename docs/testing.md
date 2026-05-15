@@ -14,6 +14,7 @@ python -m pytest
 - contour-shell target creation
 - contour-shell helper mask creation
 - bottom layer filling
+- vertical support generation for overhangs
 - Studio brick-combination tiling
 - layer color sequence
 - mesh-to-LDR CLI smoke conversion

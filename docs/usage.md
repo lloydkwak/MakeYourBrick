@@ -91,3 +91,4 @@ The report includes:
 - orientation report
 - footprint/base-size report
 - stability summary
+- support voxel count
