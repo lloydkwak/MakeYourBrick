@@ -27,11 +27,11 @@ def brick_to_ldraw_matrix(brick: Brick) -> str:
     if rotation == 0:
         return "1 0 0 0 1 0 0 0 1"
     if rotation == 90:
-        return "0 0 1 0 1 0 -1 0 0"
+        return "0 0 -1 0 1 0 1 0 0"
     if rotation == 180:
         return "-1 0 0 0 1 0 0 0 -1"
     if rotation == 270:
-        return "0 0 -1 0 1 0 1 0 0"
+        return "0 0 1 0 1 0 -1 0 0"
     raise ValueError(f"Unsupported brick rotation: {brick.rotation_degrees}")
 
 

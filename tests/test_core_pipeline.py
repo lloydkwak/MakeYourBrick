@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 from makeyourbrick.brickify.optimizer import bricks_to_occupancy
+from makeyourbrick.io.ldr_writer import brick_to_ldr_line
 from makeyourbrick.sculpture import (
     SculptureSettings,
     VoxelModel,
@@ -19,21 +20,22 @@ from makeyourbrick.sculpture import (
     layered_model_matches_target,
     place_layered_bricks,
 )
+from makeyourbrick.types import Brick
 
 trimesh = pytest.importorskip("trimesh")
 
 
 def _brick_footprint(part_id: str) -> tuple[int, int]:
     return {
-        "3008.dat": (1, 8),
-        "3007.dat": (2, 8),
-        "3009.dat": (1, 6),
-        "2456.dat": (2, 6),
-        "3010.dat": (1, 4),
-        "3001.dat": (2, 4),
-        "3622.dat": (1, 3),
-        "3002.dat": (2, 3),
-        "3004.dat": (1, 2),
+        "3008.dat": (8, 1),
+        "3007.dat": (8, 2),
+        "3009.dat": (6, 1),
+        "2456.dat": (6, 2),
+        "3010.dat": (4, 1),
+        "3001.dat": (4, 2),
+        "3622.dat": (3, 1),
+        "3002.dat": (3, 2),
+        "3004.dat": (2, 1),
         "3003.dat": (2, 2),
         "3005.dat": (1, 1),
     }[part_id]
@@ -145,5 +147,13 @@ def test_mesh_to_ldr_cli_writes_studio_sculpture(tmp_path: Path) -> None:
 
 
 def test_ldr_part_dimensions_are_known_for_core_palette() -> None:
-    assert _brick_footprint("3007.dat") == (2, 8)
+    assert _brick_footprint("3007.dat") == (8, 2)
     assert _brick_footprint("3005.dat") == (1, 1)
+
+
+def test_ldraw_writer_uses_ldraw_default_part_axes() -> None:
+    horizontal = Brick(part_id="3010.dat", color_id=16, x=0, y=0, z=0, width=4, depth=1)
+    vertical = Brick(part_id="3010.dat", color_id=16, x=0, y=0, z=0, width=1, depth=4, rotation_degrees=90)
+
+    assert "30 0 0 1 0 0 0 1 0 0 0 1 3010.dat" in brick_to_ldr_line(horizontal)
+    assert "0 0 30 0 0 -1 0 1 0 1 0 0 3010.dat" in brick_to_ldr_line(vertical)

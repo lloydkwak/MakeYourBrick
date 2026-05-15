@@ -7,15 +7,15 @@ import numpy as np
 from makeyourbrick.types import Brick, BrickSpec
 
 STUDIO_SCULPTURE_BRICKS = (
-    BrickSpec("3010.dat", 1, 4),
-    BrickSpec("3001.dat", 2, 4),
-    BrickSpec("3008.dat", 1, 8),
-    BrickSpec("3009.dat", 1, 6),
-    BrickSpec("3622.dat", 1, 3),
-    BrickSpec("3004.dat", 1, 2),
-    BrickSpec("3002.dat", 2, 3),
-    BrickSpec("3007.dat", 2, 8),
-    BrickSpec("2456.dat", 2, 6),
+    BrickSpec("3010.dat", 4, 1),
+    BrickSpec("3001.dat", 4, 2),
+    BrickSpec("3008.dat", 8, 1),
+    BrickSpec("3009.dat", 6, 1),
+    BrickSpec("3622.dat", 3, 1),
+    BrickSpec("3004.dat", 2, 1),
+    BrickSpec("3002.dat", 3, 2),
+    BrickSpec("3007.dat", 8, 2),
+    BrickSpec("2456.dat", 6, 2),
     BrickSpec("3003.dat", 2, 2),
     BrickSpec("3005.dat", 1, 1),
 )
