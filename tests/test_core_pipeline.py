@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 from makeyourbrick.brickify.optimizer import bricks_to_occupancy
+from makeyourbrick.brickify.report import build_stability_report
 from makeyourbrick.io.ldr_writer import brick_to_ldr_line
 from makeyourbrick.sculpture import (
     SculptureSettings,
@@ -157,3 +158,15 @@ def test_ldraw_writer_uses_ldraw_default_part_axes() -> None:
 
     assert "30 0 0 1 0 0 0 1 0 0 0 1 3010.dat" in brick_to_ldr_line(horizontal)
     assert "0 0 30 0 0 -1 0 1 0 1 0 0 3010.dat" in brick_to_ldr_line(vertical)
+
+
+def test_stability_report_counts_top_attached_bricks() -> None:
+    lower = Brick(part_id="3005.dat", color_id=16, x=0, y=0, z=0, width=1, depth=1)
+    middle = Brick(part_id="3005.dat", color_id=16, x=1, y=1, z=0, width=1, depth=1)
+    upper = Brick(part_id="3004.dat", color_id=16, x=0, y=2, z=0, width=2, depth=1)
+
+    report = build_stability_report([lower, middle, upper], (2, 3, 1))
+
+    assert report["floating_brick_count"] == 1
+    assert report["top_attached_only_brick_count"] == 1
+    assert report["bidirectional_unattached_brick_count"] == 0

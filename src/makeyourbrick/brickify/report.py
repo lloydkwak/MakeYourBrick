@@ -95,6 +95,16 @@ def connected_component_sizes(occupancy: np.ndarray) -> list[int]:
     return sorted(sizes, reverse=True)
 
 
+def _brick_overlap_area(a: Brick, b: Brick) -> int:
+    overlap_x = min(a.x + a.width, b.x + b.width) - max(a.x, b.x)
+    overlap_z = min(a.z + a.depth, b.z + b.depth) - max(a.z, b.z)
+    return max(0, overlap_x) * max(0, overlap_z)
+
+
+def _has_neighbor(brick: Brick, candidates: list[Brick]) -> bool:
+    return any(_brick_overlap_area(brick, other) > 0 for other in candidates)
+
+
 def build_stability_report(
     bricks: list[Brick],
     occupancy_shape: tuple[int, int, int],
@@ -122,15 +132,30 @@ def build_stability_report(
             "base_thickness": int(base_thickness),
         }
     brick_occupancy = bricks_to_occupancy(bricks, occupancy_shape)
-    support_ratios = [
-        support_ratio_for_area(brick_occupancy, brick.x, brick.y, brick.z, brick.width, brick.depth)
-        for brick in bricks
-    ]
+    support_ratios = [support_ratio_for_area(brick_occupancy, brick.x, brick.y, brick.z, brick.width, brick.depth) for brick in bricks]
     seam_scores = [
         seam_overlap_ratio(bricks, brick.y, brick.x, brick.z, brick.width, brick.depth)
         for brick in bricks
         if brick.y > 0
     ]
+    by_layer: dict[int, list[Brick]] = {}
+    for brick in bricks:
+        by_layer.setdefault(int(brick.y), []).append(brick)
+    vertical_neighbor_count = 0
+    bidirectional_unattached = 0
+    top_attached_only = 0
+    bottom_attached = 0
+    for brick, ratio in zip(bricks, support_ratios):
+        lower_ok = brick.y <= 0 or ratio > 0.0
+        upper_ok = _has_neighbor(brick, by_layer.get(brick.y + 1, []))
+        if lower_ok:
+            bottom_attached += 1
+        elif upper_ok:
+            top_attached_only += 1
+        if lower_ok or upper_ok:
+            vertical_neighbor_count += 1
+        else:
+            bidirectional_unattached += 1
     unsupported = sum(1 for brick, ratio in zip(bricks, support_ratios) if brick.y > 0 and ratio < 1.0)
     floating = sum(1 for brick, ratio in zip(bricks, support_ratios) if brick.y > 0 and ratio == 0.0)
     low_support = sum(
@@ -146,6 +171,10 @@ def build_stability_report(
     return {
         "unsupported_brick_count": int(unsupported),
         "floating_brick_count": int(floating),
+        "bidirectional_unattached_brick_count": int(bidirectional_unattached),
+        "top_attached_only_brick_count": int(top_attached_only),
+        "bottom_attached_brick_count": int(bottom_attached),
+        "vertical_neighbor_brick_count": int(vertical_neighbor_count),
         "low_support_brick_count": int(low_support),
         "overhang_risk_brick_count": int(overhang_risk),
         "average_support_ratio": round(float(np.mean(support_ratios)), 4),

@@ -251,6 +251,7 @@ def _fill_stripe(
         primary = run_end
     return bricks
 
+
 def _tile_layer(
     layer_occupancy: np.ndarray,
     layer_colors: np.ndarray,
@@ -260,39 +261,48 @@ def _tile_layer(
     pair_offset: int,
     y: int,
     allow_rotations: bool,
+    span_order: tuple[int, ...] = (2, 1),
 ) -> list[Brick]:
     work_occupancy, work_colors = _work_arrays(layer_occupancy, layer_colors, axis)
     used = np.zeros(work_occupancy.shape, dtype=bool)
     specs_by_span = _run_specs_for_axis(brick_specs, axis=axis, allow_rotations=allow_rotations)
     bricks: list[Brick] = []
 
-    for secondary in range(pair_offset, work_occupancy.shape[1] - 1, 2):
-        bricks.extend(
-            _fill_stripe(
-                work_occupancy=work_occupancy,
-                work_colors=work_colors,
-                used=used,
-                axis=axis,
-                y=y,
-                secondary=secondary,
-                span=2,
-                specs=specs_by_span.get(2, []),
+    for span in span_order:
+        if span == 2:
+            secondary_values = range(pair_offset, work_occupancy.shape[1] - 1, 2)
+        elif span == 1:
+            secondary_values = range(work_occupancy.shape[1])
+        else:
+            continue
+        for secondary in secondary_values:
+            bricks.extend(
+                _fill_stripe(
+                    work_occupancy=work_occupancy,
+                    work_colors=work_colors,
+                    used=used,
+                    axis=axis,
+                    y=y,
+                    secondary=secondary,
+                    span=span,
+                    specs=specs_by_span.get(span, []),
+                )
             )
-        )
 
-    for secondary in range(work_occupancy.shape[1]):
-        bricks.extend(
-            _fill_stripe(
-                work_occupancy=work_occupancy,
-                work_colors=work_colors,
-                used=used,
-                axis=axis,
-                y=y,
-                secondary=secondary,
-                span=1,
-                specs=specs_by_span.get(1, []),
+    if 1 not in span_order:
+        for secondary in range(work_occupancy.shape[1]):
+            bricks.extend(
+                _fill_stripe(
+                    work_occupancy=work_occupancy,
+                    work_colors=work_colors,
+                    used=used,
+                    axis=axis,
+                    y=y,
+                    secondary=secondary,
+                    span=1,
+                    specs=specs_by_span.get(1, []),
+                )
             )
-        )
 
     for primary, secondary in np.argwhere(work_occupancy & ~used):
         color_id = int(work_colors[int(primary), int(secondary)])
@@ -312,6 +322,73 @@ def _tile_layer(
     return bricks
 
 
+def _overlap_area(a: Brick, b: Brick) -> int:
+    overlap_x = min(a.x + a.width, b.x + b.width) - max(a.x, b.x)
+    overlap_z = min(a.z + a.depth, b.z + b.depth) - max(a.z, b.z)
+    return max(0, overlap_x) * max(0, overlap_z)
+
+
+def _has_vertical_neighbor(brick: Brick, neighbors: list[Brick]) -> bool:
+    return any(_overlap_area(brick, other) > 0 for other in neighbors)
+
+
+def _candidate_key(bricks: list[Brick]) -> tuple[tuple[str, int, int, int, int, int], ...]:
+    return tuple(sorted((brick.part_id, brick.x, brick.y, brick.z, brick.width, brick.depth) for brick in bricks))
+
+
+def _layer_tiling_candidates(
+    layer: np.ndarray,
+    layer_colors: np.ndarray,
+    brick_specs: tuple[BrickSpec, ...],
+    *,
+    y: int,
+    preferred_axis: str,
+    allow_rotations: bool,
+) -> list[tuple[tuple[int, int, int], list[Brick]]]:
+    candidates: list[tuple[tuple[int, int, int], list[Brick]]] = []
+    seen: set[tuple[tuple[str, int, int, int, int, int], ...]] = set()
+    for axis in ("x", "z"):
+        axis_penalty = 0 if axis == preferred_axis else 1
+        for span_order_index, span_order in enumerate(((2, 1), (1, 2))):
+            pair_offsets = (0, 1) if 2 in span_order and span_order[0] == 2 else (0,)
+            for pair_offset in pair_offsets:
+                layer_bricks = _tile_layer(
+                    layer,
+                    layer_colors,
+                    brick_specs,
+                    axis=axis,
+                    pair_offset=pair_offset,
+                    y=y,
+                    allow_rotations=allow_rotations,
+                    span_order=span_order,
+                )
+                key = _candidate_key(layer_bricks)
+                if key in seen:
+                    continue
+                seen.add(key)
+                candidates.append(((len(layer_bricks), axis_penalty, span_order_index), layer_bricks))
+    return candidates
+
+
+def _support_flags_from_lower(bricks: list[Brick], lower: list[Brick], *, y: int) -> list[bool]:
+    if y <= 0:
+        return [True for _ in bricks]
+    return [_has_vertical_neighbor(brick, lower) for brick in bricks]
+
+
+def _support_flags_from_upper(bricks: list[Brick], upper: list[Brick]) -> list[bool]:
+    return [_has_vertical_neighbor(brick, upper) for brick in bricks]
+
+
+def _future_upper_possible(bricks: list[Brick], next_candidates: list[list[Brick]]) -> list[bool]:
+    if not next_candidates:
+        return [False for _ in bricks]
+    possible: list[bool] = []
+    for brick in bricks:
+        possible.append(any(_has_vertical_neighbor(brick, candidate) for candidate in next_candidates))
+    return possible
+
+
 def run_length_layered_brickify(
     occupancy: np.ndarray,
     color_ids: np.ndarray,
@@ -322,26 +399,76 @@ def run_length_layered_brickify(
 
     _validate_voxel_inputs(occupancy, color_ids)
     bricks: list[Brick] = []
+    previous_bricks: list[Brick] = []
+    previous_support_from_lower: list[bool] = []
+    previous_y: int | None = None
     for y in range(occupancy.shape[1]):
         layer = occupancy[:, y, :]
         if not layer.any():
+            previous_bricks = []
+            previous_support_from_lower = []
+            previous_y = None
             continue
-        candidates: list[tuple[tuple[int, int, int], list[Brick]]] = []
         preferred_axis = "x" if y % 2 == 0 else "z"
-        for axis in ("x", "z"):
-            for pair_offset in (0, 1):
-                layer_bricks = _tile_layer(
-                    layer,
-                    color_ids[:, y, :],
+        candidates = _layer_tiling_candidates(
+            layer,
+            color_ids[:, y, :],
+            brick_specs,
+            y=y,
+            preferred_axis=preferred_axis,
+            allow_rotations=allow_rotations,
+        )
+        next_candidates: list[list[Brick]] = []
+        if y + 1 < occupancy.shape[1] and occupancy[:, y + 1, :].any():
+            next_preferred_axis = "x" if (y + 1) % 2 == 0 else "z"
+            next_candidates = [
+                candidate
+                for _score, candidate in _layer_tiling_candidates(
+                    occupancy[:, y + 1, :],
+                    color_ids[:, y + 1, :],
                     brick_specs,
-                    axis=axis,
-                    pair_offset=pair_offset,
-                    y=y,
+                    y=y + 1,
+                    preferred_axis=next_preferred_axis,
                     allow_rotations=allow_rotations,
                 )
-                axis_penalty = 0 if axis == preferred_axis else 1
-                candidates.append(((len(layer_bricks), axis_penalty, pair_offset), layer_bricks))
-        bricks.extend(min(candidates, key=lambda item: item[0])[1])
+            ]
+
+        scored_candidates: list[tuple[tuple[int, int, int, int, int, int], list[Brick], list[bool]]] = []
+        lower = previous_bricks if previous_y == y - 1 else []
+        for base_score, candidate in candidates:
+            support_from_lower = _support_flags_from_lower(candidate, lower, y=y)
+            support_from_upper = _future_upper_possible(candidate, next_candidates)
+            previous_support_from_upper = (
+                _support_flags_from_upper(previous_bricks, candidate) if previous_y == y - 1 else []
+            )
+            previous_unattached = sum(
+                1
+                for lower_ok, upper_ok in zip(previous_support_from_lower, previous_support_from_upper)
+                if not lower_ok and not upper_ok
+            )
+            current_no_neighbor_possible = sum(
+                1 for lower_ok, upper_ok in zip(support_from_lower, support_from_upper) if not lower_ok and not upper_ok
+            )
+            current_no_lower = sum(1 for value in support_from_lower if not value)
+            scored_candidates.append(
+                (
+                    (
+                        previous_unattached,
+                        current_no_neighbor_possible,
+                        current_no_lower,
+                        base_score[0],
+                        base_score[1],
+                        base_score[2],
+                    ),
+                    candidate,
+                    support_from_lower,
+                )
+            )
+
+        _score, selected, previous_support_from_lower = min(scored_candidates, key=lambda item: item[0])
+        bricks.extend(selected)
+        previous_bricks = selected
+        previous_y = y
     return bricks
 
 

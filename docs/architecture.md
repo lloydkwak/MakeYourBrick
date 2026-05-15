@@ -18,7 +18,7 @@ mesh path
   -> slice mesh into filled X/Z layer footprints
   -> polish voxel layers
   -> derive a Studio-style shell target from wall/base thickness
-  -> tile each layer with Studio brick combinations
+  -> tile each layer with Studio brick combinations using lower/upper attachment awareness
   -> write .ldr and report.json
 ```
 
@@ -43,7 +43,7 @@ mesh path
 4. Each horizontal layer is filled from mesh cross-section contours.
 5. The target keeps the outer contour shell for each layer, then fully fills the configured bottom layers.
 6. Wall thickness and base thickness directly control the active target, matching Studio's sculpture import settings.
-7. Each layer is tiled exactly with the selected Studio sculpture brick set.
+7. Each layer is tiled exactly with the selected Studio sculpture brick set. Candidate layouts are selected with a lower/upper attachment check so a brick may be considered buildable when it connects to the layer below or to a later upper subassembly.
 8. `0 STEP` is inserted between layers.
 
 The active default is equivalent to Studio-like settings:
