@@ -16,7 +16,7 @@ Options:
 
 - `--mesh`: input OBJ/STL or any Trimesh-loadable triangle mesh
 - `--base-size-studs`: maximum horizontal footprint in studs
-- `--wall-thickness`: contour wall thickness in studs
+- `--wall-thickness`: retained Studio setting for hollow-mode/reporting work
 - `--base-thickness`: number of bottom layers to fill completely
 - `--up-axis`: `auto`, `none`, `x`, `y`, or `z`
 - `--voxels`: optional `.npz` voxel artifact path

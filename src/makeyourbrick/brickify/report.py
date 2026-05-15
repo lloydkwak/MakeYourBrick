@@ -30,12 +30,19 @@ def build_brick_report(
     output_count = len(output_bricks)
     reduction_count = input_count - output_count
     reduction_percent = (reduction_count / input_count * 100.0) if input_count else 0.0
+    brick_occupancy = bricks_to_occupancy(output_bricks, occupancy.shape)
+    missed_voxels = occupancy & ~brick_occupancy
+    overflow_voxels = brick_occupancy & ~occupancy
     report = {
         "optimized": bool(optimized),
         "optimizer": optimizer,
         "brick_palette": brick_palette,
         "occupancy_shape": [int(value) for value in occupancy.shape],
         "occupied_voxel_count": int(occupancy.sum()),
+        "covered_voxel_count": int((occupancy & brick_occupancy).sum()),
+        "missed_voxel_count": int(missed_voxels.sum()),
+        "overflow_voxel_count": int(overflow_voxels.sum()),
+        "exact_cover": bool(not missed_voxels.any() and not overflow_voxels.any()),
         "input_brick_count": int(input_count),
         "output_brick_count": int(output_count),
         "reduction_count": int(reduction_count),

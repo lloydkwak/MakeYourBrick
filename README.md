@@ -9,7 +9,7 @@ image or mesh
   -> triangle mesh (.obj preferred)
   -> Y-up orientation
   -> base-size layer slicing
-  -> contour shell + filled bottom layers
+  -> filled layer footprint target
   -> Studio brick-combination tiling
   -> layer-colored LDraw output
 ```
@@ -21,8 +21,8 @@ Implemented and kept:
 - OBJ/STL mesh loading through Trimesh
 - optional SAM 3D command runner that must export a triangle mesh
 - Studio-like base-size scaling
-- layer-slice voxelization
-- wall thickness and bottom thickness
+- layer-slice voxelization with filled X/Z footprints
+- bottom thickness and retained wall-thickness metadata for hollow-mode work
 - Studio sculpture brick set: `1x2`, `1x3`, `1x4`, `1x6`, `1x8`, `2x2`, `2x3`, `2x4`, `2x6`, `2x8`
 - layer color sequence observed from Studio output: `15, 3, 2, 19, 20, 27, 13, 1`
 - LDraw `0 STEP` output by layer

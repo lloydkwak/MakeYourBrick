@@ -17,8 +17,7 @@ mesh path
   -> scale Y by 20/24 for brick-height LDraw proportions
   -> slice mesh into filled X/Z layer footprints
   -> polish voxel layers
-  -> build contour shell target
-  -> fill bottom base_thickness layers
+  -> keep the complete filled layer footprint as the target
   -> tile each layer with Studio brick combinations
   -> write .ldr and report.json
 ```
@@ -30,7 +29,7 @@ mesh path
 - `src/makeyourbrick/mesh/solidify.py`: Trimesh loading and scene flattening
 - `src/makeyourbrick/mesh/orient.py`: source up-axis handling
 - `src/makeyourbrick/voxel/voxelize.py`: layer-slice voxelization
-- `src/makeyourbrick/voxel/sculpture.py`: layer cleanup, contour shell, base fill
+- `src/makeyourbrick/voxel/sculpture.py`: layer cleanup, shell/base helper masks
 - `src/makeyourbrick/sculpture/`: target mask building and layer placement
 - `src/makeyourbrick/brickify/optimizer.py`: Studio brick-combination tiler
 - `src/makeyourbrick/io/ldr_writer.py`: LDraw output
@@ -42,8 +41,8 @@ mesh path
 2. The mesh is oriented to Y-up.
 3. The Y axis is scaled by the LEGO brick ratio `20/24` before slicing.
 4. Each horizontal layer is filled from mesh cross-section contours.
-5. The target keeps only the configured contour wall thickness.
-6. The bottom `base_thickness` layers are completely filled.
+5. The target keeps the complete filled footprint for every layer.
+6. Wall thickness and base thickness are still reported and available for hollow-mode work, but the active default prioritizes matching the mesh volume without artificial holes.
 7. Each layer is tiled exactly with the selected Studio sculpture brick set.
 8. `0 STEP` is inserted between layers.
 

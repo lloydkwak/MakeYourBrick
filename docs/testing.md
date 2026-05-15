@@ -11,7 +11,8 @@ python -m pytest
 
 ## Covered
 
-- contour-shell target creation
+- filled layer target creation
+- contour-shell helper mask creation
 - bottom layer filling
 - Studio brick-combination tiling
 - layer color sequence

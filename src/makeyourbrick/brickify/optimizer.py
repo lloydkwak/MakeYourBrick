@@ -314,7 +314,7 @@ def run_length_layered_brickify(
         layer = occupancy[:, y, :]
         if not layer.any():
             continue
-        candidates: list[tuple[tuple[int, int, int], list[Brick]]] = []
+        candidates: list[tuple[tuple[int, int], list[Brick]]] = []
         preferred_axis = "x" if y % 2 == 0 else "z"
         for axis in ("x", "z"):
             for pair_offset in (0, 1):
@@ -327,9 +327,8 @@ def run_length_layered_brickify(
                     y=y,
                     allow_rotations=allow_rotations,
                 )
-                area_score = sum((brick.width * brick.depth) ** 2 for brick in layer_bricks)
                 axis_penalty = 0 if axis == preferred_axis else 1
-                candidates.append(((len(layer_bricks), -area_score, axis_penalty), layer_bricks))
+                candidates.append(((axis_penalty, pair_offset), layer_bricks))
         bricks.extend(min(candidates, key=lambda item: item[0])[1])
     return bricks
 

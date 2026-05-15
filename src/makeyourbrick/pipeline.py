@@ -13,7 +13,7 @@ from makeyourbrick.mesh.solidify import load_mesh
 from makeyourbrick.sculpture import (
     SculptureSettings,
     VoxelModel,
-    build_contour_shell_targets,
+    build_filled_layer_targets,
     catalog_for_palette,
     place_layered_bricks,
 )
@@ -103,7 +103,7 @@ def convert_mesh_to_ldr(
         pitch=float(loaded_pitch),
         origin=tuple(float(value) for value in origin),
     )
-    targets = build_contour_shell_targets(
+    targets = build_filled_layer_targets(
         solid_model,
         SculptureSettings(wall_thickness=wall_thickness, base_thickness=base_thickness),
     )
@@ -122,7 +122,7 @@ def convert_mesh_to_ldr(
                 optimizer="studio-layered",
                 brick_palette="studio",
                 sculpture={
-                    "mode": "contour-shell",
+                    "mode": "filled-layer",
                     "wall_thickness": int(wall_thickness),
                     "base_thickness": int(base_thickness),
                     "color_strategy": "layer",
@@ -133,7 +133,7 @@ def convert_mesh_to_ldr(
                 stability=build_stability_report(
                     bricks,
                     target_model.shape,
-                    sculpture_mode="contour-shell",
+                    sculpture_mode="filled-layer",
                     wall_thickness=wall_thickness,
                     base_thickness=base_thickness,
                 ),
