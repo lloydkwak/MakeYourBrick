@@ -19,7 +19,10 @@ def scene_to_mesh(scene) -> object:
     if isinstance(scene, tm.Trimesh):
         return scene
     if isinstance(scene, tm.Scene):
-        meshes = [geometry for geometry in scene.geometry.values() if isinstance(geometry, tm.Trimesh)]
+        geometry = scene.to_geometry()
+        if isinstance(geometry, tm.Trimesh):
+            return geometry
+        meshes = [geometry for geometry in scene.dump() if isinstance(geometry, tm.Trimesh)]
         if not meshes:
             raise ValueError("Scene does not contain mesh geometry.")
         return tm.util.concatenate(meshes)

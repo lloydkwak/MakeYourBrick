@@ -58,7 +58,7 @@ python scripts/mesh_to_ldr.py \
 
 ## Image To LDraw
 
-`image_to_ldr.py` expects a SAM command that writes a Trimesh-loadable mesh to `{output}`.
+`image_to_ldr.py` expects a SAM command that writes a Trimesh-loadable mesh to `{output}`. For SAM 3D Objects, prefer a textured `.glb` so UV texture colour survives the handoff.
 
 ```bash
 python scripts/image_to_ldr.py \
@@ -67,6 +67,7 @@ python scripts/image_to_ldr.py \
   --sam-repo third_party/sam-3d-objects \
   --sam-command "python your_sam_export.py --image {image} --mask {mask} --output {output}" \
   --base-size-studs 32 \
+  --color-strategy mesh \
   --wall-thickness 2 \
   --base-thickness 3 \
   --report outputs/reports/image_report.json \

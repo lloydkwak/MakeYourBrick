@@ -17,6 +17,7 @@ No package installation or dev server is required for this milestone.
 - translucent mock mask overlay
 - selection payload preview in image coordinates
 - LEGO conversion settings preview
+- mesh or layer color strategy selection
 - JSON export for the selection/config payload
 - optional backend image/selection sync
 - backend pipeline job execution
@@ -24,7 +25,7 @@ No package installation or dev server is required for this milestone.
 
 ## Scope
 
-This shell does not run real segmentation in the browser. `Run Conversion` calls the local FastAPI job endpoint. By default the backend uses a fake SAM mesh for local development; when the backend is configured with `MAKEYOURBRICK_RUNNER_MODE=sam3d`, the same UI flow sends the selected mask id to the real SAM command path.
+This shell does not run real segmentation in the browser. `Run Conversion` calls the local FastAPI job endpoint. By default the backend uses a fake SAM mesh for local development; when the backend is configured with `MAKEYOURBRICK_RUNNER_MODE=sam3d`, the same UI flow sends the selected mask id to the real SAM command path. Mesh color mode is the expected path for textured SAM GLB output.
 
 ## Backend Workflow
 

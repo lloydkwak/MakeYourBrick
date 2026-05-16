@@ -14,7 +14,7 @@ python scripts/mesh_to_ldr.py \
 
 Options:
 
-- `--mesh`: input OBJ/STL or any Trimesh-loadable triangle mesh
+- `--mesh`: input OBJ/GLB/STL or any Trimesh-loadable triangle mesh
 - `--base-size-studs`: maximum horizontal footprint in studs, or `auto` to choose from 16/24/32/48/64 using mesh proportions and complexity
 - `--wall-thickness`: shell wall width in studs
 - `--base-thickness`: number of bottom layers to fill completely
@@ -38,6 +38,7 @@ python scripts/image_to_ldr.py \
   --base-size-studs 32 \
   --wall-thickness 2 \
   --base-thickness 3 \
+  --color-strategy mesh \
   --report outputs/reports/image_report.json \
   --output outputs/ldr/image_output.ldr
 ```
@@ -103,6 +104,8 @@ LDraw palette in CIELAB space and stores the chosen LDraw color IDs in the
 voxel artifact. In `--color-strategy mesh`, brick placement is color-boundary
 aware: one brick is placed only when its full footprint has one quantized LDraw
 color ID.
+For SAM 3D Objects integration, prefer a textured `.glb` raw mesh so geometry,
+UVs, material, and texture image stay together.
 
 For vehicle-style OBJ files made from many open sub-meshes, start with:
 

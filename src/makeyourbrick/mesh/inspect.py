@@ -27,6 +27,9 @@ def _empty_report(mesh_path: Path) -> dict[str, Any]:
         "has_vertex_colors": False,
         "has_face_colors": False,
         "has_texture_hint": False,
+        "has_texture_image": False,
+        "has_material_diffuse": False,
+        "color_source": "none",
         "voxelization_ready": False,
         "warnings": [],
         "errors": [],
@@ -56,9 +59,22 @@ def _inspect_trimesh(mesh: object, report: dict[str, Any]) -> None:
     visual = getattr(mesh, "visual", None)
     vertex_colors = getattr(visual, "vertex_colors", None)
     face_colors = getattr(visual, "face_colors", None)
+    material = getattr(visual, "material", None)
+    texture_image = getattr(material, "image", None)
+    material_diffuse = getattr(material, "diffuse", None)
     report["has_vertex_colors"] = bool(vertex_colors is not None and len(vertex_colors) == len(vertices))
     report["has_face_colors"] = bool(face_colors is not None and len(face_colors) == len(faces))
-    report["has_texture_hint"] = bool(getattr(visual, "material", None) is not None)
+    report["has_texture_hint"] = bool(material is not None)
+    report["has_texture_image"] = bool(texture_image is not None)
+    report["has_material_diffuse"] = bool(material_diffuse is not None)
+    if report["has_texture_image"]:
+        report["color_source"] = "texture"
+    elif report["has_vertex_colors"]:
+        report["color_source"] = "vertex"
+    elif report["has_face_colors"]:
+        report["color_source"] = "face"
+    elif report["has_material_diffuse"]:
+        report["color_source"] = "material"
 
     if report["vertex_count"] == 0:
         report["errors"].append("Mesh has no vertices.")
@@ -94,13 +110,17 @@ def inspect_mesh(mesh_path: Path) -> dict[str, Any]:
     if isinstance(loaded, trimesh.Trimesh):
         _inspect_trimesh(loaded, report)
     elif isinstance(loaded, trimesh.Scene):
-        meshes = [geometry for geometry in loaded.geometry.values() if isinstance(geometry, trimesh.Trimesh)]
+        meshes = [geometry for geometry in loaded.dump() if isinstance(geometry, trimesh.Trimesh)]
         report["asset_type"] = "scene"
         report["geometry_count"] = len(loaded.geometry)
         if not meshes:
             report["errors"].append("Scene does not contain triangle mesh geometry.")
             return report
-        _inspect_trimesh(trimesh.util.concatenate(meshes), report)
+        geometry = loaded.to_geometry()
+        if isinstance(geometry, trimesh.Trimesh):
+            _inspect_trimesh(geometry, report)
+        else:
+            _inspect_trimesh(trimesh.util.concatenate(meshes), report)
         report["asset_type"] = "scene"
         report["geometry_count"] = len(meshes)
     elif hasattr(trimesh.points, "PointCloud") and isinstance(loaded, trimesh.points.PointCloud):

@@ -7,10 +7,10 @@ MakeYourBrick has been reduced to one core Studio-like sculpture pipeline.
 ```text
 image path
   -> Sam3DRunner command
-  -> raw triangle mesh
+  -> raw triangle mesh, preferably textured GLB
   -> convert_mesh_to_ldr()
 
-mesh path
+mesh path (OBJ/GLB/STL, with GLB preferred for SAM texture output)
   -> load_mesh()
   -> orient_mesh_to_y_up()
   -> compute footprint pitch from base_size_studs, optionally auto-selected from mesh complexity
@@ -29,7 +29,7 @@ mesh path
 
 - `src/makeyourbrick/pipeline.py`: orchestration for mesh and image conversion
 - `src/makeyourbrick/ai/sam3d_runner.py`: external SAM command contract
-- `src/makeyourbrick/mesh/solidify.py`: Trimesh loading and scene flattening
+- `src/makeyourbrick/mesh/solidify.py`: Trimesh loading and transformed scene flattening
 - `src/makeyourbrick/mesh/orient.py`: source up-axis handling
 - `src/makeyourbrick/voxel/voxelize.py`: layer-slice voxelization
 - `src/makeyourbrick/voxel/sculpture.py`: layer cleanup, shell/base helper masks
@@ -45,7 +45,7 @@ mesh path
 3. The Y axis is scaled by the LEGO brick ratio `20/24` before slicing.
 4. Each horizontal layer is filled from mesh cross-section contours.
 5. If the mesh is open and the slice result is sparse, surface voxelization with fill is used as a fallback.
-6. Mesh vertex, face, UV texture, or material diffuse colours are sampled at occupied voxel centers and quantized to solid LDraw colours in CIELAB space.
+6. Mesh vertex, face, UV texture, or material diffuse colours are sampled at occupied voxel centers and quantized to solid LDraw colours in CIELAB space. Textured GLB is the preferred SAM handoff format because it keeps mesh geometry, UVs, material, and texture image in one artifact.
 7. Closed slice output uses a contour-shell target: outer shell plus fully filled bottom layers.
 8. Open surface fallback output uses a surface-detail target: the recovered occupancy is preserved so seats, wheels, trims, and separated OBJ components are not erased by shell extraction.
 9. Wall thickness and base thickness directly control the closed sculpture target, matching Studio's sculpture import settings. For open surface-detail mode, the base mask is still reported, but the full recovered target is kept for detail.
@@ -59,7 +59,7 @@ The active default is equivalent to Studio-like settings:
 base_size_studs: 32
 wall_thickness: 2
 base_thickness: 3
-coloring: by layer
+coloring: mesh for image/SAM conversion, by layer for Studio-style debug output
 up_axis: auto
 ```
 

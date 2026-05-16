@@ -45,6 +45,7 @@ class JobRequest(BaseModel):
     wall_thickness: int = Field(default=2, ge=1, le=16)
     base_thickness: int = Field(default=3, ge=0, le=64)
     up_axis: Literal["auto", "none", "x", "y", "z"] = "auto"
+    color_strategy: Literal["layer", "mesh"] = "mesh"
 
 
 class JobStatusResponse(BaseModel):

@@ -17,6 +17,7 @@ const apiBaseUrl = document.querySelector("#apiBaseUrl");
 const baseSizeStuds = document.querySelector("#baseSizeStuds");
 const wallThickness = document.querySelector("#wallThickness");
 const baseThickness = document.querySelector("#baseThickness");
+const colorStrategy = document.querySelector("#colorStrategy");
 const exportButton = document.querySelector("#exportButton");
 const syncButton = document.querySelector("#syncButton");
 const runButton = document.querySelector("#runButton");
@@ -299,6 +300,7 @@ function buildPayload() {
       wall_thickness: Number(wallThickness.value),
       base_thickness: Number(baseThickness.value),
       up_axis: "auto",
+      color_strategy: colorStrategy.value,
       steps_by_layer: true,
     },
     job: {
@@ -502,7 +504,7 @@ dropZone.addEventListener("drop", (event) => {
   loadFile(event.dataTransfer.files[0]);
 });
 
-for (const input of [apiBaseUrl, baseSizeStuds, wallThickness, baseThickness]) {
+for (const input of [apiBaseUrl, baseSizeStuds, wallThickness, baseThickness, colorStrategy]) {
   input.addEventListener("change", updatePayload);
 }
 
@@ -683,6 +685,7 @@ runButton.addEventListener("click", async () => {
         wall_thickness: payload.lego.wall_thickness,
         base_thickness: payload.lego.base_thickness,
         up_axis: payload.lego.up_axis,
+        color_strategy: payload.lego.color_strategy,
       }),
     });
     if (!response.ok) throw new Error(`Job creation failed: ${response.status}`);

@@ -21,6 +21,8 @@ python -m pytest
 - CIELAB LDraw colour quantization
 - mesh colour strategy brick placement
 - mesh colour boundary preservation during brick placement
+- GLB scene transform preservation
+- mesh inspection colour source reporting
 - mesh-to-LDR CLI smoke conversion
 - all-1x1 target debug output
 - open mesh surface voxel fallback

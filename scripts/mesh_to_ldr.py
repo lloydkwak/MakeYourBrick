@@ -16,8 +16,8 @@ from makeyourbrick.pipeline import (
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Convert an OBJ/STL mesh to a Studio-like LDraw sculpture.")
-    parser.add_argument("--mesh", type=Path, required=True, help="Input OBJ/STL mesh path.")
+    parser = argparse.ArgumentParser(description="Convert an OBJ/GLB/STL mesh to a Studio-like LDraw sculpture.")
+    parser.add_argument("--mesh", type=Path, required=True, help="Input OBJ/GLB/STL mesh path.")
     parser.add_argument(
         "--base-size-studs",
         default=str(DEFAULT_BASE_SIZE_STUDS),

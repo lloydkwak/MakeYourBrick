@@ -8,13 +8,17 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from PIL import Image
 
+from makeyourbrick.ai.fake_runner import FakeSamMeshRunner
 from makeyourbrick.brickify.attachments import add_attachment_plates
 from makeyourbrick.brickify.colors import quantize_rgb_to_ldraw
 from makeyourbrick.brickify.optimizer import bricks_to_occupancy
 from makeyourbrick.brickify.report import build_stability_report
 from makeyourbrick.io.ldr_writer import brick_to_ldr_line
-from makeyourbrick.pipeline import convert_mesh_to_ldr
+from makeyourbrick.mesh.inspect import inspect_mesh
+from makeyourbrick.mesh.solidify import load_mesh
+from makeyourbrick.pipeline import convert_mesh_to_ldr, run_from_image
 from makeyourbrick.sculpture import (
     SculptureSettings,
     VoxelModel,
@@ -250,3 +254,56 @@ def test_auto_base_size_records_selected_size(tmp_path: Path) -> None:
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["footprint_scale"]["requested_base_size_studs"] == "auto"
     assert report["footprint_scale"]["base_size_studs"] in {16, 24, 32, 48, 64}
+
+
+def test_glb_scene_loading_applies_node_transforms(tmp_path: Path) -> None:
+    mesh_path = tmp_path / "translated.glb"
+    mesh = trimesh.creation.box(extents=(1.0, 1.0, 1.0))
+    scene = trimesh.Scene()
+    scene.add_geometry(mesh, transform=trimesh.transformations.translation_matrix((5.0, 0.0, 0.0)))
+    scene.export(mesh_path)
+
+    loaded = load_mesh(mesh_path)
+
+    assert loaded.bounds[0, 0] == pytest.approx(4.5)
+    assert loaded.bounds[1, 0] == pytest.approx(5.5)
+
+
+def test_mesh_inspection_reports_glb_vertex_color_source(tmp_path: Path) -> None:
+    mesh_path = tmp_path / "colored.glb"
+    mesh = trimesh.creation.box(extents=(1.0, 1.0, 1.0))
+    mesh.visual.vertex_colors = np.tile(np.asarray([[255, 0, 0, 255]], dtype=np.uint8), (len(mesh.vertices), 1))
+    mesh.export(mesh_path)
+
+    report = inspect_mesh(mesh_path)
+
+    assert report["load_status"] == "loaded"
+    assert report["asset_type"] == "scene"
+    assert report["has_vertex_colors"] is True
+    assert report["color_source"] == "vertex"
+
+
+def test_image_runner_accepts_glb_raw_mesh_and_mesh_colors(tmp_path: Path) -> None:
+    image_path = tmp_path / "input.png"
+    raw_mesh_path = tmp_path / "raw_model.glb"
+    voxel_path = tmp_path / "model_voxels.npz"
+    ldr_path = tmp_path / "output.ldr"
+    report_path = tmp_path / "report.json"
+    Image.new("RGB", (16, 16), (255, 255, 255)).save(image_path)
+
+    run_from_image(
+        image_path=image_path,
+        runner=FakeSamMeshRunner(),
+        raw_mesh_path=raw_mesh_path,
+        voxel_output_path=voxel_path,
+        ldr_output_path=ldr_path,
+        report_path=report_path,
+        base_size_studs=8,
+        color_strategy="mesh",
+    )
+
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert raw_mesh_path.exists()
+    assert raw_mesh_path.suffix == ".glb"
+    assert report["sculpture"]["color_strategy"] == "mesh"
+    assert report["color_counts"]
