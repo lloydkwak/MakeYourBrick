@@ -20,6 +20,7 @@ python -m pytest
 - layer color sequence
 - CIELAB LDraw colour quantization
 - mesh colour strategy brick placement
+- mesh colour boundary preservation during brick placement
 - mesh-to-LDR CLI smoke conversion
 - all-1x1 target debug output
 - open mesh surface voxel fallback

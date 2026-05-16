@@ -17,7 +17,7 @@ mesh path
   -> scale Y by 20/24 for brick-height LDraw proportions
   -> slice mesh into filled X/Z layer footprints
   -> fall back to surface voxel fill for open or highly fragmented meshes
-  -> sample mesh vertex/face colour and quantize to solid LDraw colours
+  -> sample mesh vertex/face/texture/material colour and quantize to solid LDraw colours
   -> polish closed slice voxels, or preserve open surface voxels
   -> derive a Studio-style shell target or an open-mesh detail target
   -> tile each layer with Studio brick combinations using lower/upper attachment awareness
@@ -45,11 +45,11 @@ mesh path
 3. The Y axis is scaled by the LEGO brick ratio `20/24` before slicing.
 4. Each horizontal layer is filled from mesh cross-section contours.
 5. If the mesh is open and the slice result is sparse, surface voxelization with fill is used as a fallback.
-6. Mesh vertex/face colours are sampled at occupied voxel centers and quantized to solid LDraw colours in CIELAB space.
+6. Mesh vertex, face, UV texture, or material diffuse colours are sampled at occupied voxel centers and quantized to solid LDraw colours in CIELAB space.
 7. Closed slice output uses a contour-shell target: outer shell plus fully filled bottom layers.
 8. Open surface fallback output uses a surface-detail target: the recovered occupancy is preserved so seats, wheels, trims, and separated OBJ components are not erased by shell extraction.
 9. Wall thickness and base thickness directly control the closed sculpture target, matching Studio's sculpture import settings. For open surface-detail mode, the base mask is still reported, but the full recovered target is kept for detail.
-10. Each layer is tiled exactly with the selected Studio sculpture brick set. Candidate layouts are selected with a lower/upper attachment check so a brick may be considered buildable when it connects to the layer below or to a later upper subassembly.
+10. Each layer is tiled exactly with the selected Studio sculpture brick set. In mesh colour mode, a candidate brick is accepted only when every occupied stud in its footprint has the same quantized LDraw colour ID, so one brick does not cross colour boundaries. Candidate layouts are selected with a lower/upper attachment check so a brick may be considered buildable when it connects to the layer below or to a later upper subassembly.
 11. If a brick is unattached from both below and above, the writer tries to add a thin attachment-only plate over it and a same-layer stable neighbor. These plates are included in the LDR file but excluded from exact-cover voxel metrics.
 12. `0 STEP` is inserted between layers.
 

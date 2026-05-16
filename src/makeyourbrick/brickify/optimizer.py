@@ -20,7 +20,6 @@ STUDIO_SCULPTURE_BRICKS = (
     BrickSpec("3005.dat", 1, 1),
 )
 
-BRICK_PALETTES = ("studio",)
 STUDIO_SPAN_1_LENGTH_PRIORITY = {8: 0, 6: 1, 4: 2, 3: 3, 2: 4, 1: 5}
 STUDIO_SPAN_2_PART_PRIORITY = {
     "3001.dat": 0,
@@ -29,12 +28,6 @@ STUDIO_SPAN_2_PART_PRIORITY = {
     "2456.dat": 3,
     "3003.dat": 4,
 }
-
-
-def brick_specs_for_palette(palette: str) -> tuple[BrickSpec, ...]:
-    if palette != "studio":
-        raise ValueError("Only the Studio sculpture brick palette is supported.")
-    return STUDIO_SCULPTURE_BRICKS
 
 
 def _validate_voxel_inputs(occupancy: np.ndarray, color_ids: np.ndarray) -> None:
@@ -378,15 +371,6 @@ def _support_flags_from_lower(bricks: list[Brick], lower: list[Brick], *, y: int
 
 def _support_flags_from_upper(bricks: list[Brick], upper: list[Brick]) -> list[bool]:
     return [_has_vertical_neighbor(brick, upper) for brick in bricks]
-
-
-def _future_upper_possible(bricks: list[Brick], next_candidates: list[list[Brick]]) -> list[bool]:
-    if not next_candidates:
-        return [False for _ in bricks]
-    possible: list[bool] = []
-    for brick in bricks:
-        possible.append(any(_has_vertical_neighbor(brick, candidate) for candidate in next_candidates))
-    return possible
 
 
 def _unattached_count(

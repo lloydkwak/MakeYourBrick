@@ -97,10 +97,12 @@ The report includes:
 - selected voxelizer (`slice` or `surface`)
 - selected sculpture mode (`contour-shell` for closed slice output or `surface-detail` for fragmented open OBJ output)
 
-Mesh color matching samples vertex or face colors when they are available,
-quantizes RGB to the solid LDraw palette in CIELAB space, and stores the chosen
-LDraw color IDs in the voxel artifact. Textured OBJ files need baked vertex or
-face colors for best results.
+Mesh color matching samples vertex colors, face colors, UV texture pixels, or
+material diffuse colors when they are available. It quantizes RGB to the solid
+LDraw palette in CIELAB space and stores the chosen LDraw color IDs in the
+voxel artifact. In `--color-strategy mesh`, brick placement is color-boundary
+aware: one brick is placed only when its full footprint has one quantized LDraw
+color ID.
 
 For vehicle-style OBJ files made from many open sub-meshes, start with:
 

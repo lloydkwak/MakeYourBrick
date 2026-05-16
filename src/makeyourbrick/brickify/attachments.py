@@ -181,10 +181,6 @@ def _brick_mask(bricks: list[Brick], shape: tuple[int, int]) -> np.ndarray:
     return mask
 
 
-def _brick_covered_by_mask(brick: Brick, mask: np.ndarray) -> bool:
-    return bool(mask[brick.x : brick.x + brick.width, brick.z : brick.z + brick.depth].any())
-
-
 def _is_resolved_by_plates(brick: Brick, plates: list[Brick], stable_bricks: list[Brick]) -> bool:
     for plate in plates:
         if int(plate.y) != brick.y:
@@ -256,10 +252,12 @@ def add_attachment_plates(
     bricks: list[Brick],
     occupancy_shape: tuple[int, int, int],
 ) -> tuple[list[Brick], dict]:
-    """Add clean plate patches over fully unattached same-layer regions.
+    """Add clean overlay patches over fully unattached same-layer regions.
 
-    The plates are attachment-only parts: they are written to LDR output but
-    intentionally excluded from exact-cover voxel metrics.
+    Plate patches are preferred when they can tie into stable same-layer
+    neighbours. If no non-overlapping plate can do that, a minimal full-height
+    support brick is added below the unattached brick. Overlay parts are written
+    to LDR output but excluded from exact-cover voxel metrics.
     """
 
     by_layer: dict[int, list[Brick]] = {}
