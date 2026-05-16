@@ -31,6 +31,9 @@ third_party/sam-3d-objects
 
 Do not commit that checkout. The MakeYourBrick runner only requires a command template that writes a triangle mesh to `{output}`.
 
+See [Local SAM 3D Objects Setup](sam3d_local_setup.md) for the recommended
+local checkout, checkpoint, and backend configuration flow.
+
 ## Generated Files
 
 Generated artifacts belong under:

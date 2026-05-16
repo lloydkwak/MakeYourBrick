@@ -1,24 +1,24 @@
 # MakeYourBrick
 
-MakeYourBrick converts a 2D image or an OBJ/STL mesh into a Studio-like LDraw `.ldr` LEGO sculpture.
+MakeYourBrick converts a 2D image or an OBJ/GLB/STL mesh into a Studio-like LDraw `.ldr` LEGO sculpture.
 
 The repository now keeps one focused production path:
 
 ```text
 image or mesh
-  -> triangle mesh (.obj preferred)
+  -> triangle mesh (.glb preferred for textured SAM output)
   -> Y-up orientation
   -> base-size layer slicing
   -> filled layer footprint target
   -> Studio brick-combination tiling
-  -> layer-colored LDraw output
+  -> layer-colored or mesh-colored LDraw output
 ```
 
 ## Current Scope
 
 Implemented and kept:
 
-- OBJ/STL mesh loading through Trimesh
+- OBJ/GLB/STL mesh loading through Trimesh
 - optional SAM 3D command runner that must export a triangle mesh
 - Studio-like base-size scaling
 - layer-slice voxelization with filled X/Z footprints
@@ -95,4 +95,5 @@ python -m pytest
 - [Usage](docs/usage.md)
 - [Environment](docs/environment.md)
 - [Testing](docs/testing.md)
+- [Local SAM 3D Setup](docs/sam3d_local_setup.md)
 - [References](docs/references.md)

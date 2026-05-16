@@ -1,14 +1,19 @@
-# Core geometry stack
+# Core geometry, voxelization, and colour matching
 numpy>=1.26
 scipy>=1.11
-trimesh>=4.6
-
-# Web backend and placeholder mask previews
+trimesh>=4.12
 Pillow>=10.0
+
+# Local FastAPI backend and UI job API
 fastapi>=0.136
+pydantic>=2.0
 uvicorn>=0.46
 python-multipart>=0.0.20
 
 # Development and tests
-pytest>=8.0
+pytest>=7.4
 ruff>=0.8
+
+# SAM 3D Objects is intentionally not listed here.
+# Install it separately under third_party/sam-3d-objects following Meta's
+# official setup and checkpoint instructions.
