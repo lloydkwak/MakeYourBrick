@@ -96,4 +96,5 @@ python -m pytest
 - [Environment](docs/environment.md)
 - [Testing](docs/testing.md)
 - [Local SAM 3D Setup](docs/sam3d_local_setup.md)
+- [Docker SAM 3D Runtime](docker/README.md)
 - [References](docs/references.md)

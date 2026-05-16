@@ -7,7 +7,7 @@ MakeYourBrick's `{output}` path.
 
 ## Recommended Integration
 
-Use this layout:
+For a direct local install, use this layout:
 
 ```text
 MakeYourBrick/
@@ -23,6 +23,10 @@ and fast-moving dependency stack, and its checkpoints require gated Hugging Face
 access. Keeping it as an external checkout makes MakeYourBrick easier to clone,
 test, and share.
 
+For a Docker-based setup, use `docker/sam3d.Dockerfile`. The image clones SAM 3D
+Objects during build and installs its official environment, while checkpoints
+remain external runtime data.
+
 ## Requirements
 
 SAM 3D Objects is the heavy part of the pipeline. Plan for:
@@ -32,6 +36,10 @@ SAM 3D Objects is the heavy part of the pipeline. Plan for:
 - CUDA-compatible PyTorch
 - large VRAM budget; the official setup recommends a high-memory GPU
 - Hugging Face account with access to `facebook/sam-3d-objects`
+
+On Windows, prefer Docker Desktop with the WSL2 backend and NVIDIA GPU
+passthrough. Native Windows execution is not the target environment for the SAM
+3D Objects setup.
 
 MakeYourBrick itself can run on normal Python, but the real SAM runner should be
 started from the same environment where SAM 3D Objects and its checkpoints are
@@ -58,6 +66,36 @@ available.
 5. Download or cache checkpoints according to the official SAM 3D Objects
    documentation. Keep them under `third_party/sam-3d-objects/` or another local
    cache path. Do not commit checkpoints.
+
+## Docker Flow
+
+Build the GPU image from the repository root:
+
+```bash
+docker build -f docker/sam3d.Dockerfile -t makeyourbrick-sam3d:local .
+```
+
+Verify Docker GPU access first:
+
+```bash
+docker run --rm --gpus all nvidia/cuda:12.1.1-base-ubuntu22.04 nvidia-smi
+```
+
+Run the local backend with the fake runner:
+
+```bash
+docker run --rm --gpus all -p 8000:8000 makeyourbrick-sam3d:local
+```
+
+After a SAM export script is available, run the real SAM backend by passing:
+
+```bash
+-e MAKEYOURBRICK_RUNNER_MODE=sam3d
+-e MAKEYOURBRICK_SAM_REPO=/opt/sam-3d-objects
+-e MAKEYOURBRICK_SAM_COMMAND="python path/to/sam3d_export.py --image {image} --mask {mask} --output {output}"
+```
+
+See `docker/README.md` for mount examples and checkpoint handling.
 
 ## Export Contract
 
