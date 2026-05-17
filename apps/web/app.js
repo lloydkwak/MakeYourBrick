@@ -12,29 +12,25 @@ const canvas = document.querySelector("#selectionCanvas");
 const scanLayer = document.querySelector("#scanLayer");
 const emptyState = document.querySelector("#emptyState");
 const imageMeta = document.querySelector("#imageMeta");
-const payloadPreview = document.querySelector("#payloadPreview");
 const apiBaseUrl = document.querySelector("#apiBaseUrl");
 const baseSizeStuds = document.querySelector("#baseSizeStuds");
 const wallThickness = document.querySelector("#wallThickness");
 const baseThickness = document.querySelector("#baseThickness");
 const colorStrategy = document.querySelector("#colorStrategy");
-const exportButton = document.querySelector("#exportButton");
-const syncButton = document.querySelector("#syncButton");
 const runButton = document.querySelector("#runButton");
 const statusText = document.querySelector("#statusText");
 const reconstructionPreview = document.querySelector("#reconstructionPreview");
 const previewTitle = document.querySelector("#previewTitle");
 const previewSubtitle = document.querySelector("#previewSubtitle");
+const previewEmpty = document.querySelector("#previewEmpty");
+const ldrPreviewCanvas = document.querySelector("#ldrPreviewCanvas");
 const resultPanel = document.querySelector("#resultPanel");
-const jobIdText = document.querySelector("#jobIdText");
-const brickCountText = document.querySelector("#brickCountText");
-const reductionText = document.querySelector("#reductionText");
 const ldrLink = document.querySelector("#ldrLink");
-const reportLink = document.querySelector("#reportLink");
-const meshInspectLink = document.querySelector("#meshInspectLink");
-const rawMeshLink = document.querySelector("#rawMeshLink");
+const startDropZone = document.querySelector("#startDropZone");
+const allFileInputs = document.querySelectorAll('input[type="file"]');
 
 const ctx = canvas.getContext("2d");
+const ldrCtx = ldrPreviewCanvas?.getContext("2d");
 
 const state = {
   image: null,
@@ -104,6 +100,14 @@ function resizeCanvas() {
   const pixelRatio = window.devicePixelRatio || 1;
   canvas.width = Math.max(640, Math.floor(rect.width * pixelRatio));
   canvas.height = Math.max(420, Math.floor(rect.height * pixelRatio));
+  if (ldrPreviewCanvas) {
+    const previewRect = ldrPreviewCanvas.getBoundingClientRect();
+    ldrPreviewCanvas.width = Math.max(640, Math.floor(previewRect.width * pixelRatio));
+    ldrPreviewCanvas.height = Math.max(420, Math.floor(previewRect.height * pixelRatio));
+    if (state.backend.result?.ldr_url) {
+      renderLdrFromUrl(apiUrl(state.backend.result.ldr_url));
+    }
+  }
   draw();
 }
 
@@ -256,10 +260,12 @@ function draw() {
   if (!state.image) {
     dropZone.classList.remove("has-selection");
     emptyState.hidden = false;
+    emptyState.style.display = "";
     updatePayload();
     return;
   }
   emptyState.hidden = true;
+  emptyState.style.display = "none";
   const hasSelection =
     state.positivePoints.length > 0 || state.negativePoints.length > 0 || Boolean(state.box);
   dropZone.classList.toggle("has-selection", hasSelection);
@@ -336,7 +342,6 @@ function updateStages() {
 }
 
 function updatePayload() {
-  payloadPreview.textContent = JSON.stringify(buildPayload(), null, 2);
   updateStages();
 }
 
@@ -365,9 +370,11 @@ function loadFile(file) {
       state.negativePoints = [];
       state.box = null;
       state.draftBox = null;
+      document.body.classList.add("has-image");
       imageMeta.textContent = `${file.name} · ${image.width} x ${image.height}`;
       statusText.textContent = "Image ready";
       resultPanel.hidden = true;
+      window.requestAnimationFrame(resizeCanvas);
       draw();
     };
     image.src = reader.result;
@@ -385,6 +392,7 @@ function normalizeBox(start, end) {
 }
 
 function resetAll() {
+  document.body.classList.remove("has-image");
   state.image = null;
   state.imageFile = null;
   state.imageName = null;
@@ -408,10 +416,13 @@ function resetAll() {
   imageMeta.textContent = "No image loaded";
   statusText.textContent = "Waiting for image";
   resultPanel.hidden = true;
+  clearLdrPreview();
   draw();
 }
 
-imageInput.addEventListener("change", (event) => loadFile(event.target.files[0]));
+allFileInputs.forEach((input) => {
+  input.addEventListener("change", (event) => loadFile(event.target.files[0]));
+});
 resetButton.addEventListener("click", resetAll);
 pointModeButton.addEventListener("click", () => setMode("point"));
 boxModeButton.addEventListener("click", () => setMode("box"));
@@ -486,23 +497,25 @@ canvas.addEventListener("pointerup", (event) => {
   draw();
 });
 
-for (const eventName of ["dragenter", "dragover"]) {
-  dropZone.addEventListener(eventName, (event) => {
-    event.preventDefault();
-    dropZone.classList.add("is-dragging");
+for (const zone of [dropZone, startDropZone].filter(Boolean)) {
+  for (const eventName of ["dragenter", "dragover"]) {
+    zone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      zone.classList.add("is-dragging");
+    });
+  }
+
+  for (const eventName of ["dragleave", "drop"]) {
+    zone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      zone.classList.remove("is-dragging");
+    });
+  }
+
+  zone.addEventListener("drop", (event) => {
+    loadFile(event.dataTransfer.files[0]);
   });
 }
-
-for (const eventName of ["dragleave", "drop"]) {
-  dropZone.addEventListener(eventName, (event) => {
-    event.preventDefault();
-    dropZone.classList.remove("is-dragging");
-  });
-}
-
-dropZone.addEventListener("drop", (event) => {
-  loadFile(event.dataTransfer.files[0]);
-});
 
 for (const input of [apiBaseUrl, baseSizeStuds, wallThickness, baseThickness, colorStrategy]) {
   input.addEventListener("change", updatePayload);
@@ -513,16 +526,6 @@ function triggerScan() {
   void scanLayer.offsetWidth;
   scanLayer.classList.add("is-active");
 }
-
-exportButton.addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify(buildPayload(), null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "makeyourbrick-selection.json";
-  link.click();
-  URL.revokeObjectURL(url);
-});
 
 async function uploadImageToBackend() {
   if (state.backend.imageId) return;
@@ -572,18 +575,6 @@ async function loadBackendMask(maskUrl) {
   draw();
 }
 
-syncButton.addEventListener("click", async () => {
-  try {
-    statusText.textContent = "Syncing with backend";
-    await uploadImageToBackend();
-    await submitSelectionToBackend();
-    statusText.textContent = state.backend.maskId ? "Backend selection synced" : "Backend image synced";
-    updatePayload();
-  } catch (error) {
-    statusText.textContent = error.message;
-  }
-});
-
 function setPipelineStage(stage) {
   const stages = document.querySelectorAll(".stage-list li");
   stages.forEach((item) => item.classList.remove("is-current", "is-done"));
@@ -606,20 +597,182 @@ function setPipelineStage(stage) {
 }
 
 function setResultLinks(result) {
-  const links = [
-    [ldrLink, result.ldr_url],
-    [reportLink, result.report_url],
-    [meshInspectLink, result.mesh_inspect_url],
-    [rawMeshLink, result.raw_mesh_url],
-  ];
-  for (const [link, path] of links) {
-    if (path) link.href = apiUrl(path);
+  if (result.ldr_url) {
+    ldrLink.href = apiUrl(result.ldr_url);
   }
-  jobIdText.textContent = result.job_id;
-  brickCountText.textContent = String(result.brick_count ?? "-");
-  reductionText.textContent =
-    typeof result.reduction_percent === "number" ? `${result.reduction_percent.toFixed(2)}%` : "-";
   resultPanel.hidden = false;
+  if (result.ldr_url) {
+    renderLdrFromUrl(apiUrl(result.ldr_url));
+  }
+}
+
+const ldrawColors = {
+  0: "#1d1e22",
+  1: "#0055bf",
+  2: "#237841",
+  3: "#008f9b",
+  4: "#c91a09",
+  5: "#c870a0",
+  6: "#583927",
+  7: "#9ba19d",
+  8: "#6d6e5c",
+  9: "#b4d2e3",
+  10: "#4b9f4a",
+  11: "#55a5af",
+  12: "#f2705e",
+  13: "#fc97ac",
+  14: "#f2cd37",
+  15: "#ffffff",
+  19: "#a5a5cb",
+  20: "#d9e4a7",
+  27: "#ffaa80",
+  71: "#a0a5a9",
+};
+
+const partFootprints = {
+  "3005.dat": [1, 1],
+  "3004.dat": [2, 1],
+  "3003.dat": [2, 2],
+  "3622.dat": [3, 1],
+  "3002.dat": [3, 2],
+  "3010.dat": [4, 1],
+  "3001.dat": [4, 2],
+  "3009.dat": [6, 1],
+  "2456.dat": [6, 2],
+  "3008.dat": [8, 1],
+  "3007.dat": [8, 2],
+  "3024.dat": [1, 1],
+  "3023.dat": [2, 1],
+  "3022.dat": [2, 2],
+  "3623.dat": [3, 1],
+  "3710.dat": [4, 1],
+  "3021.dat": [3, 2],
+  "3020.dat": [4, 2],
+  "3666.dat": [6, 1],
+  "3460.dat": [8, 1],
+  "3795.dat": [2, 6],
+  "3034.dat": [2, 8],
+};
+
+function clearLdrPreview() {
+  if (!ldrCtx || !ldrPreviewCanvas) return;
+  ldrCtx.clearRect(0, 0, ldrPreviewCanvas.width, ldrPreviewCanvas.height);
+  previewEmpty.hidden = false;
+  reconstructionPreview.classList.remove("is-active");
+}
+
+async function renderLdrFromUrl(url) {
+  if (!ldrCtx || !ldrPreviewCanvas) return;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`LDR preview failed: ${response.status}`);
+    renderLdrPreview(await response.text());
+  } catch (error) {
+    previewTitle.textContent = "LDR preview unavailable";
+    previewSubtitle.textContent = error.message;
+    clearLdrPreview();
+  }
+}
+
+function parseLdrBricks(ldrText) {
+  const bricks = [];
+  for (const line of ldrText.split(/\r?\n/)) {
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 15 || parts[0] !== "1") continue;
+    const colorId = Number(parts[1]);
+    const x = Number(parts[2]) / 20;
+    const y = -Number(parts[3]) / 24;
+    const z = Number(parts[4]) / 20;
+    const partId = parts[14].toLowerCase();
+    const footprint = partFootprints[partId] || [1, 1];
+    const rotated = Math.abs(Number(parts[5])) < 0.5 && Math.abs(Number(parts[7])) > 0.5;
+    bricks.push({
+      color: ldrawColors[colorId] || "#d6d9dd",
+      x,
+      y,
+      z,
+      width: rotated ? footprint[1] : footprint[0],
+      depth: rotated ? footprint[0] : footprint[1],
+    });
+  }
+  return bricks;
+}
+
+function shadeColor(hex, amount) {
+  const value = Number.parseInt(hex.slice(1), 16);
+  const red = Math.max(0, Math.min(255, (value >> 16) + amount));
+  const green = Math.max(0, Math.min(255, ((value >> 8) & 255) + amount));
+  const blue = Math.max(0, Math.min(255, (value & 255) + amount));
+  return `rgb(${red}, ${green}, ${blue})`;
+}
+
+function drawIsoBrick(context, brick, transform) {
+  const cx = ldrPreviewCanvas.width / 2;
+  const cy = ldrPreviewCanvas.height * 0.68;
+  const x0 = brick.x - transform.midX;
+  const z0 = brick.z - transform.midZ;
+  const layer = brick.y - transform.minY;
+  const halfW = brick.width / 2;
+  const halfD = brick.depth / 2;
+  const corners = [
+    [x0 - halfW, z0 - halfD],
+    [x0 + halfW, z0 - halfD],
+    [x0 + halfW, z0 + halfD],
+    [x0 - halfW, z0 + halfD],
+  ].map(([x, z]) => ({
+    x: cx + (x - z) * transform.scale,
+    y: cy + (x + z) * transform.scale * 0.52 - layer * transform.scale * 0.72,
+  }));
+  context.beginPath();
+  context.moveTo(corners[0].x, corners[0].y);
+  corners.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+  context.closePath();
+  context.fillStyle = brick.color;
+  context.strokeStyle = "rgba(0, 0, 0, 0.28)";
+  context.lineWidth = Math.max(0.5, transform.scale * 0.035);
+  context.fill();
+  context.stroke();
+
+  const studCount = Math.max(1, Math.round(Math.min(brick.width, 8)));
+  context.fillStyle = shadeColor(brick.color, 24);
+  for (let i = 0; i < studCount; i += 1) {
+    const t = (i + 0.5) / studCount;
+    const sx = corners[0].x + (corners[1].x - corners[0].x) * t;
+    const sy = corners[0].y + (corners[1].y - corners[0].y) * t;
+    context.beginPath();
+    context.ellipse(sx, sy - transform.scale * 0.13, transform.scale * 0.16, transform.scale * 0.08, 0, 0, Math.PI * 2);
+    context.fill();
+  }
+}
+
+function renderLdrPreview(ldrText) {
+  const bricks = parseLdrBricks(ldrText);
+  ldrCtx.clearRect(0, 0, ldrPreviewCanvas.width, ldrPreviewCanvas.height);
+  if (!bricks.length) {
+    clearLdrPreview();
+    return;
+  }
+  const minX = Math.min(...bricks.map((brick) => brick.x - brick.width / 2));
+  const maxX = Math.max(...bricks.map((brick) => brick.x + brick.width / 2));
+  const minZ = Math.min(...bricks.map((brick) => brick.z - brick.depth / 2));
+  const maxZ = Math.max(...bricks.map((brick) => brick.z + brick.depth / 2));
+  const minY = Math.min(...bricks.map((brick) => brick.y));
+  const maxY = Math.max(...bricks.map((brick) => brick.y));
+  const span = Math.max(maxX - minX, maxZ - minZ, (maxY - minY) * 0.7, 1);
+  const transform = {
+    midX: (minX + maxX) / 2,
+    midZ: (minZ + maxZ) / 2,
+    minY,
+    scale: Math.max(5, Math.min(18, Math.min(ldrPreviewCanvas.width, ldrPreviewCanvas.height) / (span * 2.25))),
+  };
+  ldrCtx.save();
+  ldrCtx.clearRect(0, 0, ldrPreviewCanvas.width, ldrPreviewCanvas.height);
+  bricks
+    .sort((a, b) => a.x + a.z + a.y * 5 - (b.x + b.z + b.y * 5))
+    .forEach((brick) => drawIsoBrick(ldrCtx, brick, transform));
+  ldrCtx.restore();
+  previewEmpty.hidden = true;
+  reconstructionPreview.classList.add("is-active");
 }
 
 function delay(ms) {

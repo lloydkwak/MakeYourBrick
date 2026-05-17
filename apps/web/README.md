@@ -1,33 +1,16 @@
-# MakeYourBrick Web Shell
+# MakeYourBrick Web App
 
-This is a local, static image upload and object selection shell for the MakeYourBrick UI milestones.
+This is the local MakeYourBrick image-to-LDraw interface. The layout is inspired
+by modern AI playground flows: upload an image, click or box-select the target
+object, run the local backend job, and preview the generated LDR artifact.
 
 ## Run
 
 Open `apps/web/index.html` in a browser.
 
-No package installation or dev server is required for this milestone.
+No frontend package install or dev server is required.
 
-## Features
-
-- image upload by file picker or drag and drop
-- point selection
-- box selection
-- positive and negative point labels
-- translucent mock mask overlay
-- selection payload preview in image coordinates
-- LEGO conversion settings preview
-- mesh or layer color strategy selection
-- JSON export for the selection/config payload
-- optional backend image/selection sync
-- backend pipeline job execution
-- result links for generated LDR, report, and raw mesh artifacts
-
-## Scope
-
-This shell does not run real segmentation in the browser. `Run Conversion` calls the local FastAPI job endpoint. By default the backend uses a fake SAM mesh for local development; when the backend is configured with `MAKEYOURBRICK_RUNNER_MODE=sam3d`, the same UI flow sends the selected mask id to the real SAM command path. Mesh color mode is the expected path for textured SAM GLB output.
-
-## Backend Workflow
+## Backend
 
 Run the FastAPI backend:
 
@@ -35,4 +18,25 @@ Run the FastAPI backend:
 python -m uvicorn makeyourbrick.server.main:app --app-dir src --reload
 ```
 
-Then open this page, upload an image, make a selection, and press `Run Conversion`.
+The UI defaults to:
+
+```text
+http://127.0.0.1:8000
+```
+
+## Flow
+
+- Upload or drag an image into the start panel.
+- Use point or box selection to mark the object.
+- Press `Generate LDR`.
+- The backend creates the mesh, voxel target, LDR file, and report.
+- The UI shows artifact links and a lightweight isometric LDR preview.
+
+The preview is intentionally lightweight and browser-native. BrickLink Studio or
+another LDraw viewer remains the source of truth for final visual inspection.
+
+## SAM Mode
+
+By default the backend can run with the fake mesh runner for local UI testing.
+When configured with `MAKEYOURBRICK_RUNNER_MODE=sam3d`, the same UI sends the
+selected mask id to the real SAM command path.

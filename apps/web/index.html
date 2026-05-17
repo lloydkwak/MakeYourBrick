@@ -3,142 +3,159 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MakeYourBrick Web Shell</title>
+    <title>MakeYourBrick</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="app-shell">
-      <section class="workspace" aria-label="Image selection workspace">
-        <header class="topbar">
-          <div>
-            <h1>MakeYourBrick</h1>
-            <p id="imageMeta">No image loaded</p>
-          </div>
-          <div class="topbar-actions">
-            <label class="file-button">
-              <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" />
-              Upload
-            </label>
-            <button id="resetButton" type="button">Reset</button>
-          </div>
-        </header>
+    <header class="app-nav" aria-label="Application navigation">
+      <button id="resetButton" class="icon-button" type="button" aria-label="Home">
+        <span class="home-icon" aria-hidden="true"></span>
+      </button>
+      <div class="brand-mark">
+        <span>MakeYourBrick</span>
+        <small id="imageMeta">No image loaded</small>
+      </div>
+      <label class="icon-button file-icon-button" aria-label="Upload image">
+        <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" />
+        <span class="image-icon" aria-hidden="true"></span>
+      </label>
+    </header>
 
-        <div class="tool-row" role="toolbar" aria-label="Selection tools">
-          <div class="segmented" aria-label="Selection mode">
-            <button class="is-active" id="pointModeButton" type="button">Point</button>
-            <button id="boxModeButton" type="button">Box</button>
-          </div>
-          <div class="segmented" aria-label="Point type">
-            <button class="is-active" id="positiveButton" type="button">Positive</button>
-            <button id="negativeButton" type="button">Negative</button>
-          </div>
-          <button id="undoButton" type="button">Undo</button>
-          <button id="clearButton" type="button">Clear</button>
-          <label class="toggle">
-            <input id="maskToggle" type="checkbox" checked />
-            Mask
-          </label>
+    <main class="app-shell">
+      <section class="intro-panel" aria-label="Conversion intro">
+        <div class="intro-copy">
+          <h1>Create LEGO models</h1>
+          <p>Create buildable LDraw sculptures from selected objects in images.</p>
         </div>
 
-        <div id="dropZone" class="canvas-wrap">
-          <canvas id="selectionCanvas" width="1280" height="820"></canvas>
-          <div id="scanLayer" class="scan-layer" aria-hidden="true"></div>
-          <div id="emptyState" class="empty-state">
-            <strong>Upload an image</strong>
-            <span>Point and box selections are recorded in image coordinates.</span>
-          </div>
+        <div class="how-card" aria-label="How it works">
+          <h2>How it works</h2>
+          <ol>
+            <li><span>1.</span>Choose an image</li>
+            <li><span>2.</span>Select an object</li>
+            <li><span>3.</span>Create an LDR model</li>
+          </ol>
+        </div>
+
+        <div class="model-row">
+          <span>Model</span>
+          <strong>SAM 3D Objects</strong>
         </div>
       </section>
 
-      <aside class="side-panel" aria-label="Pipeline configuration">
-        <section class="panel-section">
-          <h2>Selection Payload</h2>
-          <pre id="payloadPreview"></pre>
-        </section>
+      <section id="startDropZone" class="upload-stage" aria-label="Image upload">
+        <div class="upload-box">
+          <span class="large-image-icon" aria-hidden="true"></span>
+          <h2>Start with your own image</h2>
+          <label class="upload-button">
+            <input type="file" accept="image/png,image/jpeg,image/webp" />
+            Upload
+          </label>
+        </div>
+      </section>
 
-        <section class="panel-section">
-          <h2>LEGO Settings</h2>
-          <label>
-            API base URL
-            <input id="apiBaseUrl" type="text" value="http://127.0.0.1:8000" />
-          </label>
-          <label>
-            Base size studs
-            <input id="baseSizeStuds" type="number" min="1" max="256" step="1" value="32" />
-          </label>
-          <label>
-            Wall thickness
-            <input id="wallThickness" type="number" min="1" max="16" step="1" value="2" />
-          </label>
-          <label>
-            Bottom thickness
-            <input id="baseThickness" type="number" min="0" max="64" step="1" value="3" />
-          </label>
-          <label>
-            Color strategy
-            <select id="colorStrategy">
-              <option value="mesh" selected>Mesh colors</option>
-              <option value="layer">Layer colors</option>
-            </select>
-          </label>
-        </section>
+      <section class="editor-stage" aria-label="Object selection and LDR preview">
+        <div class="editor-card">
+          <div class="editor-toolbar">
+            <div class="toolbar-title">
+              <span class="cursor-icon" aria-hidden="true"></span>
+              <strong>Click to select an object</strong>
+            </div>
+            <div class="backend-status">
+              <label>
+                API
+                <input id="apiBaseUrl" type="text" value="http://127.0.0.1:8000" />
+              </label>
+            </div>
+          </div>
 
-        <section class="panel-section">
-          <h2>Pipeline Preview</h2>
-          <div id="reconstructionPreview" class="reconstruction-preview" aria-label="Reconstruction preview">
-            <div class="preview-orbit">
-              <div class="preview-object">
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
+          <div class="split-workspace">
+            <div id="dropZone" class="image-workspace">
+              <canvas id="selectionCanvas" width="1280" height="820"></canvas>
+              <div id="scanLayer" class="scan-layer" aria-hidden="true"></div>
+            <div id="emptyState" class="empty-state" hidden>
+              <strong>Upload an image</strong>
+              <span>Use the upload button to begin.</span>
+            </div>
+            </div>
+
+            <aside class="ldr-workspace" aria-label="LDR model preview">
+              <div id="reconstructionPreview" class="ldr-preview">
+                <canvas id="ldrPreviewCanvas" width="900" height="720"></canvas>
+                <div id="previewEmpty" class="preview-empty">
+                  <strong id="previewTitle">Your LDR model will appear here</strong>
+                  <span id="previewSubtitle">Generate a LEGO conversion to preview the result.</span>
+                </div>
+                <div class="preview-floor" aria-hidden="true"></div>
               </div>
-            </div>
-            <div class="preview-caption">
-              <strong id="previewTitle">Waiting for target</strong>
-              <span id="previewSubtitle">Select an object to prepare reconstruction.</span>
-            </div>
+            </aside>
           </div>
-          <ol class="stage-list">
-            <li data-stage="upload" class="is-current">Image uploaded</li>
-            <li data-stage="select">Target selected</li>
-            <li data-stage="segment">Segmentation mask</li>
-            <li data-stage="reconstruct">3D reconstruction</li>
-            <li data-stage="convert">LEGO conversion</li>
-          </ol>
-        </section>
 
-        <section class="panel-section action-panel">
-          <button id="exportButton" class="primary-button" type="button">Export JSON</button>
-          <button id="syncButton" type="button">Sync Backend</button>
-          <button id="runButton" type="button">Run Conversion</button>
-          <p id="statusText">Waiting for image</p>
-        </section>
-
-        <section id="resultPanel" class="panel-section result-panel" hidden>
-          <h2>Result</h2>
-          <dl>
-            <div>
-              <dt>Job</dt>
-              <dd id="jobIdText">-</dd>
+          <div class="control-dock">
+            <div class="mask-controls">
+              <strong>Edit mask</strong>
+              <button id="pointModeButton" class="is-active" type="button">Point</button>
+              <button id="boxModeButton" type="button">Box</button>
+              <button id="positiveButton" class="is-active" type="button">Add</button>
+              <button id="negativeButton" type="button">Remove</button>
+              <button id="undoButton" type="button">Undo</button>
+              <button id="clearButton" type="button">Clear</button>
+              <label class="mask-toggle">
+                <input id="maskToggle" type="checkbox" checked />
+                Mask
+              </label>
             </div>
-            <div>
-              <dt>Bricks</dt>
-              <dd id="brickCountText">-</dd>
-            </div>
-            <div>
-              <dt>Reduction</dt>
-              <dd id="reductionText">-</dd>
-            </div>
-          </dl>
-          <div class="artifact-links">
-            <a id="ldrLink" href="#" target="_blank" rel="noreferrer">LDR</a>
-            <a id="reportLink" href="#" target="_blank" rel="noreferrer">Report</a>
-            <a id="meshInspectLink" href="#" target="_blank" rel="noreferrer">Mesh inspect</a>
-            <a id="rawMeshLink" href="#" target="_blank" rel="noreferrer">Raw mesh</a>
+            <button id="runButton" class="generate-button" type="button">
+              Generate LDR
+              <span class="cube-icon" aria-hidden="true"></span>
+            </button>
           </div>
-        </section>
-      </aside>
+        </div>
+
+        <aside class="settings-panel" aria-label="LEGO conversion settings">
+          <section>
+            <h2>Settings</h2>
+            <label>
+              Base size
+              <input id="baseSizeStuds" type="number" min="8" max="256" step="1" value="32" />
+            </label>
+            <label>
+              Wall thickness
+              <input id="wallThickness" type="number" min="1" max="16" step="1" value="2" />
+            </label>
+            <label>
+              Bottom thickness
+              <input id="baseThickness" type="number" min="0" max="64" step="1" value="3" />
+            </label>
+            <label>
+              Coloring
+              <select id="colorStrategy">
+                <option value="mesh" selected>Object texture</option>
+                <option value="layer">By layer</option>
+              </select>
+            </label>
+          </section>
+
+          <section>
+            <h2>Pipeline</h2>
+            <ol class="stage-list">
+              <li data-stage="upload" class="is-current">Choose image</li>
+              <li data-stage="select">Select object</li>
+              <li data-stage="segment">Segment mask</li>
+              <li data-stage="reconstruct">Reconstruct mesh</li>
+              <li data-stage="convert">Create LDR</li>
+            </ol>
+            <p id="statusText">Waiting for image</p>
+          </section>
+
+          <section id="resultPanel" class="result-panel" hidden>
+            <h2>Result</h2>
+            <div class="artifact-links">
+              <a id="ldrLink" href="#" target="_blank" rel="noreferrer">LDR</a>
+            </div>
+          </section>
+        </aside>
+      </section>
     </main>
 
     <script src="./app.js" defer></script>
