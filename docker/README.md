@@ -15,6 +15,15 @@ docker build \
   .
 ```
 
+For clearer logs during the long SAM dependency install, use:
+
+```bash
+docker build --progress=plain \
+  -f docker/sam3d.Dockerfile \
+  -t makeyourbrick-sam3d:local \
+  .
+```
+
 To pin a specific SAM 3D Objects commit or tag:
 
 ```bash
@@ -87,6 +96,7 @@ docker run --rm --gpus all -p 8000:8000 \
   -e MAKEYOURBRICK_RUNNER_MODE=sam3d \
   -e MAKEYOURBRICK_SAM_REPO=/opt/sam-3d-objects \
   -e MAKEYOURBRICK_SAM_COMMAND="python path/to/sam3d_export.py --image {image} --mask {mask} --output {output}" \
+  -e MAKEYOURBRICK_RAW_MESH_SUFFIX=.glb \
   makeyourbrick-sam3d:local
 ```
 
@@ -96,6 +106,9 @@ The export command contract is:
 image + mask -> textured triangle mesh at {output}, preferably raw_model.glb
 ```
 
+Set `MAKEYOURBRICK_RAW_MESH_SUFFIX=.obj` if your SAM export script writes OBJ
+instead of GLB.
+
 ## Notes
 
 - Native Windows execution is not the target for SAM 3D Objects.
@@ -103,3 +116,9 @@ image + mask -> textured triangle mesh at {output}, preferably raw_model.glb
 - The container uses CUDA 12.1 because the official SAM setup references
   PyTorch/cu121 and Kaolin wheels for torch 2.5.1/cu121.
 - Build time can be long because PyTorch3D/Kaolin/SAM dependencies are heavy.
+- If Docker Desktop exits with `failed to receive status ... EOF`, the build
+  process usually lost contact with the Docker daemon during a long dependency
+  install. Re-run the same build command; the Dockerfile keeps the official SAM
+  install steps split into cacheable layers so it can resume closer to the
+  failing package. If it repeats, increase Docker Desktop memory/disk limits and
+  rebuild with `--progress=plain`.

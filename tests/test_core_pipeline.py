@@ -19,6 +19,7 @@ from makeyourbrick.io.ldr_writer import brick_to_ldr_line
 from makeyourbrick.mesh.inspect import inspect_mesh
 from makeyourbrick.mesh.solidify import load_mesh
 from makeyourbrick.pipeline import convert_mesh_to_ldr, run_from_image
+from makeyourbrick.server.jobs import JobRunnerConfig
 from makeyourbrick.sculpture import (
     SculptureSettings,
     VoxelModel,
@@ -307,3 +308,11 @@ def test_image_runner_accepts_glb_raw_mesh_and_mesh_colors(tmp_path: Path) -> No
     assert raw_mesh_path.suffix == ".glb"
     assert report["sculpture"]["color_strategy"] == "mesh"
     assert report["color_counts"]
+
+
+def test_job_runner_config_accepts_obj_raw_mesh_suffix(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAKEYOURBRICK_RAW_MESH_SUFFIX", "obj")
+
+    config = JobRunnerConfig.from_env()
+
+    assert config.raw_mesh_suffix == ".obj"

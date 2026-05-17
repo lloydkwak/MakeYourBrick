@@ -36,6 +36,7 @@ class ServerConfigResponse(BaseModel):
     has_sam_command: bool
     timeout_seconds: int
     requires_mask: bool
+    raw_mesh_suffix: str
 
 
 class JobRequest(BaseModel):

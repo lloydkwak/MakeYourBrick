@@ -52,6 +52,7 @@ def create_app(
             has_sam_command=bool(config.sam_command),
             timeout_seconds=config.timeout_seconds,
             requires_mask=config.requires_mask,
+            raw_mesh_suffix=config.raw_mesh_suffix,
         )
 
     @app.post("/api/images", response_model=ImageUploadResponse)

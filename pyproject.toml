@@ -7,7 +7,22 @@ name = "makeyourbrick"
 version = "0.1.0"
 description = "Image-to-LEGO 3D conversion pipeline that emits LDraw files."
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "trimesh>=4.12",
+    "Pillow>=10.0",
+    "fastapi>=0.136",
+    "pydantic>=2.0",
+    "uvicorn>=0.46",
+    "python-multipart>=0.0.20",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "ruff>=0.8",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -19,4 +34,3 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-

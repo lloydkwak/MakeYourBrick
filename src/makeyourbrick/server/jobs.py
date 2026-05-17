@@ -19,6 +19,7 @@ class JobRunnerConfig:
     sam_repo: Path = Path("third_party/sam-3d-objects")
     sam_command: str | None = None
     timeout_seconds: int = 3600
+    raw_mesh_suffix: str = ".glb"
 
     @classmethod
     def from_env(cls) -> "JobRunnerConfig":
@@ -27,11 +28,15 @@ class JobRunnerConfig:
             timeout_seconds = int(timeout_text)
         except ValueError as error:
             raise ValueError("MAKEYOURBRICK_SAM_TIMEOUT_SECONDS must be an integer.") from error
+        raw_mesh_suffix = normalize_mesh_suffix(
+            os.environ.get("MAKEYOURBRICK_RAW_MESH_SUFFIX", ".glb")
+        )
         return cls(
             mode=os.environ.get("MAKEYOURBRICK_RUNNER_MODE", "fake"),
             sam_repo=Path(os.environ.get("MAKEYOURBRICK_SAM_REPO", "third_party/sam-3d-objects")),
             sam_command=os.environ.get("MAKEYOURBRICK_SAM_COMMAND"),
             timeout_seconds=timeout_seconds,
+            raw_mesh_suffix=raw_mesh_suffix,
         )
 
     @property
@@ -41,6 +46,19 @@ class JobRunnerConfig:
     @property
     def requires_mask(self) -> bool:
         return self.normalized_mode == "sam3d"
+
+
+def normalize_mesh_suffix(value: str) -> str:
+    suffix = value.strip().lower()
+    if not suffix:
+        return ".glb"
+    if not suffix.startswith("."):
+        suffix = f".{suffix}"
+    if suffix not in {".glb", ".gltf", ".obj", ".stl", ".ply"}:
+        raise ValueError(
+            "MAKEYOURBRICK_RAW_MESH_SUFFIX must be one of .glb, .gltf, .obj, .stl, or .ply."
+        )
+    return suffix
 
 
 @dataclass
@@ -122,7 +140,9 @@ def build_image_runner(config: JobRunnerConfig) -> object:
         return FakeSamMeshRunner()
     if mode in {"command", "sam3d"}:
         if not config.sam_command:
-            raise ValueError("MAKEYOURBRICK_SAM_COMMAND is required when runner mode is 'command' or 'sam3d'.")
+            raise ValueError(
+                "MAKEYOURBRICK_SAM_COMMAND is required when runner mode is 'command' or 'sam3d'."
+            )
         return Sam3DRunner(
             repo_path=config.sam_repo,
             command_template=config.sam_command,
@@ -147,7 +167,10 @@ def run_pipeline_job(
             mask_path = storage.mask_path(request.image_id, request.mask_id)
             if not mask_path.exists():
                 raise FileNotFoundError(f"Mask not found: {request.mask_id}")
-        raw_mesh_path = storage.job_mesh_dir(request.image_id, job_id) / "raw_model.glb"
+        raw_mesh_path = (
+            storage.job_mesh_dir(request.image_id, job_id)
+            / f"raw_model{runner_config.raw_mesh_suffix}"
+        )
         voxel_path = storage.job_voxel_dir(request.image_id, job_id) / "model_voxels.npz"
         ldr_path = storage.job_ldr_dir(request.image_id, job_id) / "output.ldr"
         report_path = storage.job_report_dir(request.image_id, job_id) / "report.json"

@@ -15,11 +15,15 @@ python -m pip install -e .
 ## Core Dependencies
 
 - `numpy`
+- `scipy`
 - `trimesh`
 - `Pillow`
 - `fastapi`
+- `pydantic`
 - `uvicorn`
+- `python-multipart`
 - `pytest`
+- `ruff`
 
 ## SAM 3D
 

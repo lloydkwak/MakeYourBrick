@@ -26,6 +26,9 @@ ENV APP_DIR=/workspace/MakeYourBrick
 ENV PATH=${CONDA_DIR}/envs/sam3d-objects/bin:${CONDA_DIR}/bin:${PATH}
 ENV PIP_EXTRA_INDEX_URL="https://pypi.ngc.nvidia.com https://download.pytorch.org/whl/cu121"
 ENV PIP_FIND_LINKS="https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu121.html"
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PIP_NO_INPUT=1
+ENV MAMBA_NO_BANNER=1
 ENV PYTHONUNBUFFERED=1
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
@@ -61,26 +64,41 @@ WORKDIR ${SAM3D_DIR}
 RUN mamba env create -f environments/default.yml \
     && mamba clean -afy
 
-RUN source "${CONDA_DIR}/etc/profile.d/conda.sh" \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    source "${CONDA_DIR}/etc/profile.d/conda.sh" \
     && conda activate sam3d-objects \
-    && pip install -e '.[dev]' \
-    && pip install -e '.[p3d]' \
-    && pip install -e '.[inference]' \
-    && pip install 'huggingface-hub[cli]<1.0' \
+    && python -m pip install -e '.[dev]'
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    source "${CONDA_DIR}/etc/profile.d/conda.sh" \
+    && conda activate sam3d-objects \
+    && python -m pip install -e '.[p3d]'
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    source "${CONDA_DIR}/etc/profile.d/conda.sh" \
+    && conda activate sam3d-objects \
+    && python -m pip install -e '.[inference]'
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    source "${CONDA_DIR}/etc/profile.d/conda.sh" \
+    && conda activate sam3d-objects \
+    && python -m pip install 'huggingface-hub[cli]<1.0' \
     && ./patching/hydra
 
 WORKDIR ${APP_DIR}
 
 COPY . ${APP_DIR}
 
-RUN source "${CONDA_DIR}/etc/profile.d/conda.sh" \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    source "${CONDA_DIR}/etc/profile.d/conda.sh" \
     && conda activate sam3d-objects \
-    && pip install -r requirements.txt \
-    && pip install -e .
+    && python -m pip install -r requirements.txt \
+    && python -m pip install -e .
 
 ENV MAKEYOURBRICK_RUNNER_MODE=fake
 ENV MAKEYOURBRICK_SAM_REPO=${SAM3D_DIR}
 ENV MAKEYOURBRICK_SAM_COMMAND=""
+ENV MAKEYOURBRICK_RAW_MESH_SUFFIX=.glb
 
 EXPOSE 8000
 

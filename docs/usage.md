@@ -71,9 +71,12 @@ The backend defaults to a fake local mesh runner unless configured with:
 MAKEYOURBRICK_RUNNER_MODE=command
 MAKEYOURBRICK_SAM_REPO=third_party/sam-3d-objects
 MAKEYOURBRICK_SAM_COMMAND=<command template>
+MAKEYOURBRICK_RAW_MESH_SUFFIX=.glb
 ```
 
 Use `MAKEYOURBRICK_RUNNER_MODE=sam3d` when the command requires a user mask.
+Set `MAKEYOURBRICK_RAW_MESH_SUFFIX=.obj` if your SAM export script writes OBJ
+instead of GLB.
 
 ## Output
 

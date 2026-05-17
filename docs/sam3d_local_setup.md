@@ -75,6 +75,17 @@ Build the GPU image from the repository root:
 docker build -f docker/sam3d.Dockerfile -t makeyourbrick-sam3d:local .
 ```
 
+For long builds on Docker Desktop, prefer plain progress logs:
+
+```bash
+docker build --progress=plain -f docker/sam3d.Dockerfile -t makeyourbrick-sam3d:local .
+```
+
+If the build fails near `Building wheel for pytorch3d` with `failed to receive
+status ... EOF`, Docker Desktop likely lost the Linux engine during native
+extension compilation. Retry on a machine with an NVIDIA GPU and enough Docker
+memory/disk budget.
+
 Verify Docker GPU access first:
 
 ```bash
@@ -93,6 +104,7 @@ After a SAM export script is available, run the real SAM backend by passing:
 -e MAKEYOURBRICK_RUNNER_MODE=sam3d
 -e MAKEYOURBRICK_SAM_REPO=/opt/sam-3d-objects
 -e MAKEYOURBRICK_SAM_COMMAND="python path/to/sam3d_export.py --image {image} --mask {mask} --output {output}"
+-e MAKEYOURBRICK_RAW_MESH_SUFFIX=.glb
 ```
 
 See `docker/README.md` for mount examples and checkpoint handling.
@@ -114,6 +126,8 @@ raw_model.glb
 Textured GLB is preferred over OBJ because it keeps geometry, transforms, UVs,
 materials, and texture images in one file. MakeYourBrick can load OBJ too, but
 OBJ texture handoff depends on sidecar `.mtl` and image files staying together.
+If the SAM export script writes OBJ, set `MAKEYOURBRICK_RAW_MESH_SUFFIX=.obj`
+for the local API or pass `--raw-mesh outputs/meshes/raw_model.obj` to the CLI.
 
 The SAM export command should:
 
@@ -153,6 +167,7 @@ For the local web shell, configure the backend with environment variables:
 export MAKEYOURBRICK_RUNNER_MODE=sam3d
 export MAKEYOURBRICK_SAM_REPO=third_party/sam-3d-objects
 export MAKEYOURBRICK_SAM_COMMAND="python path/to/sam3d_export.py --image {image} --mask {mask} --output {output}"
+export MAKEYOURBRICK_RAW_MESH_SUFFIX=.glb
 python -m uvicorn makeyourbrick.server.main:app --app-dir src --host 127.0.0.1 --port 8000 --reload
 ```
 
@@ -162,6 +177,7 @@ On Windows PowerShell:
 $env:MAKEYOURBRICK_RUNNER_MODE = "sam3d"
 $env:MAKEYOURBRICK_SAM_REPO = "third_party/sam-3d-objects"
 $env:MAKEYOURBRICK_SAM_COMMAND = "python path/to/sam3d_export.py --image {image} --mask {mask} --output {output}"
+$env:MAKEYOURBRICK_RAW_MESH_SUFFIX = ".glb"
 python -m uvicorn makeyourbrick.server.main:app --app-dir src --host 127.0.0.1 --port 8000 --reload
 ```
 
