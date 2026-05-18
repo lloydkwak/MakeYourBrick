@@ -8,9 +8,15 @@ from threading import Lock
 
 from makeyourbrick.ai.fake_runner import FakeSamMeshRunner
 from makeyourbrick.ai.sam3d_runner import Sam3DRunner
-from makeyourbrick.pipeline import run_from_image
+from makeyourbrick.mesh.inspect import inspect_mesh_to_file
+from makeyourbrick.pipeline import convert_mesh_to_ldr, run_from_image
 from makeyourbrick.server.schemas import JobRequest, JobResultResponse, JobStatusResponse
 from makeyourbrick.server.storage import SessionStorage
+
+
+def sam3d_reconstruction_progress(elapsed: float) -> float:
+    warmup_seconds = 12 * 60
+    return min(0.34, 0.18 + (elapsed / warmup_seconds) * 0.16)
 
 
 @dataclass(frozen=True)
@@ -180,7 +186,7 @@ def run_pipeline_job(
             status="running",
             stage="reconstruction",
             progress=0.15,
-            message=f"Generating mesh with {runner_config.mode} runner",
+            message=f"Starting {runner_config.mode} mesh reconstruction",
             paths={
                 "raw_mesh": raw_mesh_path,
                 "voxels": voxel_path,
@@ -189,27 +195,64 @@ def run_pipeline_job(
                 "mesh_inspect": mesh_inspect_path,
             },
         )
-        registry.update(
-            job_id,
-            stage="mesh_inspection",
-            progress=0.28,
-            message="Generating and inspecting raw mesh before conversion",
-        )
-        run_from_image(
-            image_path=image_path,
-            runner=runner,
-            mask_path=mask_path,
-            raw_mesh_path=raw_mesh_path,
-            voxel_output_path=voxel_path,
-            ldr_output_path=ldr_path,
-            base_size_studs=request.base_size_studs,
-            report_path=report_path,
-            raw_mesh_report_path=mesh_inspect_path,
-            up_axis=request.up_axis,
-            wall_thickness=request.wall_thickness,
-            base_thickness=request.base_thickness,
-            color_strategy=request.color_strategy,
-        )
+        if isinstance(runner, Sam3DRunner):
+            artifact = runner.generate(
+                image_path,
+                raw_mesh_path,
+                mask_path=mask_path,
+                on_progress=lambda elapsed, message: registry.update(
+                    job_id,
+                    stage="reconstruction",
+                    progress=sam3d_reconstruction_progress(elapsed),
+                    message=message,
+                ),
+            )
+            registry.update(
+                job_id,
+                stage="mesh_inspection",
+                progress=0.36,
+                message="SAM mesh generated; inspecting raw GLB",
+            )
+            inspect_mesh_to_file(artifact.path, mesh_inspect_path)
+            registry.update(
+                job_id,
+                stage="conversion",
+                progress=0.52,
+                message="Converting SAM mesh to LDraw bricks",
+            )
+            convert_mesh_to_ldr(
+                mesh_path=artifact.path,
+                ldr_output_path=ldr_path,
+                voxel_output_path=voxel_path,
+                report_path=report_path,
+                base_size_studs=request.base_size_studs,
+                wall_thickness=request.wall_thickness,
+                base_thickness=request.base_thickness,
+                up_axis=request.up_axis,
+                color_strategy=request.color_strategy,
+            )
+        else:
+            registry.update(
+                job_id,
+                stage="mesh_inspection",
+                progress=0.28,
+                message="Generating and inspecting raw mesh before conversion",
+            )
+            run_from_image(
+                image_path=image_path,
+                runner=runner,
+                mask_path=mask_path,
+                raw_mesh_path=raw_mesh_path,
+                voxel_output_path=voxel_path,
+                ldr_output_path=ldr_path,
+                base_size_studs=request.base_size_studs,
+                report_path=report_path,
+                raw_mesh_report_path=mesh_inspect_path,
+                up_axis=request.up_axis,
+                wall_thickness=request.wall_thickness,
+                base_thickness=request.base_thickness,
+                color_strategy=request.color_strategy,
+            )
         report = json.loads(report_path.read_text(encoding="utf-8"))
         mesh_inspect = json.loads(mesh_inspect_path.read_text(encoding="utf-8"))
         warnings = list(mesh_inspect.get("warnings", []))

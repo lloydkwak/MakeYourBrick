@@ -13,10 +13,6 @@ const scanLayer = document.querySelector("#scanLayer");
 const emptyState = document.querySelector("#emptyState");
 const imageMeta = document.querySelector("#imageMeta");
 const apiBaseUrl = document.querySelector("#apiBaseUrl");
-const baseSizeStuds = document.querySelector("#baseSizeStuds");
-const wallThickness = document.querySelector("#wallThickness");
-const baseThickness = document.querySelector("#baseThickness");
-const colorStrategy = document.querySelector("#colorStrategy");
 const runButton = document.querySelector("#runButton");
 const statusText = document.querySelector("#statusText");
 const reconstructionPreview = document.querySelector("#reconstructionPreview");
@@ -28,6 +24,20 @@ const resultPanel = document.querySelector("#resultPanel");
 const ldrLink = document.querySelector("#ldrLink");
 const startDropZone = document.querySelector("#startDropZone");
 const allFileInputs = document.querySelectorAll('input[type="file"]');
+
+function removeLegacySettingsControls() {
+  for (const heading of document.querySelectorAll(".settings-panel h2")) {
+    if (heading.textContent.trim() !== "Settings") continue;
+    const section = heading.closest("section");
+    if (section) section.remove();
+  }
+}
+
+removeLegacySettingsControls();
+
+if (window.location.protocol.startsWith("http")) {
+  apiBaseUrl.value = window.location.origin;
+}
 
 const ctx = canvas.getContext("2d");
 const ldrCtx = ldrPreviewCanvas?.getContext("2d");
@@ -58,6 +68,9 @@ const state = {
   layout: { x: 0, y: 0, width: canvas.width, height: canvas.height, scale: 1 },
 };
 
+let selectionPreviewTimer = null;
+let selectionPreviewSeq = 0;
+
 function setMode(mode) {
   state.mode = mode;
   pointModeButton.classList.toggle("is-active", mode === "point");
@@ -74,6 +87,10 @@ function hasSelection() {
   return state.positivePoints.length > 0 || state.negativePoints.length > 0 || Boolean(state.box);
 }
 
+function hasMaskTarget() {
+  return state.positivePoints.length > 0 || Boolean(state.box);
+}
+
 function resetBackendArtifacts({ keepImage = true } = {}) {
   state.backend.maskId = null;
   state.backend.maskUrl = null;
@@ -86,6 +103,30 @@ function resetBackendArtifacts({ keepImage = true } = {}) {
   if (!keepImage) {
     state.backend.imageId = null;
     state.backend.imageUrl = null;
+  }
+}
+
+function scheduleSelectionPreview() {
+  window.clearTimeout(selectionPreviewTimer);
+  selectionPreviewSeq += 1;
+  if (!state.image || !hasMaskTarget()) return;
+  const seq = selectionPreviewSeq;
+  selectionPreviewTimer = window.setTimeout(() => syncSelectionPreview(seq), 350);
+}
+
+async function syncSelectionPreview(seq) {
+  try {
+    statusText.textContent = "Segmenting mask preview";
+    await uploadImageToBackend();
+    if (seq !== selectionPreviewSeq) return;
+    await submitSelectionToBackend();
+    if (seq !== selectionPreviewSeq) return;
+    setPipelineStage("segment");
+    statusText.textContent = "Mask preview ready";
+  } catch (error) {
+    if (seq === selectionPreviewSeq) {
+      statusText.textContent = error.message;
+    }
   }
 }
 
@@ -199,16 +240,23 @@ function drawBackendMask() {
     state.layout.width,
     state.layout.height,
   );
-  maskCtx.globalCompositeOperation = "source-in";
-  maskCtx.fillStyle = "#1a7f64";
-  maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+  const maskPixels = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+  const data = maskPixels.data;
+  for (let index = 0; index < data.length; index += 4) {
+    const alpha = data[index];
+    data[index] = 0;
+    data[index + 1] = 214;
+    data[index + 2] = 163;
+    data[index + 3] = alpha;
+  }
+  maskCtx.putImageData(maskPixels, 0, 0);
 
   ctx.save();
-  ctx.globalAlpha = 0.34;
+  ctx.globalAlpha = 0.58;
   ctx.drawImage(maskCanvas, 0, 0);
   ctx.globalAlpha = 1;
-  ctx.strokeStyle = "rgba(26, 127, 100, 0.85)";
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(0, 94, 72, 0.95)";
+  ctx.lineWidth = 4;
   const box = state.box;
   if (box) {
     const start = imageToCanvas({ x: box[0], y: box[1] });
@@ -302,11 +350,11 @@ function buildPayload() {
       box: state.box,
     },
     lego: {
-      base_size_studs: Number(baseSizeStuds.value),
-      wall_thickness: Number(wallThickness.value),
-      base_thickness: Number(baseThickness.value),
+      base_size_studs: "auto",
+      wall_thickness: 2,
+      base_thickness: 3,
       up_axis: "auto",
-      color_strategy: colorStrategy.value,
+      color_strategy: "mesh",
       steps_by_layer: true,
     },
     job: {
@@ -370,6 +418,8 @@ function loadFile(file) {
       state.negativePoints = [];
       state.box = null;
       state.draftBox = null;
+      window.clearTimeout(selectionPreviewTimer);
+      selectionPreviewSeq += 1;
       document.body.classList.add("has-image");
       imageMeta.textContent = `${file.name} · ${image.width} x ${image.height}`;
       statusText.textContent = "Image ready";
@@ -412,6 +462,8 @@ function resetAll() {
   state.negativePoints = [];
   state.box = null;
   state.draftBox = null;
+  window.clearTimeout(selectionPreviewTimer);
+  selectionPreviewSeq += 1;
   imageInput.value = "";
   imageMeta.textContent = "No image loaded";
   statusText.textContent = "Waiting for image";
@@ -443,6 +495,7 @@ undoButton.addEventListener("click", () => {
   resetBackendArtifacts();
   statusText.textContent = "Selection updated";
   draw();
+  scheduleSelectionPreview();
 });
 
 clearButton.addEventListener("click", () => {
@@ -450,6 +503,8 @@ clearButton.addEventListener("click", () => {
   state.negativePoints = [];
   state.box = null;
   state.draftBox = null;
+  window.clearTimeout(selectionPreviewTimer);
+  selectionPreviewSeq += 1;
   resetBackendArtifacts();
   statusText.textContent = "Selection cleared";
   draw();
@@ -469,6 +524,7 @@ canvas.addEventListener("pointerdown", (event) => {
     statusText.textContent = "Selection updated";
     triggerScan();
     draw();
+    scheduleSelectionPreview();
     return;
   }
   state.isDraggingBox = true;
@@ -495,6 +551,7 @@ canvas.addEventListener("pointerup", (event) => {
   statusText.textContent = "Box selected";
   triggerScan();
   draw();
+  scheduleSelectionPreview();
 });
 
 for (const zone of [dropZone, startDropZone].filter(Boolean)) {
@@ -517,7 +574,7 @@ for (const zone of [dropZone, startDropZone].filter(Boolean)) {
   });
 }
 
-for (const input of [apiBaseUrl, baseSizeStuds, wallThickness, baseThickness, colorStrategy]) {
+for (const input of [apiBaseUrl]) {
   input.addEventListener("change", updatePayload);
 }
 
@@ -559,6 +616,8 @@ async function submitSelectionToBackend() {
   state.backend.maskId = result.mask_id;
   state.backend.maskUrl = result.mask_url;
   await loadBackendMask(result.mask_url);
+  statusText.textContent = "Mask generated and shown on image";
+  return result;
 }
 
 async function loadBackendMask(maskUrl) {
@@ -780,13 +839,19 @@ function delay(ms) {
 }
 
 async function pollJob(jobId) {
+  const startedAt = Date.now();
   for (;;) {
     const response = await fetch(apiUrl(`/api/jobs/${jobId}`));
     if (!response.ok) throw new Error(`Job polling failed: ${response.status}`);
     const job = await response.json();
     state.backend.jobStatus = job.status;
     state.backend.jobStage = job.stage;
-    statusText.textContent = `${job.stage}: ${job.message}`;
+    const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
+    const elapsed = `${String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:${String(
+      elapsedSeconds % 60,
+    ).padStart(2, "0")}`;
+    const percent = Math.max(0, Math.min(100, Math.round((job.progress || 0) * 100)));
+    statusText.textContent = `${job.stage}: ${job.message} · ${elapsed} · ${percent}%`;
     setPipelineStage(job.stage);
     if (job.status === "completed") {
       const resultResponse = await fetch(apiUrl(`/api/jobs/${jobId}/result`));
@@ -812,7 +877,6 @@ runButton.addEventListener("click", async () => {
   const payload = buildPayload();
   const selectionReady =
     payload.selection.positive_points.length > 0 ||
-    payload.selection.negative_points.length > 0 ||
     payload.selection.box;
   if (!payload.image || !selectionReady) {
     statusText.textContent = "Image and selection required";
@@ -834,11 +898,6 @@ runButton.addEventListener("click", async () => {
       body: JSON.stringify({
         image_id: state.backend.imageId,
         mask_id: state.backend.maskId,
-        base_size_studs: payload.lego.base_size_studs,
-        wall_thickness: payload.lego.wall_thickness,
-        base_thickness: payload.lego.base_thickness,
-        up_axis: payload.lego.up_axis,
-        color_strategy: payload.lego.color_strategy,
       }),
     });
     if (!response.ok) throw new Error(`Job creation failed: ${response.status}`);

@@ -18,10 +18,13 @@ FROM nvidia/cuda:12.1.1-devel-ubuntu22.04
 ARG DEBIAN_FRONTEND=noninteractive
 ARG SAM3D_REPO=https://github.com/facebookresearch/sam-3d-objects.git
 ARG SAM3D_REF=main
+ARG SAM2_REPO=https://github.com/facebookresearch/sam2.git
+ARG SAM2_REF=main
 ARG MINIFORGE_URL=https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
 
 ENV CONDA_DIR=/opt/conda
 ENV SAM3D_DIR=/opt/sam-3d-objects
+ENV SAM2_DIR=/opt/sam2
 ENV APP_DIR=/workspace/MakeYourBrick
 ENV PATH=${CONDA_DIR}/envs/sam3d-objects/bin:${CONDA_DIR}/bin:${PATH}
 ENV PIP_EXTRA_INDEX_URL="https://pypi.ngc.nvidia.com https://download.pytorch.org/whl/cu121"
@@ -74,6 +77,9 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     && conda activate sam3d-objects \
     && python -m pip install -e '.[p3d]'
 
+ARG CUDA_ARCH_LIST=7.5;8.0;8.6;8.9;9.0
+ENV TORCH_CUDA_ARCH_LIST=${CUDA_ARCH_LIST}
+
 RUN --mount=type=cache,target=/root/.cache/pip \
     source "${CONDA_DIR}/etc/profile.d/conda.sh" \
     && conda activate sam3d-objects \
@@ -85,6 +91,12 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     && python -m pip install 'huggingface-hub[cli]<1.0' \
     && ./patching/hydra
 
+RUN git clone --depth 1 --branch "${SAM2_REF}" "${SAM2_REPO}" "${SAM2_DIR}" \
+    && source "${CONDA_DIR}/etc/profile.d/conda.sh" \
+    && conda activate sam3d-objects \
+    && cd "${SAM2_DIR}" \
+    && SAM2_BUILD_CUDA=0 python -m pip install --no-build-isolation --no-deps -e .
+
 WORKDIR ${APP_DIR}
 
 COPY . ${APP_DIR}
@@ -95,9 +107,14 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     && python -m pip install -r requirements.txt \
     && python -m pip install -e .
 
-ENV MAKEYOURBRICK_RUNNER_MODE=fake
+ENV MAKEYOURBRICK_RUNNER_MODE=sam3d
+ENV MAKEYOURBRICK_SEGMENTER_MODE=sam2
+ENV MAKEYOURBRICK_SAM2_MODEL_ID=facebook/sam2.1-hiera-large
+ENV MAKEYOURBRICK_SAM2_DEVICE=auto
+ENV MAKEYOURBRICK_SAM3D_MODEL_ID=facebook/sam-3d-objects
+ENV PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 ENV MAKEYOURBRICK_SAM_REPO=${SAM3D_DIR}
-ENV MAKEYOURBRICK_SAM_COMMAND=""
+ENV MAKEYOURBRICK_SAM_COMMAND="python /workspace/MakeYourBrick/scripts/sam3d_export.py --repo {repo} --depth-device cpu --dino-dtype fp16 --image {image} --mask {mask} --output {output}"
 ENV MAKEYOURBRICK_RAW_MESH_SUFFIX=.glb
 
 EXPOSE 8000

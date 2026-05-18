@@ -42,7 +42,7 @@ class ServerConfigResponse(BaseModel):
 class JobRequest(BaseModel):
     image_id: str
     mask_id: str | None = None
-    base_size_studs: int = Field(default=32, ge=8, le=256)
+    base_size_studs: int | Literal["auto"] = "auto"
     wall_thickness: int = Field(default=2, ge=1, le=16)
     base_thickness: int = Field(default=3, ge=0, le=64)
     up_axis: Literal["auto", "none", "x", "y", "z"] = "auto"

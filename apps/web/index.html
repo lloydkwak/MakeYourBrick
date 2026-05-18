@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>MakeYourBrick</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=3" />
   </head>
   <body>
     <header class="app-nav" aria-label="Application navigation">
@@ -114,29 +114,6 @@
 
         <aside class="settings-panel" aria-label="LEGO conversion settings">
           <section>
-            <h2>Settings</h2>
-            <label>
-              Base size
-              <input id="baseSizeStuds" type="number" min="8" max="256" step="1" value="32" />
-            </label>
-            <label>
-              Wall thickness
-              <input id="wallThickness" type="number" min="1" max="16" step="1" value="2" />
-            </label>
-            <label>
-              Bottom thickness
-              <input id="baseThickness" type="number" min="0" max="64" step="1" value="3" />
-            </label>
-            <label>
-              Coloring
-              <select id="colorStrategy">
-                <option value="mesh" selected>Object texture</option>
-                <option value="layer">By layer</option>
-              </select>
-            </label>
-          </section>
-
-          <section>
             <h2>Pipeline</h2>
             <ol class="stage-list">
               <li data-stage="upload" class="is-current">Choose image</li>
@@ -158,6 +135,6 @@
       </section>
     </main>
 
-    <script src="./app.js" defer></script>
+    <script src="./app.js?v=3" defer></script>
   </body>
 </html>

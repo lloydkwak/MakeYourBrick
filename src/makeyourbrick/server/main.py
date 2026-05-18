@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from PIL import Image, UnidentifiedImageError
 
 from makeyourbrick.server.jobs import JobRegistry, JobRunnerConfig, run_pipeline_job, to_status_response
-from makeyourbrick.server.masks import create_placeholder_mask
+from makeyourbrick.server.masks import create_interactive_mask
 from makeyourbrick.server.schemas import (
     HealthResponse,
     ImageUploadResponse,
@@ -38,6 +39,14 @@ def create_app(
     app.state.storage = storage or SessionStorage()
     app.state.jobs = registry or JobRegistry()
     app.state.runner_config = runner_config or JobRunnerConfig.from_env()
+
+    @app.middleware("http")
+    async def disable_web_cache(request: Request, call_next):
+        response = await call_next(request)
+        if not request.url.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-store, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+        return response
 
     @app.get("/api/health", response_model=HealthResponse)
     def health() -> HealthResponse:
@@ -99,7 +108,7 @@ def create_app(
         with ImageResponseContext(image) as opened:
             mask_id = app.state.storage.new_id()
             mask_path = app.state.storage.mask_path(image_id, mask_id)
-            create_placeholder_mask(opened.size, selection, mask_path)
+            create_interactive_mask(opened, selection, mask_path)
         app.state.storage.save_selection(image_id, mask_id, selection)
         return SelectionResponse(
             image_id=image_id,
@@ -173,6 +182,10 @@ def create_app(
         if kind == "ldr":
             return FileResponse(path, media_type="text/plain")
         return FileResponse(path)
+
+    web_dir = Path(__file__).resolve().parents[3] / "apps" / "web"
+    if web_dir.exists():
+        app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
 
     return app
 

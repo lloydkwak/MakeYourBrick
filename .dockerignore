@@ -18,9 +18,7 @@ data/examples/**
 !data/examples/**/
 !data/examples/**/.gitkeep
 
-third_party/**
-!third_party/**/
-!third_party/**/.gitkeep
+third_party
 
 *.obj
 *.odj
