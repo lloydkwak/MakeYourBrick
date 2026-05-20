@@ -26,7 +26,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--base-size-studs",
         default=str(DEFAULT_BASE_SIZE_STUDS),
-        help="Maximum horizontal footprint in studs, or 'auto' to choose from 16/24/32/48/64.",
+        help="Maximum horizontal footprint in studs, or 'auto' to choose from 16/24/32/48.",
     )
     parser.add_argument("--wall-thickness", type=int, default=DEFAULT_WALL_THICKNESS)
     parser.add_argument("--base-thickness", type=int, default=DEFAULT_BASE_THICKNESS)

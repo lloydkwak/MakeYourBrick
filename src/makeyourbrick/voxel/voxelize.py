@@ -8,7 +8,7 @@ from makeyourbrick.brickify.colors import quantize_rgb_to_ldraw, sample_mesh_rgb
 from makeyourbrick.types import VoxelArtifact
 
 VOXELIZERS = ("slice", "surface")
-AUTO_BASE_SIZE_OPTIONS = (16, 24, 32, 48, 64)
+AUTO_BASE_SIZE_OPTIONS = (16, 24, 32, 48)
 
 
 def compute_footprint_pitch(mesh, base_size_studs: int, min_pitch: float = 0.005) -> float:
@@ -20,32 +20,41 @@ def compute_footprint_pitch(mesh, base_size_studs: int, min_pitch: float = 0.005
     return max(footprint / base_size_studs, min_pitch)
 
 
-def recommend_base_size_studs(mesh, *, max_base_size: int = 64) -> int:
+def recommend_base_size_studs(mesh, *, max_base_size: int = 48) -> int:
     extents = np.asarray(mesh.extents, dtype=np.float64)
     footprint = float(max(extents[0], extents[2]))
     if footprint <= 0:
         raise ValueError("Mesh has zero-sized X/Z footprint.")
-    thinness = footprint / max(float(extents[1]), 1e-9)
-    complexity = float(len(getattr(mesh, "faces", []))) / 50000.0
+    height = max(float(extents[1]), 1e-9)
+    footprint_to_height = footprint / height
+    face_count = int(len(getattr(mesh, "faces", [])))
     component_count = 1
     if not bool(getattr(mesh, "is_watertight", False)):
         try:
             component_count = len(mesh.split(only_watertight=False))
         except Exception:
             component_count = 2
-    fragmentation = min(component_count / 250.0, 4.0)
-    score = thinness + complexity + fragmentation
-    if score >= 10.0:
-        recommended = 64
-    elif score >= 6.0:
+
+    if footprint_to_height >= 5.0:
         recommended = 48
-    elif score >= 3.5:
+    elif footprint_to_height >= 2.5:
         recommended = 32
-    elif score >= 2.0:
-        recommended = 24
     else:
+        recommended = 24
+
+    if footprint_to_height < 1.25 and face_count >= 150000:
+        recommended = max(recommended, 32)
+    elif footprint_to_height < 1.25 and face_count < 25000 and component_count <= 4:
         recommended = 16
-    return min(recommended, max_base_size)
+    elif footprint_to_height >= 1.5 and face_count >= 200000:
+        recommended = max(recommended, 32)
+    if component_count >= 64 and footprint_to_height >= 2.0:
+        recommended = max(recommended, 32)
+
+    valid_options = [size for size in AUTO_BASE_SIZE_OPTIONS if size <= max_base_size]
+    if not valid_options:
+        raise ValueError("max_base_size is smaller than every supported auto base size.")
+    return min(valid_options, key=lambda size: abs(size - recommended))
 
 
 def save_voxel_artifact(

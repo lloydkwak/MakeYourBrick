@@ -468,6 +468,7 @@ body.has-image .editor-stage {
 .preview-empty {
   position: absolute;
   inset: 0;
+  z-index: 2;
   display: grid;
   place-content: center;
   gap: 8px;
@@ -508,16 +509,25 @@ body.has-image .editor-stage {
     #f0ebe6;
 }
 
-#ldrPreviewCanvas {
+.sam-model-viewer {
   position: absolute;
   inset: 0;
+  z-index: 1;
   width: 100%;
   height: 100%;
   display: block;
+  background: transparent;
+  touch-action: none;
+  cursor: grab;
+}
+
+.sam-model-viewer:active {
+  cursor: grabbing;
 }
 
 .preview-floor {
   position: absolute;
+  z-index: 0;
   left: 50%;
   bottom: 22px;
   width: 62%;
@@ -528,6 +538,10 @@ body.has-image .editor-stage {
   background-image: radial-gradient(circle, #b9ada5 0 2px, transparent 2.7px);
   background-size: 18px 18px;
   pointer-events: none;
+}
+
+.ldr-preview.is-active .preview-empty {
+  display: none;
 }
 
 .control-dock {

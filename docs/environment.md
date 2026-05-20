@@ -1,18 +1,39 @@
 # Environment
 
-## Python
+## Recommended Runtime
+
+Use the Docker image for real SAM2 + SAM 3D Objects runs. It installs the SAM
+stack, MakeYourBrick, and the local web backend in one CUDA-enabled container.
+
+Requirements:
+
+- Linux with NVIDIA Container Toolkit, or Windows Docker Desktop with WSL2 GPU passthrough
+- NVIDIA GPU
+- Docker access to the GPU
+- Hugging Face token with access to `facebook/sam-3d-objects`
+- mounted caches for Hugging Face and torch model downloads
+
+Verify GPU passthrough:
+
+```bash
+docker run --rm --gpus all nvidia/cuda:12.1.1-base-ubuntu22.04 nvidia-smi
+```
+
+## Python Development
+
+For non-SAM development and mesh-only tests:
 
 - Python 3.10+
-- The local workspace has also been verified with Python 3.12.
+- verified locally with Python 3.12 for lightweight checks
 
-## Install
+Install:
 
 ```bash
 python -m pip install -r requirements.txt
 python -m pip install -e .
 ```
 
-## Core Dependencies
+Core dependencies:
 
 - `numpy`
 - `scipy`
@@ -25,18 +46,21 @@ python -m pip install -e .
 - `pytest`
 - `ruff`
 
-## SAM 3D
+## Model Data
 
-SAM 3D Objects remains external:
+Do not commit model checkpoints. Runtime caches should live under:
 
 ```text
-third_party/sam-3d-objects
+third_party/sam-3d-objects/hf-cache/
+third_party/sam-3d-objects/torch-cache/
 ```
 
-Do not commit that checkout. The MakeYourBrick runner only requires a command template that writes a triangle mesh to `{output}`.
+The Docker run commands mount those directories to:
 
-See [Local SAM 3D Objects Setup](sam3d_local_setup.md) for the recommended
-local checkout, checkpoint, and backend configuration flow.
+```text
+/root/.cache/huggingface
+/root/.cache/torch
+```
 
 ## Generated Files
 
@@ -46,4 +70,12 @@ Generated artifacts belong under:
 outputs/
 ```
 
-Only `.gitkeep` placeholders should be versioned there.
+Typical outputs:
+
+- uploaded images and masks
+- raw SAM GLB meshes
+- voxel `.npz` files
+- conversion reports
+- final `.ldr` files
+
+Only placeholder files should be versioned under generated-output directories.

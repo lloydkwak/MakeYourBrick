@@ -5,6 +5,7 @@
 - BrickLink Studio sculpture tool: https://studiohelp.bricklink.com/hc/en-us/articles/6508264220183-Sculpture
 - SAM 3D Objects: https://github.com/facebookresearch/sam-3d-objects
 - SAM 3D Objects model page: https://huggingface.co/facebook/sam-3d-objects
+- SAM2: https://github.com/facebookresearch/sam2
 - Meta SAM 3D research page: https://ai.meta.com/research/sam3d/
 - Trimesh: https://github.com/mikedh/trimesh
 - LDraw file format: https://www.ldraw.org/article/218.html

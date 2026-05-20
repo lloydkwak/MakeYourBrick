@@ -33,7 +33,7 @@
           <ol>
             <li><span>1.</span>Choose an image</li>
             <li><span>2.</span>Select an object</li>
-            <li><span>3.</span>Create an LDR model</li>
+            <li><span>3.</span>Preview 3D and download LDR</li>
           </ol>
         </div>
 
@@ -54,7 +54,7 @@
         </div>
       </section>
 
-      <section class="editor-stage" aria-label="Object selection and LDR preview">
+      <section class="editor-stage" aria-label="Object selection and 3D preview">
         <div class="editor-card">
           <div class="editor-toolbar">
             <div class="toolbar-title">
@@ -79,12 +79,16 @@
             </div>
             </div>
 
-            <aside class="ldr-workspace" aria-label="LDR model preview">
+            <aside class="ldr-workspace" aria-label="SAM 3D object preview">
               <div id="reconstructionPreview" class="ldr-preview">
-                <canvas id="ldrPreviewCanvas" width="900" height="720"></canvas>
+                <canvas
+                  id="samModelCanvas"
+                  class="sam-model-viewer"
+                  aria-label="SAM 3D object preview"
+                ></canvas>
                 <div id="previewEmpty" class="preview-empty">
-                  <strong id="previewTitle">Your LDR model will appear here</strong>
-                  <span id="previewSubtitle">Generate a LEGO conversion to preview the result.</span>
+                  <strong id="previewTitle">Your 3D object will appear here</strong>
+                  <span id="previewSubtitle">Generate a model to preview the SAM 3D output.</span>
                 </div>
                 <div class="preview-floor" aria-hidden="true"></div>
               </div>
@@ -106,7 +110,7 @@
               </label>
             </div>
             <button id="runButton" class="generate-button" type="button">
-              Generate LDR
+              Generate model
               <span class="cube-icon" aria-hidden="true"></span>
             </button>
           </div>
@@ -128,13 +132,15 @@
           <section id="resultPanel" class="result-panel" hidden>
             <h2>Result</h2>
             <div class="artifact-links">
-              <a id="ldrLink" href="#" target="_blank" rel="noreferrer">LDR</a>
+              <a id="rawMeshLink" href="#" target="_blank" rel="noreferrer" download>3D model</a>
+              <a id="ldrLink" href="#" target="_blank" rel="noreferrer" download>LDR</a>
             </div>
           </section>
         </aside>
       </section>
     </main>
 
-    <script src="./app.js?v=3" defer></script>
+    <script src="./glb-viewer.js?v=1" defer></script>
+    <script src="./app.js?v=5" defer></script>
   </body>
 </html>

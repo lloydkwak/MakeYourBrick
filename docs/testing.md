@@ -1,63 +1,72 @@
 # Testing
 
-The test suite is intentionally small. It covers only the current core pipeline.
+The test suite focuses on the current image/mesh-to-LDraw pipeline.
 
-## Run
+## Run Locally
 
 ```bash
 python -m compileall src scripts tests
 python -m pytest
 ```
 
+If the host Python environment does not include the project dependencies, run
+tests in the Docker image:
+
+```bash
+docker run --rm -v "$(pwd):/workspace/MakeYourBrick" \
+  -w /workspace/MakeYourBrick \
+  makeyourbrick-sam3d:local \
+  python -m pytest
+```
+
 ## Covered
 
-- contour-shell target creation
-- contour-shell helper mask creation
+- contour-shell and surface-detail target creation
 - bottom layer filling
 - Studio brick-combination tiling
 - lower/upper attachment-aware stability reporting
 - attachment-only plate overlay reporting
-- layer color sequence
-- CIELAB LDraw colour quantization
-- mesh colour strategy brick placement
-- mesh colour boundary preservation during brick placement
+- LDraw writer axes and layer steps
+- CIELAB LDraw color quantization
+- texture shadow softening
+- mesh color strategy and color-boundary preservation
 - GLB scene transform preservation
-- mesh inspection colour source reporting
+- mesh inspection and color source reporting
 - mesh-to-LDR CLI smoke conversion
 - all-1x1 target debug output
 - open mesh surface voxel fallback
-- open mesh surface-detail target preservation
-- automatic base-size selection
-- conversion report output
+- auto base-size selection, including dense tall meshes resolving to `32`
+- fake image runner GLB path
+- job runner raw mesh suffix handling
 
-## Manual Studio Check
+## Manual Checks
 
-For visual inspection:
+Generate a mesh-only LDR:
 
 ```bash
 python scripts/mesh_to_ldr.py \
-  --mesh queen.obj \
-  --base-size-studs 32 \
+  --mesh queen.glb \
+  --base-size-studs auto \
   --wall-thickness 2 \
   --base-thickness 3 \
+  --color-strategy mesh \
   --report outputs/reports/queen_report.json \
   --output outputs/ldr/queen.ldr
 ```
 
 Open `outputs/ldr/queen.ldr` in BrickLink Studio or another LDraw viewer.
 
-For fragmented vehicle-style OBJ files, use Y-up and auto base size:
+For the full SAM path, run the Docker UI, generate a model, then inspect:
 
-```bash
-python scripts/mesh_to_ldr.py \
-  --mesh car.obj \
-  --base-size-studs auto \
-  --wall-thickness 2 \
-  --base-thickness 3 \
-  --up-axis y \
-  --report outputs/reports/car_report.json \
-  --output outputs/ldr/car.ldr
-```
+- the mask overlay in the UI
+- the raw GLB preview in the right panel
+- the downloaded LDR in Studio
+- `outputs/ui_sessions/.../reports/report.json`
 
-The report should show `sculpture.mode` as `surface-detail` when the open mesh
-surface fallback is selected.
+The report should show:
+
+- `footprint_scale.base_size_studs`
+- `sculpture.color_strategy`
+- `color_counts`
+- `stability`
+- `attachment_overlay`

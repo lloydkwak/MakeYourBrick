@@ -115,8 +115,15 @@ Then upload an image, select the target object with points or a box, and wait
 for the mask preview. The image uses SAM2 from Hugging Face
 (`facebook/sam2.1-hiera-large`) for interactive segmentation, then SAM 3D
 Objects (`facebook/sam-3d-objects`) auto-resolves its gated checkpoints from the
-same Hugging Face cache, writes a GLB, voxelizes it, and returns an LDraw `.ldr`
-artifact when you click Generate LDR.
+same Hugging Face cache, writes a GLB, previews that raw SAM 3D mesh in the web
+UI, voxelizes it, and returns an LDraw `.ldr` artifact for download when you
+click Generate model.
+
+The MakeYourBrick conversion step uses `base_size_studs=auto` by default. Auto
+chooses from `16/24/32/48`; dense tall objects such as the queen demo resolve to
+`32`, while simpler or wider assets are scaled from their proportions and mesh
+detail. Mesh colours are sampled from the GLB and dark baked shadows are softened
+before LDraw palette matching.
 
 SAM2 and SAM 3D share a single in-process GPU lock so a click segmentation and a
 3D reconstruction do not run on the GPU at the same time. If another host

@@ -19,8 +19,9 @@ const reconstructionPreview = document.querySelector("#reconstructionPreview");
 const previewTitle = document.querySelector("#previewTitle");
 const previewSubtitle = document.querySelector("#previewSubtitle");
 const previewEmpty = document.querySelector("#previewEmpty");
-const ldrPreviewCanvas = document.querySelector("#ldrPreviewCanvas");
+const samModelCanvas = document.querySelector("#samModelCanvas");
 const resultPanel = document.querySelector("#resultPanel");
+const rawMeshLink = document.querySelector("#rawMeshLink");
 const ldrLink = document.querySelector("#ldrLink");
 const startDropZone = document.querySelector("#startDropZone");
 const allFileInputs = document.querySelectorAll('input[type="file"]');
@@ -40,7 +41,8 @@ if (window.location.protocol.startsWith("http")) {
 }
 
 const ctx = canvas.getContext("2d");
-const ldrCtx = ldrPreviewCanvas?.getContext("2d");
+let samViewer = null;
+let modelPreviewSeq = 0;
 
 const state = {
   image: null,
@@ -91,6 +93,42 @@ function hasMaskTarget() {
   return state.positivePoints.length > 0 || Boolean(state.box);
 }
 
+function clearModelPreview() {
+  modelPreviewSeq += 1;
+  if (samViewer) {
+    samViewer.clear();
+  }
+  previewEmpty.hidden = false;
+  reconstructionPreview.classList.remove("is-active");
+}
+
+async function showModelPreview(rawMeshUrl) {
+  if (!rawMeshUrl || !samModelCanvas || !window.MakeYourBrickGlbViewer) {
+    clearModelPreview();
+    return;
+  }
+  const seq = ++modelPreviewSeq;
+  if (!samViewer) {
+    samViewer = new window.MakeYourBrickGlbViewer(samModelCanvas);
+  }
+  previewTitle.textContent = "Loading SAM 3D model";
+  previewSubtitle.textContent = "Preparing interactive preview.";
+  previewEmpty.hidden = true;
+  reconstructionPreview.classList.add("is-active");
+  try {
+    await samViewer.load(apiUrl(rawMeshUrl));
+    if (seq !== modelPreviewSeq) return;
+    previewTitle.textContent = "SAM 3D model ready";
+    previewSubtitle.textContent = "Drag to rotate. Scroll or pinch to zoom.";
+  } catch (error) {
+    if (seq !== modelPreviewSeq) return;
+    previewEmpty.hidden = false;
+    reconstructionPreview.classList.remove("is-active");
+    previewTitle.textContent = "3D preview failed";
+    previewSubtitle.textContent = error.message;
+  }
+}
+
 function resetBackendArtifacts({ keepImage = true } = {}) {
   state.backend.maskId = null;
   state.backend.maskUrl = null;
@@ -100,6 +138,7 @@ function resetBackendArtifacts({ keepImage = true } = {}) {
   state.backend.jobStage = null;
   state.backend.result = null;
   resultPanel.hidden = true;
+  clearModelPreview();
   if (!keepImage) {
     state.backend.imageId = null;
     state.backend.imageUrl = null;
@@ -141,14 +180,6 @@ function resizeCanvas() {
   const pixelRatio = window.devicePixelRatio || 1;
   canvas.width = Math.max(640, Math.floor(rect.width * pixelRatio));
   canvas.height = Math.max(420, Math.floor(rect.height * pixelRatio));
-  if (ldrPreviewCanvas) {
-    const previewRect = ldrPreviewCanvas.getBoundingClientRect();
-    ldrPreviewCanvas.width = Math.max(640, Math.floor(previewRect.width * pixelRatio));
-    ldrPreviewCanvas.height = Math.max(420, Math.floor(previewRect.height * pixelRatio));
-    if (state.backend.result?.ldr_url) {
-      renderLdrFromUrl(apiUrl(state.backend.result.ldr_url));
-    }
-  }
   draw();
 }
 
@@ -373,11 +404,15 @@ function updateStages() {
   });
   const hasImage = Boolean(state.image);
   const selectionReady = hasSelection();
-  reconstructionPreview.classList.toggle("is-active", selectionReady);
-  previewTitle.textContent = selectionReady ? "Target locked" : "Waiting for target";
-  previewSubtitle.textContent = selectionReady
-    ? "Mask preview is ready for LEGO conversion."
-    : "Select an object to prepare reconstruction.";
+  const modelReady = Boolean(state.backend.result?.raw_mesh_url);
+  reconstructionPreview.classList.toggle("is-active", selectionReady || modelReady);
+  if (!modelReady) {
+    previewEmpty.hidden = false;
+    previewTitle.textContent = selectionReady ? "Target locked" : "Waiting for target";
+    previewSubtitle.textContent = selectionReady
+      ? "Mask preview is ready for 3D reconstruction."
+      : "Select an object to prepare reconstruction.";
+  }
   if (selectionReady && state.backend.jobStage) {
     setPipelineStage(state.backend.jobStage);
     return;
@@ -424,6 +459,7 @@ function loadFile(file) {
       imageMeta.textContent = `${file.name} · ${image.width} x ${image.height}`;
       statusText.textContent = "Image ready";
       resultPanel.hidden = true;
+      clearModelPreview();
       window.requestAnimationFrame(resizeCanvas);
       draw();
     };
@@ -468,7 +504,7 @@ function resetAll() {
   imageMeta.textContent = "No image loaded";
   statusText.textContent = "Waiting for image";
   resultPanel.hidden = true;
-  clearLdrPreview();
+  clearModelPreview();
   draw();
 }
 
@@ -656,182 +692,20 @@ function setPipelineStage(stage) {
 }
 
 function setResultLinks(result) {
+  rawMeshLink.hidden = !result.raw_mesh_url;
+  ldrLink.hidden = !result.ldr_url;
+  if (result.raw_mesh_url) {
+    rawMeshLink.href = apiUrl(result.raw_mesh_url);
+    rawMeshLink.download = "sam3d-object.glb";
+    showModelPreview(result.raw_mesh_url);
+  } else {
+    clearModelPreview();
+  }
   if (result.ldr_url) {
     ldrLink.href = apiUrl(result.ldr_url);
+    ldrLink.download = "makeyourbrick.ldr";
   }
   resultPanel.hidden = false;
-  if (result.ldr_url) {
-    renderLdrFromUrl(apiUrl(result.ldr_url));
-  }
-}
-
-const ldrawColors = {
-  0: "#1d1e22",
-  1: "#0055bf",
-  2: "#237841",
-  3: "#008f9b",
-  4: "#c91a09",
-  5: "#c870a0",
-  6: "#583927",
-  7: "#9ba19d",
-  8: "#6d6e5c",
-  9: "#b4d2e3",
-  10: "#4b9f4a",
-  11: "#55a5af",
-  12: "#f2705e",
-  13: "#fc97ac",
-  14: "#f2cd37",
-  15: "#ffffff",
-  19: "#a5a5cb",
-  20: "#d9e4a7",
-  27: "#ffaa80",
-  71: "#a0a5a9",
-};
-
-const partFootprints = {
-  "3005.dat": [1, 1],
-  "3004.dat": [2, 1],
-  "3003.dat": [2, 2],
-  "3622.dat": [3, 1],
-  "3002.dat": [3, 2],
-  "3010.dat": [4, 1],
-  "3001.dat": [4, 2],
-  "3009.dat": [6, 1],
-  "2456.dat": [6, 2],
-  "3008.dat": [8, 1],
-  "3007.dat": [8, 2],
-  "3024.dat": [1, 1],
-  "3023.dat": [2, 1],
-  "3022.dat": [2, 2],
-  "3623.dat": [3, 1],
-  "3710.dat": [4, 1],
-  "3021.dat": [3, 2],
-  "3020.dat": [4, 2],
-  "3666.dat": [6, 1],
-  "3460.dat": [8, 1],
-  "3795.dat": [2, 6],
-  "3034.dat": [2, 8],
-};
-
-function clearLdrPreview() {
-  if (!ldrCtx || !ldrPreviewCanvas) return;
-  ldrCtx.clearRect(0, 0, ldrPreviewCanvas.width, ldrPreviewCanvas.height);
-  previewEmpty.hidden = false;
-  reconstructionPreview.classList.remove("is-active");
-}
-
-async function renderLdrFromUrl(url) {
-  if (!ldrCtx || !ldrPreviewCanvas) return;
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`LDR preview failed: ${response.status}`);
-    renderLdrPreview(await response.text());
-  } catch (error) {
-    previewTitle.textContent = "LDR preview unavailable";
-    previewSubtitle.textContent = error.message;
-    clearLdrPreview();
-  }
-}
-
-function parseLdrBricks(ldrText) {
-  const bricks = [];
-  for (const line of ldrText.split(/\r?\n/)) {
-    const parts = line.trim().split(/\s+/);
-    if (parts.length < 15 || parts[0] !== "1") continue;
-    const colorId = Number(parts[1]);
-    const x = Number(parts[2]) / 20;
-    const y = -Number(parts[3]) / 24;
-    const z = Number(parts[4]) / 20;
-    const partId = parts[14].toLowerCase();
-    const footprint = partFootprints[partId] || [1, 1];
-    const rotated = Math.abs(Number(parts[5])) < 0.5 && Math.abs(Number(parts[7])) > 0.5;
-    bricks.push({
-      color: ldrawColors[colorId] || "#d6d9dd",
-      x,
-      y,
-      z,
-      width: rotated ? footprint[1] : footprint[0],
-      depth: rotated ? footprint[0] : footprint[1],
-    });
-  }
-  return bricks;
-}
-
-function shadeColor(hex, amount) {
-  const value = Number.parseInt(hex.slice(1), 16);
-  const red = Math.max(0, Math.min(255, (value >> 16) + amount));
-  const green = Math.max(0, Math.min(255, ((value >> 8) & 255) + amount));
-  const blue = Math.max(0, Math.min(255, (value & 255) + amount));
-  return `rgb(${red}, ${green}, ${blue})`;
-}
-
-function drawIsoBrick(context, brick, transform) {
-  const cx = ldrPreviewCanvas.width / 2;
-  const cy = ldrPreviewCanvas.height * 0.68;
-  const x0 = brick.x - transform.midX;
-  const z0 = brick.z - transform.midZ;
-  const layer = brick.y - transform.minY;
-  const halfW = brick.width / 2;
-  const halfD = brick.depth / 2;
-  const corners = [
-    [x0 - halfW, z0 - halfD],
-    [x0 + halfW, z0 - halfD],
-    [x0 + halfW, z0 + halfD],
-    [x0 - halfW, z0 + halfD],
-  ].map(([x, z]) => ({
-    x: cx + (x - z) * transform.scale,
-    y: cy + (x + z) * transform.scale * 0.52 - layer * transform.scale * 0.72,
-  }));
-  context.beginPath();
-  context.moveTo(corners[0].x, corners[0].y);
-  corners.slice(1).forEach((point) => context.lineTo(point.x, point.y));
-  context.closePath();
-  context.fillStyle = brick.color;
-  context.strokeStyle = "rgba(0, 0, 0, 0.28)";
-  context.lineWidth = Math.max(0.5, transform.scale * 0.035);
-  context.fill();
-  context.stroke();
-
-  const studCount = Math.max(1, Math.round(Math.min(brick.width, 8)));
-  context.fillStyle = shadeColor(brick.color, 24);
-  for (let i = 0; i < studCount; i += 1) {
-    const t = (i + 0.5) / studCount;
-    const sx = corners[0].x + (corners[1].x - corners[0].x) * t;
-    const sy = corners[0].y + (corners[1].y - corners[0].y) * t;
-    context.beginPath();
-    context.ellipse(sx, sy - transform.scale * 0.13, transform.scale * 0.16, transform.scale * 0.08, 0, 0, Math.PI * 2);
-    context.fill();
-  }
-}
-
-function renderLdrPreview(ldrText) {
-  const bricks = parseLdrBricks(ldrText);
-  ldrCtx.clearRect(0, 0, ldrPreviewCanvas.width, ldrPreviewCanvas.height);
-  if (!bricks.length) {
-    clearLdrPreview();
-    return;
-  }
-  const minX = Math.min(...bricks.map((brick) => brick.x - brick.width / 2));
-  const maxX = Math.max(...bricks.map((brick) => brick.x + brick.width / 2));
-  const minZ = Math.min(...bricks.map((brick) => brick.z - brick.depth / 2));
-  const maxZ = Math.max(...bricks.map((brick) => brick.z + brick.depth / 2));
-  const minY = Math.min(...bricks.map((brick) => brick.y));
-  const maxY = Math.max(...bricks.map((brick) => brick.y));
-  const span = Math.max(maxX - minX, maxZ - minZ, (maxY - minY) * 0.7, 1);
-  const transform = {
-    midX: (minX + maxX) / 2,
-    midZ: (minZ + maxZ) / 2,
-    minY,
-    scale: Math.max(5, Math.min(18, Math.min(ldrPreviewCanvas.width, ldrPreviewCanvas.height) / (span * 2.25))),
-  };
-  ldrCtx.save();
-  ldrCtx.clearRect(0, 0, ldrPreviewCanvas.width, ldrPreviewCanvas.height);
-  bricks
-    .sort((a, b) => a.x + a.z + a.y * 5 - (b.x + b.z + b.y * 5))
-    .forEach((brick) => drawIsoBrick(ldrCtx, brick, transform));
-  ldrCtx.restore();
-  previewEmpty.hidden = true;
-  reconstructionPreview.classList.add("is-active");
 }
 
 function delay(ms) {
@@ -859,8 +733,8 @@ async function pollJob(jobId) {
       const result = await resultResponse.json();
       state.backend.result = result;
       statusText.textContent = "Conversion complete";
-      previewTitle.textContent = "LEGO output ready";
-      previewSubtitle.textContent = "LDR and report artifacts are available.";
+      previewTitle.textContent = "SAM 3D model ready";
+      previewSubtitle.textContent = "LDR is available as a download.";
       setPipelineStage("completed");
       setResultLinks(result);
       updatePayload();

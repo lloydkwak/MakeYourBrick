@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 
 DEFAULT_RGB = np.array((160, 165, 169), dtype=np.uint8)
+_LUMA_WEIGHTS = np.array((0.2126, 0.7152, 0.0722), dtype=np.float64)
 
 
 @dataclass(frozen=True)
@@ -134,6 +135,39 @@ def quantize_rgb_to_ldraw(
     return result
 
 
+def soften_texture_shadows(rgb: np.ndarray, occupancy: np.ndarray | None = None) -> np.ndarray:
+    """Compress baked photo shadows before matching to the LEGO colour palette."""
+    rgb = np.asarray(rgb, dtype=np.uint8)
+    corrected = rgb.astype(np.float64)
+    mask = np.any(rgb > 0, axis=-1)
+    if occupancy is not None:
+        mask &= np.asarray(occupancy, dtype=bool)
+    if not mask.any():
+        return rgb.copy()
+
+    samples = corrected[mask]
+    luma = samples @ _LUMA_WEIGHTS
+    median_luma = float(np.percentile(luma, 55))
+    if median_luma < 64:
+        return rgb.copy()
+
+    median_rgb = np.percentile(samples, 55, axis=0)
+    shadow_floor = float(np.clip(median_luma * 0.72, 84, 168))
+    shadow_mask = mask.copy()
+    full_luma = corrected @ _LUMA_WEIGHTS
+    shadow_mask &= full_luma < shadow_floor
+    if not shadow_mask.any():
+        return rgb.copy()
+
+    shadow_luma = np.maximum(full_luma[shadow_mask], 1.0)
+    gain = np.minimum(shadow_floor / shadow_luma, 2.6)
+    lifted = corrected[shadow_mask] * gain[:, None]
+    blend = np.clip((shadow_floor - shadow_luma) / max(shadow_floor, 1.0), 0.0, 0.55)
+    lifted = lifted * (1.0 - blend[:, None]) + median_rgb * blend[:, None]
+    corrected[shadow_mask] = lifted
+    return np.clip(corrected, 0, 255).astype(np.uint8)
+
+
 def _visual_rgb_source(mesh) -> tuple[np.ndarray, np.ndarray] | tuple[None, None]:
     visual = getattr(mesh, "visual", None)
     vertex_colors = getattr(visual, "vertex_colors", None)
@@ -197,6 +231,6 @@ def sample_mesh_rgb(mesh, point_grid: np.ndarray, occupancy: np.ndarray, default
         return rgb
     if len(source_points) == 1:
         rgb[occupancy] = source_rgb[0]
-        return rgb
+        return soften_texture_shadows(rgb, occupancy)
     rgb[occupancy] = source_rgb[_nearest_indices(source_points, occupied_points)]
-    return rgb
+    return soften_texture_shadows(rgb, occupancy)

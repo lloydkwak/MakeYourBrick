@@ -1,221 +1,102 @@
-# Local SAM 3D Objects Setup
+# SAM 3D Local Setup
 
-MakeYourBrick is designed to run without vendoring Meta's SAM 3D Objects
-repository or model checkpoints. The recommended integration is a local external
-checkout plus a command template that writes a textured triangle mesh to
-MakeYourBrick's `{output}` path.
+The supported local setup is Docker-first. MakeYourBrick does not vendor Meta's
+SAM 3D Objects repository, SAM2, or checkpoints into this repository.
 
-## Recommended Integration
-
-For a direct local install, use this layout:
-
-```text
-MakeYourBrick/
-  scripts/
-  src/
-  third_party/
-    sam-3d-objects/        # local checkout, ignored by git
-      checkpoints/         # local checkpoint cache, ignored by git
-```
-
-Do not use a git submodule for the first integration. SAM 3D Objects has a large
-and fast-moving dependency stack, and its checkpoints require gated Hugging Face
-access. Keeping it as an external checkout makes MakeYourBrick easier to clone,
-test, and share.
-
-For a Docker-based setup, use `docker/sam3d.Dockerfile`. The image clones SAM 3D
-Objects during build and installs its official environment, while checkpoints
-remain external runtime data.
-
-## Requirements
-
-SAM 3D Objects is the heavy part of the pipeline. Plan for:
-
-- Linux or WSL2/Linux for the SAM environment
-- NVIDIA GPU
-- CUDA-compatible PyTorch
-- large VRAM budget; the official setup recommends a high-memory GPU
-- Hugging Face account with access to `facebook/sam-3d-objects`
-
-On Windows, prefer Docker Desktop with the WSL2 backend and NVIDIA GPU
-passthrough. Native Windows execution is not the target environment for the SAM
-3D Objects setup.
-
-MakeYourBrick itself can run on normal Python, but the real SAM runner should be
-started from the same environment where SAM 3D Objects and its checkpoints are
-available.
-
-## Install Flow
-
-1. Clone MakeYourBrick.
-
-2. Clone SAM 3D Objects under `third_party/`.
-
-   ```bash
-   git clone https://github.com/facebookresearch/sam-3d-objects.git third_party/sam-3d-objects
-   ```
-
-3. Follow the official SAM 3D Objects setup instructions in that checkout.
-
-4. Request access to the Hugging Face model and authenticate locally.
-
-   ```bash
-   huggingface-cli login
-   ```
-
-5. Download or cache checkpoints according to the official SAM 3D Objects
-   documentation. Keep them under `third_party/sam-3d-objects/` or another local
-   cache path. Do not commit checkpoints.
-
-## Docker Flow
-
-Build the GPU image from the repository root:
+## Docker Build
 
 ```bash
 docker build -f docker/sam3d.Dockerfile -t makeyourbrick-sam3d:local .
 ```
 
-For long builds on Docker Desktop, prefer plain progress logs:
+The image:
+
+- clones SAM 3D Objects into `/opt/sam-3d-objects`
+- clones SAM2 into `/opt/sam2`
+- creates the official `sam3d-objects` conda environment
+- installs MakeYourBrick
+- starts the FastAPI app on port `8000`
+
+## Hugging Face Access
+
+SAM 3D Objects is gated. Request access on Hugging Face and pass a token at
+runtime:
 
 ```bash
-docker build --progress=plain -f docker/sam3d.Dockerfile -t makeyourbrick-sam3d:local .
+read -rsp "Hugging Face token: " HF_TOKEN
+echo
+export HF_TOKEN
 ```
 
-If the build fails near `Building wheel for pytorch3d` with `failed to receive
-status ... EOF`, Docker Desktop likely lost the Linux engine during native
-extension compilation. Retry on a machine with an NVIDIA GPU and enough Docker
-memory/disk budget.
+Do not paste tokens into committed files. Revoke any token that has been exposed.
 
-Verify Docker GPU access first:
+## Run
+
+For RTX 3080-class 10 GB GPUs, use staged depth mode:
 
 ```bash
-docker run --rm --gpus all nvidia/cuda:12.1.1-base-ubuntu22.04 nvidia-smi
+docker run --rm --gpus all -p 8000:8000 \
+  -e HF_TOKEN \
+  -v "$(pwd)/outputs:/workspace/MakeYourBrick/outputs" \
+  -v "$(pwd)/third_party/sam-3d-objects/torch-cache:/root/.cache/torch" \
+  -v "$(pwd)/third_party/sam-3d-objects/hf-cache:/root/.cache/huggingface" \
+  -e 'MAKEYOURBRICK_SAM_COMMAND=python /workspace/MakeYourBrick/scripts/sam3d_export.py --repo {repo} --depth-device staged-cuda --dino-dtype fp16 --image {image} --mask {mask} --output {output}' \
+  makeyourbrick-sam3d:local
 ```
 
-Run the local backend with the fake runner:
+Open:
 
-```bash
-docker run --rm --gpus all -p 8000:8000 makeyourbrick-sam3d:local
+```text
+http://127.0.0.1:8000
 ```
 
-After a SAM export script is available, run the real SAM backend by passing:
+## What Happens At Runtime
 
-```bash
--e MAKEYOURBRICK_RUNNER_MODE=sam3d
--e MAKEYOURBRICK_SAM_REPO=/opt/sam-3d-objects
--e MAKEYOURBRICK_SAM_COMMAND="python path/to/sam3d_export.py --image {image} --mask {mask} --output {output}"
--e MAKEYOURBRICK_RAW_MESH_SUFFIX=.glb
+1. The UI uploads the image to the FastAPI backend.
+2. User points or boxes are sent to SAM2.
+3. SAM2 writes a mask PNG.
+4. SAM 3D Objects reconstructs a raw `.glb`.
+5. The UI previews the raw GLB directly.
+6. MakeYourBrick converts the GLB to `.ldr`.
+
+When `/opt/sam-3d-objects/checkpoints/hf/pipeline.yaml` is missing,
+`scripts/sam3d_export.py` downloads `MAKEYOURBRICK_SAM3D_MODEL_ID` from
+Hugging Face, finds the snapshot `checkpoints/` directory, and links it into the
+SAM 3D checkout.
+
+## Low-VRAM Notes
+
+The default Docker image command uses CPU depth because it is conservative. For
+10 GB GPUs, the recommended runtime override is:
+
+```text
+--depth-device staged-cuda --dino-dtype fp16
 ```
 
-See `docker/README.md` for mount examples and checkpoint handling.
+That computes depth on CUDA, frees the depth model, then loads SAM 3D for
+reconstruction. Use `--depth-device cuda` only when the GPU has enough VRAM to
+keep the depth model and SAM 3D resident together.
 
 ## Export Contract
 
-MakeYourBrick only needs one artifact from SAM:
+MakeYourBrick expects:
 
 ```text
-input image + mask -> textured triangle mesh at {output}
+input image + mask -> raw_model.glb
 ```
 
-Preferred output:
+GLB is preferred because it keeps geometry, transforms, vertex colors/materials,
+and textures in one file. OBJ can still be used for mesh-only conversion, but
+sidecar `.mtl` and texture files must stay together.
 
-```text
-raw_model.glb
-```
+## Offline Cache
 
-Textured GLB is preferred over OBJ because it keeps geometry, transforms, UVs,
-materials, and texture images in one file. MakeYourBrick can load OBJ too, but
-OBJ texture handoff depends on sidecar `.mtl` and image files staying together.
-If the SAM export script writes OBJ, set `MAKEYOURBRICK_RAW_MESH_SUFFIX=.obj`
-for the local API or pass `--raw-mesh outputs/meshes/raw_model.obj` to the CLI.
-
-The SAM export command should:
-
-- accept `--image`
-- accept `--mask`
-- accept `--output`
-- write a Trimesh-loadable `.glb`
-- preserve texture or vertex/face colour when available
-
-## MakeYourBrick CLI
-
-Once a SAM export command exists, call it through `image_to_ldr.py`:
-
-```bash
-python scripts/image_to_ldr.py \
-  --image data/input_images/sample.png \
-  --mask data/masks/sample.png \
-  --sam-repo third_party/sam-3d-objects \
-  --sam-command "python path/to/sam3d_export.py --image {image} --mask {mask} --output {output}" \
-  --raw-mesh outputs/meshes/raw_model.glb \
-  --base-size-studs 32 \
-  --wall-thickness 2 \
-  --base-thickness 3 \
-  --color-strategy mesh \
-  --report outputs/reports/image_report.json \
-  --output outputs/ldr/image_output.ldr
-```
-
-Use `--color-strategy mesh` for real SAM output so voxel colours are sampled from
-the generated textured mesh.
-
-## Local Web API
-
-For the local web shell, configure the backend with environment variables:
-
-```bash
-export MAKEYOURBRICK_RUNNER_MODE=sam3d
-export MAKEYOURBRICK_SAM_REPO=third_party/sam-3d-objects
-export MAKEYOURBRICK_SAM_COMMAND="python path/to/sam3d_export.py --image {image} --mask {mask} --output {output}"
-export MAKEYOURBRICK_RAW_MESH_SUFFIX=.glb
-python -m uvicorn makeyourbrick.server.main:app --app-dir src --host 127.0.0.1 --port 8000 --reload
-```
-
-On Windows PowerShell:
-
-```powershell
-$env:MAKEYOURBRICK_RUNNER_MODE = "sam3d"
-$env:MAKEYOURBRICK_SAM_REPO = "third_party/sam-3d-objects"
-$env:MAKEYOURBRICK_SAM_COMMAND = "python path/to/sam3d_export.py --image {image} --mask {mask} --output {output}"
-$env:MAKEYOURBRICK_RAW_MESH_SUFFIX = ".glb"
-python -m uvicorn makeyourbrick.server.main:app --app-dir src --host 127.0.0.1 --port 8000 --reload
-```
-
-Then open `apps/web/index.html`, upload an image, select an object, and run the
-conversion job.
-
-## Verification
-
-Before running the full LEGO pipeline, verify the raw mesh:
-
-```bash
-python scripts/image_to_ldr.py \
-  --image data/input_images/sample.png \
-  --mask data/masks/sample.png \
-  --sam-repo third_party/sam-3d-objects \
-  --sam-command "python path/to/sam3d_export.py --image {image} --mask {mask} --output {output}" \
-  --raw-mesh outputs/meshes/raw_model.glb \
-  --raw-mesh-report outputs/reports/raw_mesh_inspect.json \
-  --color-strategy mesh \
-  --output outputs/ldr/image_output.ldr
-```
-
-Check `outputs/reports/raw_mesh_inspect.json`:
-
-- `voxelization_ready` should be `true`
-- `face_count` should be greater than zero
-- `color_source` should ideally be `texture`, `vertex`, `face`, or `material`
-- `asset_type` may be `scene` for GLB and that is fine
-
-## Why Not Commit SAM or Checkpoints?
-
-- SAM 3D Objects is an external research dependency with its own setup.
-- The checkpoint is gated and should not be redistributed in this repository.
-- The local command-template boundary keeps MakeYourBrick usable with fake,
-  future, or alternative 3D reconstruction backends.
+After the first successful download, the mounted caches can be reused. To force
+offline cache use, append `--local-files-only` to `MAKEYOURBRICK_SAM_COMMAND`.
 
 ## References
 
 - SAM 3D Objects GitHub: https://github.com/facebookresearch/sam-3d-objects
 - SAM 3D Objects model page: https://huggingface.co/facebook/sam-3d-objects
+- SAM2 GitHub: https://github.com/facebookresearch/sam2
 - Meta SAM 3D research page: https://ai.meta.com/research/sam3d/

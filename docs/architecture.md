@@ -1,79 +1,95 @@
 # Architecture
 
-MakeYourBrick has been reduced to one core Studio-like sculpture pipeline.
+MakeYourBrick has one production path: select an object in an image, reconstruct
+it with SAM 3D Objects, preview the raw mesh, and convert it into a Studio-like
+LDraw sculpture.
 
 ## Data Flow
 
 ```text
-image path
-  -> Sam3DRunner command
-  -> raw triangle mesh, preferably textured GLB
+web image upload
+  -> FastAPI session storage
+  -> SAM2 prompt segmentation
+  -> mask PNG
+  -> SAM 3D Objects export script
+  -> raw_model.glb
+  -> browser GLB preview
   -> convert_mesh_to_ldr()
-
-mesh path (OBJ/GLB/STL, with GLB preferred for SAM texture output)
-  -> load_mesh()
-  -> orient_mesh_to_y_up()
-  -> compute footprint pitch from base_size_studs, optionally auto-selected from mesh complexity
-  -> scale Y by 20/24 for brick-height LDraw proportions
-  -> slice mesh into filled X/Z layer footprints
-  -> fall back to surface voxel fill for open or highly fragmented meshes
-  -> sample mesh vertex/face/texture/material colour and quantize to solid LDraw colours
-  -> polish closed slice voxels, or preserve open surface voxels
-  -> derive a Studio-style shell target or an open-mesh detail target
-  -> tile each layer with Studio brick combinations using lower/upper attachment awareness
-  -> add optional attachment-only plates for fully unattached bricks
-  -> write .ldr and report.json
+  -> output.ldr + report.json + model_voxels.npz
 ```
+
+Mesh-only conversion enters at `convert_mesh_to_ldr()` with an OBJ/GLB/STL or
+any Trimesh-loadable triangle mesh.
 
 ## Core Modules
 
-- `src/makeyourbrick/pipeline.py`: orchestration for mesh and image conversion
-- `src/makeyourbrick/ai/sam3d_runner.py`: external SAM command contract
-- `src/makeyourbrick/mesh/solidify.py`: Trimesh loading and transformed scene flattening
-- `src/makeyourbrick/mesh/orient.py`: source up-axis handling
-- `src/makeyourbrick/voxel/voxelize.py`: layer-slice voxelization
-- `src/makeyourbrick/voxel/sculpture.py`: layer cleanup, shell/base helper masks
-- `src/makeyourbrick/sculpture/`: target mask building and layer placement
-- `src/makeyourbrick/brickify/optimizer.py`: Studio brick-combination tiler
-- `src/makeyourbrick/io/ldr_writer.py`: LDraw output
-- `src/makeyourbrick/server/`: local API and job runner
+- `apps/web/`: browser UI, SAM mask overlay, GLB preview, artifact links
+- `apps/web/glb-viewer.js`: dependency-free GLB previewer with WebGL and 2D canvas fallback
+- `src/makeyourbrick/server/`: FastAPI app, storage, job registry, SAM2 mask creation
+- `scripts/sam2_segment.py`: SAM2 prompt-to-mask helper
+- `scripts/sam3d_export.py`: SAM 3D Objects GLB export helper with checkpoint auto-resolution and low-VRAM modes
+- `src/makeyourbrick/pipeline.py`: conversion orchestration
+- `src/makeyourbrick/mesh/`: mesh loading, inspection, orientation
+- `src/makeyourbrick/voxel/`: base-size selection, layer slicing, surface fallback, cleanup
+- `src/makeyourbrick/brickify/`: LDraw color matching, shadow softening, Studio-like placement reports
+- `src/makeyourbrick/sculpture/`: target masks and brick placement
+- `src/makeyourbrick/io/ldr_writer.py`: LDraw writer
 
-## Current Algorithm
+## Reconstruction
 
-1. Base size defines the maximum X/Z footprint in studs. It can be set explicitly or auto-selected from mesh proportions, face count, and fragmentation.
-2. The mesh is oriented to Y-up.
-3. The Y axis is scaled by the LEGO brick ratio `20/24` before slicing.
-4. Each horizontal layer is filled from mesh cross-section contours.
-5. If the mesh is open and the slice result is sparse, surface voxelization with fill is used as a fallback.
-6. Mesh vertex, face, UV texture, or material diffuse colours are sampled at occupied voxel centers and quantized to solid LDraw colours in CIELAB space. Textured GLB is the preferred SAM handoff format because it keeps mesh geometry, UVs, material, and texture image in one artifact.
-7. Closed slice output uses a contour-shell target: outer shell plus fully filled bottom layers.
-8. Open surface fallback output uses a surface-detail target: the recovered occupancy is preserved so seats, wheels, trims, and separated OBJ components are not erased by shell extraction.
-9. Wall thickness and base thickness directly control the closed sculpture target, matching Studio's sculpture import settings. For open surface-detail mode, the base mask is still reported, but the full recovered target is kept for detail.
-10. Each layer is tiled exactly with the selected Studio sculpture brick set. In mesh colour mode, a candidate brick is accepted only when every occupied stud in its footprint has the same quantized LDraw colour ID, so one brick does not cross colour boundaries. Candidate layouts are selected with a lower/upper attachment check so a brick may be considered buildable when it connects to the layer below or to a later upper subassembly.
-11. If a brick is unattached from both below and above, the writer tries to add a thin attachment-only plate over it and a same-layer stable neighbor. These plates are included in the LDR file but excluded from exact-cover voxel metrics.
-12. `0 STEP` is inserted between layers.
+The Docker runtime clones SAM2 and SAM 3D Objects during build. At runtime:
 
-The active default is equivalent to Studio-like settings:
+- SAM2 (`facebook/sam2.1-hiera-large` by default) creates prompt masks.
+- SAM 3D Objects (`facebook/sam-3d-objects`) creates the raw GLB mesh.
+- Checkpoints are loaded from the mounted Hugging Face cache.
+- `--depth-device staged-cuda` is recommended for RTX 3080-class 10 GB GPUs.
+
+The GLB is kept as a first-class artifact. The UI previews it directly, while
+the LDR remains a download artifact for Studio/LDraw inspection.
+
+## Conversion Algorithm
+
+1. Load and flatten OBJ/GLB/STL scenes through Trimesh.
+2. Orient the mesh to Y-up.
+3. Select base size explicitly or with `auto`.
+4. Compute pitch from the selected X/Z footprint size.
+5. Scale Y by `20/24` so voxel layers match LEGO brick height proportions.
+6. Slice closed meshes into filled X/Z layer footprints.
+7. Fall back to surface voxel fill for open or fragmented meshes.
+8. Sample mesh colors from vertex colors, face colors, UV textures, or material diffuse color.
+9. Soften baked photo shadows before CIELAB LDraw color quantization.
+10. Build a contour-shell target for closed slice output, or preserve surface-detail output for fragmented/open meshes.
+11. Tile each layer with the Studio sculpture brick set, respecting color boundaries in mesh-color mode.
+12. Add attachment-only plates for bricks that are otherwise unattached from both below and above.
+13. Write `.ldr` with `0 STEP` between layers and a JSON report.
+
+## Auto Base Size
+
+`auto` chooses from `16/24/32/48` studs. It uses footprint-to-height ratio,
+mesh density, and fragmentation:
+
+- simple compact objects can stay at `16` or `24`
+- dense tall objects such as the queen demo resolve to `32`
+- wide or highly fragmented objects can rise to `32` or `48`
+
+This avoids the earlier behavior where high SAM mesh face counts alone pushed
+small objects to oversized `48`-stud outputs.
+
+## Color Handling
+
+Mesh color mode is the default for image/SAM output. The converter samples
+available mesh color data and quantizes to the solid LDraw palette in CIELAB
+space. Before quantization, dark photo shadows are lifted toward the object's
+mid-tone so background lighting does not become black or very dark brown LEGO
+bricks.
+
+## Defaults
 
 ```text
-base_size_studs: 32
+base_size_studs: auto
 wall_thickness: 2
 base_thickness: 3
-coloring: mesh for image/SAM conversion, by layer for Studio-style debug output
+color_strategy: mesh
 up_axis: auto
+raw_mesh_suffix: .glb
 ```
-
-## Removed Experimental Paths
-
-The following were intentionally removed from the active codebase:
-
-- synthetic voxel demos
-- legacy greedy optimizer
-- plate-height output
-- surface/ray/surface-only voxelizers
-- lattice/rib infill modes
-- BrickFormer reward experiments
-- Studio `.io` analysis utilities
-- mesh sample comparison utilities
-
-They were useful during exploration, but they made the code harder to reason about while the actual target is a Studio-like OBJ-to-sculpture converter.

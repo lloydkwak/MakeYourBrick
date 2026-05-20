@@ -181,6 +181,10 @@ def create_app(
             return FileResponse(path, media_type="application/json")
         if kind == "ldr":
             return FileResponse(path, media_type="text/plain")
+        if kind == "raw_mesh" and path.suffix.lower() == ".glb":
+            return FileResponse(path, media_type="model/gltf-binary")
+        if kind == "raw_mesh" and path.suffix.lower() == ".gltf":
+            return FileResponse(path, media_type="model/gltf+json")
         return FileResponse(path)
 
     web_dir = Path(__file__).resolve().parents[3] / "apps" / "web"

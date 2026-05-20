@@ -1,13 +1,44 @@
 # Usage
 
+## Web App
+
+The recommended path is the Docker SAM runtime:
+
+```bash
+docker run --rm --gpus all -p 8000:8000 \
+  -e HF_TOKEN \
+  -v "$(pwd)/outputs:/workspace/MakeYourBrick/outputs" \
+  -v "$(pwd)/third_party/sam-3d-objects/torch-cache:/root/.cache/torch" \
+  -v "$(pwd)/third_party/sam-3d-objects/hf-cache:/root/.cache/huggingface" \
+  -e 'MAKEYOURBRICK_SAM_COMMAND=python /workspace/MakeYourBrick/scripts/sam3d_export.py --repo {repo} --depth-device staged-cuda --dino-dtype fp16 --image {image} --mask {mask} --output {output}' \
+  makeyourbrick-sam3d:local
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000
+```
+
+Flow:
+
+- upload or drag in an image
+- click points or draw a box on the object
+- wait for the SAM2 mask overlay
+- press `Generate model`
+- inspect the raw SAM 3D GLB preview
+- download the `.ldr`
+
 ## Mesh Conversion
 
 ```bash
 python scripts/mesh_to_ldr.py \
-  --mesh queen.obj \
-  --base-size-studs 32 \
+  --mesh queen.glb \
+  --base-size-studs auto \
   --wall-thickness 2 \
   --base-thickness 3 \
+  --up-axis auto \
+  --color-strategy mesh \
   --report outputs/reports/queen_report.json \
   --output outputs/ldr/queen.ldr
 ```
@@ -15,27 +46,28 @@ python scripts/mesh_to_ldr.py \
 Options:
 
 - `--mesh`: input OBJ/GLB/STL or any Trimesh-loadable triangle mesh
-- `--base-size-studs`: maximum horizontal footprint in studs, or `auto` to choose from 16/24/32/48/64 using mesh proportions and complexity
+- `--base-size-studs`: maximum horizontal footprint in studs, or `auto` to choose from `16/24/32/48`
 - `--wall-thickness`: shell wall width in studs
 - `--base-thickness`: number of bottom layers to fill completely
 - `--up-axis`: `auto`, `none`, `x`, `y`, or `z`
-- `--color-strategy`: `layer` for Studio-like layer colors, or `mesh` for mesh-sampled LDraw color matching
+- `--color-strategy`: `mesh` for mesh-sampled colors, or `layer` for Studio-like debug layer colors
 - `--voxels`: optional `.npz` voxel artifact path
-- `--debug-target-output`: optional all-1x1 LDraw target preview for separating voxelization issues from brick placement issues
+- `--debug-target-output`: optional all-1x1 LDraw target preview
 - `--report`: JSON report path
 - `--output`: LDraw output path
 
-## Image Conversion
+## Image CLI
 
-`image_to_ldr.py` runs an external SAM command first. The command must create a triangle mesh at `{output}`.
+`image_to_ldr.py` runs an external SAM command first. The command must create a
+triangle mesh at `{output}`.
 
 ```bash
 python scripts/image_to_ldr.py \
   --image data/input_images/sample.png \
   --mask data/masks/sample.png \
   --sam-repo third_party/sam-3d-objects \
-  --sam-command "python your_sam_export.py --image {image} --mask {mask} --output {output}" \
-  --base-size-studs 32 \
+  --sam-command "python scripts/sam3d_export.py --repo {repo} --image {image} --mask {mask} --output {output}" \
+  --base-size-studs auto \
   --wall-thickness 2 \
   --base-thickness 3 \
   --color-strategy mesh \
@@ -51,66 +83,34 @@ Supported command placeholders:
 - `{output_dir}`
 - `{repo}`
 
-## Local Web Shell
-
-Start the backend:
-
-```bash
-python -m uvicorn makeyourbrick.server.main:app --app-dir src --host 127.0.0.1 --port 8000 --reload
-```
-
-Open:
-
-```text
-apps/web/index.html
-```
-
-The backend defaults to a fake local mesh runner unless configured with:
-
-```text
-MAKEYOURBRICK_RUNNER_MODE=command
-MAKEYOURBRICK_SAM_REPO=third_party/sam-3d-objects
-MAKEYOURBRICK_SAM_COMMAND=<command template>
-MAKEYOURBRICK_RAW_MESH_SUFFIX=.glb
-```
-
-Use `MAKEYOURBRICK_RUNNER_MODE=sam3d` when the command requires a user mask.
-Set `MAKEYOURBRICK_RAW_MESH_SUFFIX=.obj` if your SAM export script writes OBJ
-instead of GLB.
-
 ## Output
 
-The converter writes:
+Each completed job can write:
 
-- `.ldr`: LDraw model with per-layer `0 STEP`
-- `.npz`: voxel occupancy artifact
-- `.json`: conversion report
+- `raw_model.glb`: raw SAM 3D or input mesh artifact
+- `output.ldr`: final LDraw model
+- `model_voxels.npz`: voxel occupancy and color artifact
+- `report.json`: conversion report
+- `raw_mesh_inspect.json`: raw mesh inspection report when requested
 
 The report includes:
 
-- voxel shape
-- target voxel count
-- output brick count
-- part counts
-- color counts
+- selected base size and pitch
+- voxelizer (`slice` or `surface`)
+- sculpture mode (`contour-shell` or `surface-detail`)
+- part counts and color counts
 - orientation report
-- footprint/base-size report
 - stability summary
-- lower/upper attachment counts
 - attachment-only plate overlay counts
-- selected voxelizer (`slice` or `surface`)
-- selected sculpture mode (`contour-shell` for closed slice output or `surface-detail` for fragmented open OBJ output)
+
+## Notes
 
 Mesh color matching samples vertex colors, face colors, UV texture pixels, or
-material diffuse colors when they are available. It quantizes RGB to the solid
-LDraw palette in CIELAB space and stores the chosen LDraw color IDs in the
-voxel artifact. In `--color-strategy mesh`, brick placement is color-boundary
-aware: one brick is placed only when its full footprint has one quantized LDraw
-color ID.
-For SAM 3D Objects integration, prefer a textured `.glb` raw mesh so geometry,
-UVs, material, and texture image stay together.
+material diffuse colors. Dark photo shadows are softened before LDraw palette
+matching, which prevents background lighting from becoming large black/dark
+brown LEGO patches.
 
-For vehicle-style OBJ files made from many open sub-meshes, start with:
+For fragmented vehicle-style OBJ files, start with:
 
 ```bash
 python scripts/mesh_to_ldr.py \

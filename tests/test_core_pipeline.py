@@ -12,7 +12,7 @@ from PIL import Image
 
 from makeyourbrick.ai.fake_runner import FakeSamMeshRunner
 from makeyourbrick.brickify.attachments import add_attachment_plates
-from makeyourbrick.brickify.colors import quantize_rgb_to_ldraw
+from makeyourbrick.brickify.colors import quantize_rgb_to_ldraw, soften_texture_shadows
 from makeyourbrick.brickify.optimizer import bricks_to_occupancy
 from makeyourbrick.brickify.report import build_stability_report
 from makeyourbrick.io.ldr_writer import brick_to_ldr_line
@@ -31,6 +31,7 @@ from makeyourbrick.sculpture import (
     place_layered_bricks,
 )
 from makeyourbrick.types import Brick
+from makeyourbrick.voxel.voxelize import recommend_base_size_studs
 
 trimesh = pytest.importorskip("trimesh")
 
@@ -92,6 +93,16 @@ def test_ldraw_lab_color_matching_uses_solid_palette() -> None:
     color_ids = quantize_rgb_to_ldraw(rgb)
 
     assert color_ids.tolist() == [[4, 15, 1]]
+
+
+def test_texture_shadow_softening_lifts_dark_photo_shadows() -> None:
+    rgb = np.array([[[235, 230, 210], [26, 22, 18], [180, 160, 130]]], dtype=np.uint8)
+    occupancy = np.ones(rgb.shape[:2], dtype=bool)
+
+    softened = soften_texture_shadows(rgb, occupancy)
+
+    assert softened[0, 1].mean() > rgb[0, 1].mean() * 2
+    assert softened[0, 0].mean() == pytest.approx(rgb[0, 0].mean(), abs=1)
 
 
 def test_mesh_color_strategy_preserves_target_color_ids() -> None:
@@ -254,7 +265,15 @@ def test_auto_base_size_records_selected_size(tmp_path: Path) -> None:
 
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["footprint_scale"]["requested_base_size_studs"] == "auto"
-    assert report["footprint_scale"]["base_size_studs"] in {16, 24, 32, 48, 64}
+    assert report["footprint_scale"]["base_size_studs"] in {16, 24, 32, 48}
+
+
+def test_auto_base_size_uses_more_detail_for_dense_tall_mesh() -> None:
+    mesh = trimesh.creation.uv_sphere(count=[240, 240], radius=1.0)
+    mesh.apply_scale([0.7, 2.4, 0.7])
+
+    assert len(mesh.faces) > 100000
+    assert recommend_base_size_studs(mesh) == 32
 
 
 def test_glb_scene_loading_applies_node_transforms(tmp_path: Path) -> None:
