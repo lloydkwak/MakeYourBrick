@@ -11,6 +11,8 @@ the final model.
 
 ![MakeYourBrick demo 2](result/demo2.gif)
 
+![MakeYourBrick ldr result in studio](result/ldr_result.gif)
+
 ## Pipeline
 
 ```text
